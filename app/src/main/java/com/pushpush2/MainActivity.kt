@@ -681,7 +681,14 @@ class MainActivity : Activity() {
     }
 
     private fun cancelPendingStageAdvance() {
-        pendingStageAdvance?.let { gameView.removeCallbacks(it) }
+        pendingStageAdvance?.let { runnable ->
+            if (::gameView.isInitialized) {
+                gameView.removeCallbacks(runnable)
+            }
+            if (::gameClearScreenView.isInitialized) {
+                gameClearScreenView.removeCallbacks(runnable)
+            }
+        }
         pendingStageAdvance = null
 
         if (::gameView.isInitialized) {
