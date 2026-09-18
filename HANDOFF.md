@@ -114,7 +114,10 @@ Android Studio / Emulator / 실제 스마트폰 테스트
 - AGP 8.13.2 / Gradle 8.13 / JDK 17
 - maxSdkVersion 미지정으로 이후 Android 설치 차단 없음
 - GitHub Actions Debug APK 자동 빌드
+- GameEngine JVM 회귀 테스트 및 66개 스테이지 구조 무결성 테스트
+- GitHub Actions Android 7.0(API 24) 실제 실행 smoke test
 - GitHub Actions Android 16(API 36) 실제 실행 smoke test
+- API 24 / API 36 smoke 실행 화면 캡처 Artifact
 - 이미지/오디오 디코딩 오류가 앱 시작을 종료하지 않도록 startup-safe 처리
 
 ## 원본 SWF 분석 결과
@@ -253,12 +256,12 @@ Workflow:
 핵심 빌드 명령:
 
 ```text
-./gradlew lintDebug assembleDebug
+./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
 새 ChatGPT 대화에서는 코드 변경 후 항상 최신 workflow run을 확인합니다.
 
-이 문서를 작성할 당시 최신 main 빌드는 성공 상태입니다.
+최근 검증에서는 JVM unit test, lintDebug, assembleDebug와 Android API 24 / 36 smoke test가 모두 성공했습니다.
 
 ## 다음 우선순위
 
@@ -266,8 +269,10 @@ Workflow:
 또한 박스가 목표에 들어갈 때 박스 Sprite 356은 frame 2부터, 플레이어 Sprite 370은 frame 71부터 반응 애니메이션을 재생하는 것을 확인했습니다.
 
 1. Galaxy S8 / S10에서 게임 영역과 D-pad 크기 실기기 미세 조정
+   - API 24 / 36 에뮬레이터 자동 실행 및 화면 캡처는 완료
 2. 66개 스테이지 실제 플레이 검증
-3. Android Studio 에뮬레이터/실기기 테스트
+   - 스테이지 수/번호/박스·목표 수/좌표 범위 등 구조 무결성 자동 테스트는 완료
+3. Android Studio 실기기 테스트
 4. Debug APK 안정화 후 릴리즈 APK 생성
 
 ## 중요한 주의사항
