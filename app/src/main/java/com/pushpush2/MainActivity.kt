@@ -189,9 +189,7 @@ class MainActivity : Activity() {
             if (next <= StageRepository.stages.size) {
                 scheduleAutomaticStageAdvance(next)
             } else {
-                // 원본은 stage_map frame 67의 엔딩으로 진행한다.
-                // 엔딩 화면 이식 전까지 마지막 퍼즐의 클리어 상태를 유지한다.
-                audioPlayer.play("clear")
+                scheduleEnding()
             }
         }
     }
@@ -217,6 +215,29 @@ class MainActivity : Activity() {
 
         pendingStageAdvance = advance
         gameView.postDelayed(advance, STAGE_CLEAR_FADE_MS)
+    }
+
+    private fun scheduleEnding() {
+        cancelPendingStageAdvance()
+
+        gameView.animate()
+            .alpha(0f)
+            .setDuration(STAGE_CLEAR_FADE_MS)
+            .start()
+
+        val ending = Runnable {
+            pendingStageAdvance = null
+            gameView.animate().cancel()
+            gameView.alpha = 1f
+
+            audioPlayer.play("clear")
+            gameView.showEnding()
+            stageLabel.text = "GAME CLEAR"
+            moveLabel.text = ""
+        }
+
+        pendingStageAdvance = ending
+        gameView.postDelayed(ending, STAGE_CLEAR_FADE_MS)
     }
 
     private fun cancelPendingStageAdvance() {
