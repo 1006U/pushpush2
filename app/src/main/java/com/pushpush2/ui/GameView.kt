@@ -8,6 +8,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
+import android.os.SystemClock
+import android.util.Base64
 import android.view.View
 import com.pushpush2.R
 import com.pushpush2.game.GameState
@@ -30,13 +32,52 @@ class GameView(context: Context) : View(context) {
     private val playerBitmap: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.tile_player)
 
+    /*
+     * Sprite 370의 기본 루프에서 사용하는 Shape 358/359를 14x14 PNG로
+     * 복원한 데이터다. 원본 SWF 바이너리는 저장소에 포함하지 않는다.
+     */
+    private val playerBlinkHalfBitmap: Bitmap =
+        decodeEmbeddedBitmap(PLAYER_BLINK_HALF_PNG)
+    private val playerBlinkClosedBitmap: Bitmap =
+        decodeEmbeddedBitmap(PLAYER_BLINK_CLOSED_PNG)
+
     private val sourceRect = Rect(0, 0, ORIGINAL_TILE_PX, ORIGINAL_TILE_PX)
 
     private var gameState: GameState? = null
+    private var playerAnimationStartedAtMs = SystemClock.uptimeMillis()
+
+    private val animationTick = object : Runnable {
+        override fun run() {
+            if (!isAttachedToWindow) return
+
+            invalidate()
+            postDelayed(this, PLAYER_FRAME_DURATION_MS)
+        }
+    }
 
     fun render(state: GameState) {
+        if (gameState?.stage?.number != state.stage.number) {
+            resetPlayerAnimation()
+        }
+
         gameState = state
         invalidate()
+    }
+
+    fun resetPlayerAnimation() {
+        playerAnimationStartedAtMs = SystemClock.uptimeMillis()
+        invalidate()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        removeCallbacks(animationTick)
+        post(animationTick)
+    }
+
+    override fun onDetachedFromWindow() {
+        removeCallbacks(animationTick)
+        super.onDetachedFromWindow()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -120,13 +161,41 @@ class GameView(context: Context) : View(context) {
 
         drawTile(
             canvas = canvas,
-            bitmap = playerBitmap,
+            bitmap = currentPlayerBitmap(),
             destination = cellRect(
                 position = state.player,
                 cell = cell,
                 offsetX = offsetX,
                 offsetY = offsetY
             )
+        )
+    }
+
+    private fun currentPlayerBitmap(): Bitmap {
+        val elapsedMs =
+            (SystemClock.uptimeMillis() - playerAnimationStartedAtMs)
+                .coerceAtLeast(0L)
+
+        val frame =
+            ((elapsedMs / PLAYER_FRAME_DURATION_MS) % PLAYER_IDLE_FRAME_COUNT)
+                .toInt() + 1
+
+        /*
+         * 원본 Sprite 370의 1~70 프레임은 방향 애니메이션이 아니다.
+         * 10fps로 재생되는 대기/눈 깜빡임 루프이며 70프레임에서
+         * gotoFrame(0) + play()로 다시 처음부터 반복한다.
+         */
+        return when (frame) {
+            2, 12, 38 -> playerBlinkHalfBitmap
+            3, 13, 39 -> playerBlinkClosedBitmap
+            else -> playerBitmap
+        }
+    }
+
+    private fun decodeEmbeddedBitmap(encoded: String): Bitmap {
+        val bytes = Base64.decode(encoded, Base64.DEFAULT)
+        return requireNotNull(
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
         )
     }
 
@@ -165,6 +234,14 @@ class GameView(context: Context) : View(context) {
 
     private companion object {
         const val ORIGINAL_TILE_PX = 14
+        const val PLAYER_IDLE_FRAME_COUNT = 70L
+        const val PLAYER_FRAME_DURATION_MS = 100L
+
+        const val PLAYER_BLINK_HALF_PNG =
+            "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAABmJLR0QA/wD/AP+gvaeTAAAAsUlEQVQokZ2QMRaDIBBE//psLNJzFC0x5xbLeBRvYEkKsixIfL5kGmZ2dwYWoUX8UgOQK2EGP8ExwHAkvb4aj1QmPyV1DDam5jpAusZ0Hi5hMxEgLiFmAPksuWIJSXcaEdZPVIyZaz15a4heuwRrPmexD9pC2wN6AMY5F1S7Me2zF8PaYwvJ6PzEXjzD6Sc8wPm56e1bsKf+ih5seRG55aq7c5KI3HKgNpapVzwH8eeOb12Aa1x/oE/aAAAAAElFTkSuQmCC"
+
+        const val PLAYER_BLINK_CLOSED_PNG =
+            "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAABmJLR0QA/wD/AP+gvaeTAAAAnElEQVQokZ2SOw6DMBBEZ1AaF+l9FCjtg0MJR8kNXDrFesH4g6OMhLS/N6wtE7ViowYAzJOpAC5o9oBbSsOzz6wow6VMALa9+jsfoRxWJRMBn6DOBtN4sq1r1VyzF+dgJD/WDqiDqmBg041+tr3q4VhlVesWKaRPIbwB63yz1171B70AIEZhSQ5jzatbJTmMgfuTu7n24tMIf57xC89mQF/nbBXlAAAAAElFTkSuQmCC"
 
         val OUTER_BACKGROUND: Int =
             Color.rgb(8, 10, 12)
