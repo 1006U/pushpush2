@@ -2,11 +2,17 @@ package com.pushpush2
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
+import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Base64
 import android.view.Gravity
 import android.view.View
@@ -40,6 +46,7 @@ class MainActivity : Activity() {
     private var clearHandled = false
     private var pendingStageAdvance: Runnable? = null
     private var pendingHeaderReset: Runnable? = null
+    private var lastWallVibrationAt = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -234,7 +241,15 @@ class MainActivity : Activity() {
     }
 
     private fun move(direction: Direction) {
-        val boxesBefore = engine.state.boxes.toSet()
+        val before = engine.state
+        val next = before.player + direction
+
+        if (next in before.stage.walls) {
+            vibrateWallBlocked()
+            return
+        }
+
+        val boxesBefore = before.boxes.toSet()
 
         if (!engine.move(direction)) return
 
@@ -280,6 +295,37 @@ class MainActivity : Activity() {
             } else {
                 scheduleEnding()
             }
+        }
+    }
+
+    private fun vibrateWallBlocked() {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastWallVibrationAt < WALL_VIBRATION_COOLDOWN_MS) {
+            return
+        }
+        lastWallVibrationAt = now
+
+        val vibrator: Vibrator? =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                getSystemService(VibratorManager::class.java)
+                    ?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            }
+
+        if (vibrator?.hasVibrator() != true) return
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(
+                VibrationEffect.createOneShot(
+                    WALL_VIBRATION_MS,
+                    VibrationEffect.DEFAULT_AMPLITUDE
+                )
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(WALL_VIBRATION_MS)
         }
     }
 
@@ -514,6 +560,8 @@ class MainActivity : Activity() {
         // 클리어 메시지와 캐릭터 반응이 눈에 보이는 시간까지 확보한다.
         const val STAGE_CLEAR_FADE_MS = 900L
         const val HEADER_REACTION_MS = 900L
+        const val WALL_VIBRATION_MS = 55L
+        const val WALL_VIBRATION_COOLDOWN_MS = 140L
 
         val RETRO_BLUE: Int =
             Color.rgb(45, 132, 218)
