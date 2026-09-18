@@ -12,6 +12,7 @@ import android.view.View
 import com.pushpush2.R
 import com.pushpush2.game.GameState
 import com.pushpush2.game.Position
+import kotlin.math.floor
 import kotlin.math.min
 
 class GameView(context: Context) : View(context) {
@@ -45,43 +46,59 @@ class GameView(context: Context) : View(context) {
         val state = gameState ?: return
         val stage = state.stage
 
-        val virtualScale = min(
-            width.toFloat() / ORIGINAL_STAGE_WIDTH,
-            height.toFloat() / ORIGINAL_STAGE_HEIGHT
+        if (width <= 0 || height <= 0) return
+
+        val horizontalPadding = dp(12f)
+        val verticalPadding = dp(12f)
+
+        val availableWidth =
+            (width.toFloat() - horizontalPadding * 2f).coerceAtLeast(1f)
+        val availableHeight =
+            (height.toFloat() - verticalPadding * 2f).coerceAtLeast(1f)
+
+        val rawCell = min(
+            availableWidth / stage.width.coerceAtLeast(1),
+            availableHeight / stage.height.coerceAtLeast(1)
         )
 
-        val virtualWidth = ORIGINAL_STAGE_WIDTH * virtualScale
-        val virtualHeight = ORIGINAL_STAGE_HEIGHT * virtualScale
-        val viewportLeft = (width - virtualWidth) / 2f
-        val viewportTop = (height - virtualHeight) / 2f
-
-        val viewport = RectF(
-            viewportLeft,
-            viewportTop,
-            viewportLeft + virtualWidth,
-            viewportTop + virtualHeight
-        )
-
-        paint.style = Paint.Style.FILL
-        paint.color = FLOOR_COLOR
-        canvas.drawRect(viewport, paint)
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = maxOf(1f, virtualScale)
-        paint.color = FRAME_COLOR
-        canvas.drawRect(viewport, paint)
-
-        val cell = ORIGINAL_TILE_PX * virtualScale
+        /*
+         * Pixel-art 타일이 흐릿해지지 않도록 가능한 경우 정수 픽셀 배율을 사용한다.
+         * 아주 작은 화면에서는 rawCell을 그대로 사용해서 전체 맵이 잘리지 않게 한다.
+         */
+        val cell = if (rawCell >= ORIGINAL_TILE_PX) {
+            val integerScale = floor(rawCell / ORIGINAL_TILE_PX)
+                .coerceAtLeast(1f)
+            ORIGINAL_TILE_PX * integerScale
+        } else {
+            rawCell
+        }
 
         val boardWidth = stage.width * cell
         val boardHeight = stage.height * cell
 
-        val offsetX = viewport.centerX() - boardWidth / 2f
-        val offsetY = viewport.centerY() - boardHeight / 2f
+        val offsetX = (width - boardWidth) / 2f
+        val offsetY = (height - boardHeight) / 2f
+
+        val boardRect = RectF(
+            offsetX,
+            offsetY,
+            offsetX + boardWidth,
+            offsetY + boardHeight
+        )
+
+        paint.style = Paint.Style.FILL
+        paint.color = FLOOR_COLOR
+        canvas.drawRect(boardRect, paint)
+
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = maxOf(1f, dp(1f))
+        paint.color = FRAME_COLOR
+        canvas.drawRect(boardRect, paint)
 
         for (y in 0 until stage.height) {
             for (x in 0 until stage.width) {
                 val position = Position(x, y)
+
                 val destination = cellRect(
                     position = position,
                     cell = cell,
@@ -118,7 +135,12 @@ class GameView(context: Context) : View(context) {
         bitmap: Bitmap,
         destination: RectF
     ) {
-        canvas.drawBitmap(bitmap, sourceRect, destination, paint)
+        canvas.drawBitmap(
+            bitmap,
+            sourceRect,
+            destination,
+            paint
+        )
     }
 
     private fun cellRect(
@@ -138,13 +160,19 @@ class GameView(context: Context) : View(context) {
         )
     }
 
+    private fun dp(value: Float): Float =
+        value * resources.displayMetrics.density
+
     private companion object {
-        const val ORIGINAL_STAGE_WIDTH = 240f
-        const val ORIGINAL_STAGE_HEIGHT = 250f
         const val ORIGINAL_TILE_PX = 14
 
-        val OUTER_BACKGROUND: Int = Color.rgb(8, 10, 12)
-        val FLOOR_COLOR: Int = Color.rgb(255, 255, 255)
-        val FRAME_COLOR: Int = Color.rgb(98, 103, 108)
+        val OUTER_BACKGROUND: Int =
+            Color.rgb(8, 10, 12)
+
+        val FLOOR_COLOR: Int =
+            Color.rgb(255, 255, 255)
+
+        val FRAME_COLOR: Int =
+            Color.rgb(98, 103, 108)
     }
 }
