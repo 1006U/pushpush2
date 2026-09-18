@@ -45,6 +45,10 @@
 - [x] 이동 / 클리어 / 버튼 사운드 재생 코드 연결
 - [x] start / success 사운드 사용 시점 분석 및 연결
 - [x] GitHub Actions Android CI 추가
+- [x] GameEngine JVM 회귀 테스트 추가
+- [x] 66개 원본 스테이지 구조 무결성 자동 테스트 추가
+- [x] CI에서 Android 7.0(API 24) + Android 16(API 36) 실제 앱 실행 smoke test
+- [x] API 24 / API 36 smoke test 화면 캡처 Artifact 업로드
 - [x] 영상 참고 레트로 모바일 UI 1차 적용
 - [x] 원형 4방향 D-pad + STAGE/RETRY 소프트키
 - [x] D-pad 길게 누르기 반복 이동
@@ -274,10 +278,12 @@ GitHub Actions의:
 핵심 명령:
 
 ```text
-./gradlew lintDebug assembleDebug
+./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
 성공하면 `pushpush2-debug-apk` Artifact를 업로드합니다.
+또한 Android 7.0(API 24)과 Android 16(API 36) 에뮬레이터에서 APK를 설치/실행하고,
+각 실행 화면을 `pushpush2-smoke-api-24`, `pushpush2-smoke-api-36` Artifact로 저장합니다.
 
 ## 다음 우선순위
 
@@ -285,6 +291,8 @@ GitHub Actions의:
 - [x] 박스 Sprite 356의 2~13프레임 그래픽 복원 및 애니메이션 적용
 - [x] 플레이어 Sprite 370의 71~76 반응 애니메이션 적용
 - [x] 박스 목표 진입 시 원본 타이밍으로 두 애니메이션 동기화
+- [x] Android 7.0(API 24) 에뮬레이터 앱 시작/레이아웃 smoke 검증
+- [x] Android 16(API 36) 에뮬레이터 앱 시작/레이아웃 smoke 검증
 - [ ] Galaxy S8 실제 화면에서 D-pad 높이/보드 영역 확인
 - [ ] Galaxy S10 실제 화면에서 D-pad 높이/보드 영역 확인
 - [ ] 66개 스테이지 실제 플레이 검증
