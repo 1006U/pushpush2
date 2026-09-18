@@ -36,7 +36,9 @@ class GameView(context: Context) : View(context) {
     private val brickBitmap: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.tile_brick)
     private val goalBitmap: Bitmap =
-        BitmapFactory.decodeResource(resources, R.drawable.tile_goal)
+        makeTileBackgroundTransparent(
+            BitmapFactory.decodeResource(resources, R.drawable.tile_goal)
+        )
     private val boxBitmap: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.tile_box)
     private val legacyPlayerBitmap: Bitmap =
@@ -67,7 +69,9 @@ class GameView(context: Context) : View(context) {
      */
     private val boxGoalBitmaps: List<Bitmap> by lazy(LazyThreadSafetyMode.NONE) {
         OriginalAnimationFrames.boxGoalPngBase64.map { encoded ->
-            decodeEmbeddedBitmapOrFallback(encoded, boxBitmap)
+            makeTileBackgroundTransparent(
+                decodeEmbeddedBitmapOrFallback(encoded, boxBitmap)
+            )
         }
     }
 
@@ -876,6 +880,115 @@ class GameView(context: Context) : View(context) {
             rawCell
         }
 
+    /**
+     * Removes the opaque square background that exists around the original
+     * 14x14 goal/goal-success sprites. Only the border-connected background
+     * is cleared, so the house/ball pixels remain intact while the current
+     * playfield floor and diagonal pattern show through naturally.
+     */
+    private fun makeTileBackgroundTransparent(source: Bitmap): Bitmap {
+        val width = source.width
+        val height = source.height
+
+        if (width <= 0 || height <= 0) return source
+
+        val pixels = IntArray(width * height)
+        source.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        val borderColors = mutableListOf<Int>()
+
+        fun addBorderColor(x: Int, y: Int) {
+            val color = pixels[y * width + x]
+            if (Color.alpha(color) > 0) {
+                borderColors += color
+            }
+        }
+
+        for (x in 0 until width) {
+            addBorderColor(x, 0)
+            addBorderColor(x, height - 1)
+        }
+        for (y in 1 until height - 1) {
+            addBorderColor(0, y)
+            addBorderColor(width - 1, y)
+        }
+
+        if (borderColors.isEmpty()) return source
+
+        val grouped = borderColors.groupingBy { it }.eachCount()
+        val backgroundColor =
+            grouped.maxByOrNull { it.value }?.key ?: borderColors.first()
+
+        fun isBackgroundLike(color: Int): Boolean {
+            if (Color.alpha(color) == 0) return true
+
+            val dr = kotlin.math.abs(
+                Color.red(color) - Color.red(backgroundColor)
+            )
+            val dg = kotlin.math.abs(
+                Color.green(color) - Color.green(backgroundColor)
+            )
+            val db = kotlin.math.abs(
+                Color.blue(color) - Color.blue(backgroundColor)
+            )
+
+            return dr <= TILE_BG_TOLERANCE &&
+                dg <= TILE_BG_TOLERANCE &&
+                db <= TILE_BG_TOLERANCE
+        }
+
+        val transparent = BooleanArray(width * height)
+        val queue = ArrayDeque<Int>()
+
+        fun enqueueIfBackground(x: Int, y: Int) {
+            val index = y * width + x
+            if (
+                !transparent[index] &&
+                isBackgroundLike(pixels[index])
+            ) {
+                transparent[index] = true
+                queue.add(index)
+            }
+        }
+
+        for (x in 0 until width) {
+            enqueueIfBackground(x, 0)
+            enqueueIfBackground(x, height - 1)
+        }
+        for (y in 1 until height - 1) {
+            enqueueIfBackground(0, y)
+            enqueueIfBackground(width - 1, y)
+        }
+
+        while (queue.isNotEmpty()) {
+            val index = queue.removeFirst()
+            val x = index % width
+            val y = index / width
+
+            if (x > 0) enqueueIfBackground(x - 1, y)
+            if (x + 1 < width) enqueueIfBackground(x + 1, y)
+            if (y > 0) enqueueIfBackground(x, y - 1)
+            if (y + 1 < height) enqueueIfBackground(x, y + 1)
+        }
+
+        var changed = false
+        transparent.forEachIndexed { index, clear ->
+            if (clear && Color.alpha(pixels[index]) != 0) {
+                pixels[index] = Color.TRANSPARENT
+                changed = true
+            }
+        }
+
+        if (!changed) return source
+
+        return Bitmap.createBitmap(
+            pixels,
+            width,
+            height,
+            Bitmap.Config.ARGB_8888
+        )
+    }
+
     private fun decodeEmbeddedBitmapOrFallback(
         encoded: String,
         fallback: Bitmap
@@ -923,6 +1036,7 @@ class GameView(context: Context) : View(context) {
         const val ORIGINAL_TILE_PX = 14
         const val PLAYER_IDLE_FRAME_COUNT = 70L
         const val ORIGINAL_FRAME_DURATION_MS = 100L
+        const val TILE_BG_TOLERANCE = 18
 
         const val ENDING_SPAN_TILES = 12f
         const val ENDING_CREDIT_FADE_MS = 2000L
