@@ -4,7 +4,7 @@
 
 ## 개발 환경
 
-현재 개발 기준 환경은 다음과 같습니다.
+현재 개발 기준 환경:
 
 - **Windows 11**
 - **Android Studio**
@@ -13,12 +13,17 @@
 
 WSL2, Docker, 로컬 MCP 서버는 사용하지 않습니다.
 
-웹 ChatGPT가 GitHub MCP를 통해 저장소 코드를 직접 수정하고,
-Windows 11에서 `git pull` 후 Android Studio로 빌드/실행하는 방식으로 진행합니다.
+작업 흐름:
+
+```text
+웹 ChatGPT
+→ GitHub MCP
+→ 1006U/pushpush2 코드 수정
+→ Windows 11에서 git pull
+→ Android Studio 실행/테스트
+```
 
 ## 현재 구현 상태
-
-현재 다음 기능까지 구현되어 있습니다.
 
 - Android 앱 기본 프로젝트
 - Kotlin 기반 Sokoban 게임 엔진
@@ -29,26 +34,27 @@ Windows 11에서 `git pull` 후 Android Studio로 빌드/실행하는 방식으�
 - 스테이지 선택
 - 클리어 후 다음 스테이지 해금
 - SharedPreferences 기반 진행상황 저장
-- 원본 SWF의 벽 / 목표 / 박스 / 플레이어 기본 그래픽 추출
-- 원본 14×14 픽셀 타일 그래픽을 Android 게임 화면에 적용
+- 원본 벽 / 목표 / 박스 / 플레이어 기본 그래픽 추출
+- 원본 14×14 픽셀 그래픽 적용
+- 원본 사운드 추출 스크립트 추가
+- 이동 / 클리어 / 버튼 사운드 연결 코드 추가
+- GitHub Actions Android 빌드 CI 추가
 
-현재 캐릭터는 원본 기본 프레임 1장을 사용하고 있으며,
-방향별 이동 애니메이션과 사운드 연결은 다음 작업입니다.
+플레이어는 현재 원본 기본 프레임 1장을 사용합니다.
+방향별 이동 애니메이션은 아직 적용 전입니다.
 
 ## 원본 SWF 분석 결과
-
-확인된 주요 정보:
 
 - Flash/SWF 버전: **6**
 - 원본 화면 크기: **240 × 250 px**
 - 프레임 속도: **10 fps**
 - 실제 퍼즐 스테이지: **66개**
 - 원본 퍼즐 격자 간격: **14 px**
-- `stage_map` 프레임 1~66: 게임 스테이지
+- `stage_map` 프레임 1~66: 퍼즐 스테이지
 - 프레임 67: 엔딩
 - 프레임 68: 빈 프레임
 
-원본에서 확인된 주요 심볼:
+주요 심볼:
 
 - `brick` → 벽
 - `house` → 목표
@@ -63,15 +69,13 @@ Windows 11에서 `git pull` 후 Android Studio로 빌드/실행하는 방식으�
 - `clear.wav`
 - `button.wav`
 
-실제 SWF 내부 사운드는 MP3 압축 데이터로 저장되어 있으며 추출 가능함을 확인했습니다.
+실제 DefineSound 데이터는 MP3 형식입니다.
 
-자세한 분석 내용은:
+자세한 분석:
 
 ```text
 docs/ORIGINAL_SWF_NOTES.md
 ```
-
-를 참고하세요.
 
 ## Windows 11에서 프로젝트 받기
 
@@ -79,23 +83,64 @@ PowerShell:
 
 ```powershell
 cd C:\Users\kim\Documents
-
 git clone https://github.com/1006U/pushpush2.git
 cd pushpush2
 ```
 
-이미 clone했다면 이후에는:
+이미 clone했다면:
 
 ```powershell
 cd C:\Users\kim\Documents\pushpush2
 git pull
 ```
 
-만 실행하면 됩니다.
+## 원본 SWF 넣기
+
+첨부한 원본 파일을 Windows 프로젝트에:
+
+```text
+C:\Users\kim\Documents\pushpush2\original\game.swf
+```
+
+로 넣습니다.
+
+`original/*`는 `.gitignore` 처리되어 GitHub에 올라가지 않습니다.
+
+## 원본 사운드 추출
+
+원본 SWF를 위 경로에 넣은 뒤 PowerShell에서:
+
+```powershell
+cd C:\Users\kim\Documents\pushpush2
+py tools\extract_original_audio.py
+```
+
+실행합니다.
+
+성공하면 자동으로:
+
+```text
+app\src\main\res\raw\
+├── success.mp3
+├── start.mp3
+├── move.mp3
+├── clear.mp3
+└── button.mp3
+```
+
+가 생성됩니다.
+
+앱 코드는 해당 파일이 존재할 경우 자동으로 재생합니다.
+
+현재 연결된 동작:
+
+- 이동 성공 → `move.mp3`
+- 스테이지 클리어 → `clear.mp3`
+- 스테이지 선택 / 재시작 / 다음 스테이지 → `button.mp3`
 
 ## Android Studio에서 실행
 
-Android Studio에서:
+Android Studio:
 
 ```text
 File
@@ -103,50 +148,53 @@ File
 → C:\Users\kim\Documents\pushpush2
 ```
 
-를 선택합니다.
+Gradle Sync 완료 후 에뮬레이터 또는 실제 스마트폰에서 **Run ▶** 을 실행합니다.
 
-Gradle Sync가 끝나면 에뮬레이터 또는 실제 Android 스마트폰을 연결하고 **Run ▶** 을 실행합니다.
-
-## 명령줄에서 Debug APK 빌드
-
-Android SDK와 JDK가 설정되어 있다면 PowerShell에서:
+## PowerShell에서 Debug APK 빌드
 
 ```powershell
 .\gradlew.bat assembleDebug
 ```
 
-성공하면 APK는:
+성공 시:
 
 ```text
 app\build\outputs\apk\debug\app-debug.apk
 ```
 
-에 생성됩니다.
+## GitHub Actions 자동 빌드
 
-## 원본 SWF 보관
-
-원본 `game.swf`는 GitHub 저장소에 올리지 않고 로컬 참조용으로 관리합니다.
-
-Windows 프로젝트 폴더에서:
+`main` 브랜치에 코드가 올라가면 GitHub Actions가:
 
 ```text
-pushpush2/
-└── original/
-    └── game.swf
+./gradlew assembleDebug
 ```
 
-형태로 두면 됩니다.
+를 자동 실행합니다.
 
-`.gitignore`에 의해 `original/*` 파일은 Git에 올라가지 않습니다.
+성공하면 Actions 실행 결과에:
+
+```text
+pushpush2-debug-apk
+```
+
+Artifact가 생성됩니다.
+
+따라서 로컬 Android Studio를 열기 전에도 GitHub에서 컴파일 오류를 확인할 수 있습니다.
 
 ## 현재 프로젝트 구조
 
 ```text
 pushpush2/
+├── .github/
+│   └── workflows/
+│       └── android-ci.yml
 ├── app/
 │   └── src/main/
 │       ├── java/com/pushpush2/
 │       │   ├── MainActivity.kt
+│       │   ├── audio/
+│       │   │   └── AudioPlayer.kt
 │       │   ├── data/
 │       │   │   └── ProgressStore.kt
 │       │   ├── game/
@@ -169,6 +217,8 @@ pushpush2/
 │   └── ORIGINAL_SWF_NOTES.md
 ├── original/
 │   └── README.md
+├── tools/
+│   └── extract_original_audio.py
 ├── PROJECT_STATUS.md
 ├── README.md
 ├── build.gradle.kts
@@ -177,12 +227,12 @@ pushpush2/
 └── gradlew.bat
 ```
 
-## 앞으로의 작업
+## 다음 작업
 
-1. 원본 캐릭터 방향별 프레임 분석 및 애니메이션 적용
-2. 원본 `move / clear / start / button / success` 사운드 연결
-3. 원본 240×250 화면 배치에 더 가깝게 UI 조정
-4. 터치패드 길게 누르기 / 반복 이동 개선
+1. 플레이어 방향별 원본 프레임 분석
+2. 이동 애니메이션 적용
+3. 원본 240×250 화면 배치 재현
+4. 터치패드 길게 누르기 / 반복 이동
 5. 66개 스테이지 실제 플레이 검증
 6. 실기기 테스트
 7. APK 릴리즈
