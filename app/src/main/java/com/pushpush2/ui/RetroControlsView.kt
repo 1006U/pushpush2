@@ -345,10 +345,6 @@ class RetroControlsView(context: Context) : View(context) {
         paint.color = Color.rgb(91, 103, 116)
         canvas.drawOval(bezelRect, paint)
 
-        pressedDirection?.let { direction ->
-            drawLedHalo(canvas, direction)
-        }
-
         Direction.entries.forEach { direction ->
             drawRingSegment(
                 canvas = canvas,
@@ -459,63 +455,6 @@ class RetroControlsView(context: Context) : View(context) {
         }
         canvas.drawPath(path, paint)
 
-        if (pressed) {
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = dpF(1.2f)
-            paint.color = LED_BLUE_PALE
-            canvas.drawArc(
-                RectF(
-                    dpadCx - dpadRx * 0.86f,
-                    dpadCy - dpadRy * 0.86f,
-                    dpadCx + dpadRx * 0.86f,
-                    dpadCy + dpadRy * 0.86f
-                ),
-                startAngle + 7f,
-                sweep - 14f,
-                false,
-                paint
-            )
-        }
-    }
-
-    private fun drawLedHalo(
-        canvas: Canvas,
-        direction: Direction
-    ) {
-        val gx = when (direction) {
-            Direction.LEFT -> dpadCx - dpadRx * 0.64f
-            Direction.RIGHT -> dpadCx + dpadRx * 0.64f
-            else -> dpadCx
-        }
-
-        val gy = when (direction) {
-            Direction.UP -> dpadCy - dpadRy * 0.64f
-            Direction.DOWN -> dpadCy + dpadRy * 0.64f
-            else -> dpadCy
-        }
-
-        paint.style = Paint.Style.FILL
-        paint.color = Color.argb(35, 0, 119, 255)
-        canvas.drawOval(
-            RectF(
-                gx - dpF(20),
-                gy - dpF(13),
-                gx + dpF(20),
-                gy + dpF(13)
-            ),
-            paint
-        )
-
-        paint.color = Color.argb(62, 0, 153, 255)
-        canvas.drawOval(
-            RectF(
-                gx - dpF(13),
-                gy - dpF(8),
-                gx + dpF(13),
-                gy + dpF(8)
-            ),
-            paint
-        )
     }
 
     /**
