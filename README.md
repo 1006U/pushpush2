@@ -238,3 +238,24 @@ pushpush2/
 7. APK 릴리즈
 
 현재 진행상황은 `PROJECT_STATUS.md`에 기록합니다.
+
+
+## 새 ChatGPT 대화에서 이어서 개발
+
+웹 ChatGPT 대화가 길어졌다면 새 채팅에서 다음 파일을 먼저 읽도록 요청하세요.
+
+```text
+HANDOFF.md
+PROJECT_STATUS.md
+README.md
+docs/ORIGINAL_SWF_NOTES.md
+```
+
+가장 간단한 시작 문장:
+
+```text
+GitHub MCP로 1006U/pushpush2의 HANDOFF.md를 읽고
+main 최신 상태와 GitHub Actions 결과를 확인한 뒤 이어서 개발해줘.
+```
+
+원본 SWF를 추가 분석해야 하는 작업에서는 `game.swf`를 새 채팅에 다시 첨부해야 합니다.
