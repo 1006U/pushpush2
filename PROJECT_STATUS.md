@@ -96,6 +96,11 @@
 - [x] MediaPlayer 코덱/재생 오류가 Activity를 종료하지 않도록 방어 처리
 - [x] 사용자 제공 캐릭터 이미지를 14×14 플레이어 타일로 적용
 - [x] 새 캐릭터 기준 눈 깜빡임/성공 반응 프레임 통일
+- [x] 친구 배포용 Signed Release APK GitHub Actions workflow 추가
+- [x] Release keystore/비밀번호 Git 커밋 방지 `.gitignore` 보강
+- [x] VERSION_CODE / VERSION_NAME 환경 변수 기반 배포 버전 주입 지원
+- [x] `apksigner` 서명 검증 및 `PushPush2-vX.Y.Z.apk` Artifact 생성 자동화
+- [x] `RELEASING.md` 친구 배포 절차 문서화
 
 ## 현재 상태
 
@@ -280,12 +285,22 @@ GitHub Actions의:
 핵심 명령:
 
 ```text
-./gradlew testDebugUnitTest lintDebug assembleDebug
+./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
 ```
 
 성공하면 `pushpush2-debug-apk` Artifact를 업로드합니다.
 또한 Android 7.0(API 24)과 Android 16(API 36) 에뮬레이터에서 APK를 설치/실행하고,
 각 실행 화면을 `pushpush2-smoke-api-24`, `pushpush2-smoke-api-36` Artifact로 저장합니다.
+
+친구 배포용 workflow:
+
+```text
+.github/workflows/friend-release.yml
+```
+
+은 GitHub Secrets에 등록한 release keystore로 APK를 서명하고,
+`apksigner` 검증 후 `PushPush2-vX.Y.Z.apk` Artifact를 생성합니다.
+GitHub Release는 자동 공개하지 않습니다.
 
 ## 다음 우선순위
 
@@ -299,7 +314,8 @@ GitHub Actions의:
 - [ ] Galaxy S10 실제 화면에서 D-pad 높이/보드 영역 확인
 - [ ] 66개 스테이지 실제 플레이 검증
 - [ ] Android Studio 실기기 테스트
-- [ ] APK 릴리즈
+- [ ] Release keystore 생성 및 GitHub Actions Secrets 4개 등록
+- [ ] Friend Release APK workflow로 첫 Signed APK 생성 및 실기기 업데이트 설치 확인
 
 ## 개발 원칙
 

@@ -56,7 +56,7 @@ branch: main
   ↓ GitHub MCP
 GitHub main 브랜치 수정
   ↓
-GitHub Actions assembleDebug 검증
+GitHub Actions Debug/Release 변형 검증
   ↓
 Windows 11
   ↓ git pull
@@ -116,6 +116,9 @@ Android Studio / Emulator / 실제 스마트폰 테스트
 - AGP 8.13.2 / Gradle 8.13 / JDK 17
 - maxSdkVersion 미지정으로 이후 Android 설치 차단 없음
 - GitHub Actions Debug APK 자동 빌드
+- 친구 배포용 Signed Release APK workflow 추가 (`.github/workflows/friend-release.yml`)
+- Release 서명키/비밀번호는 GitHub Secrets로만 주입하고 `.jks`/keystore 파일은 `.gitignore`로 제외
+- `RELEASING.md`에 Android Studio keystore 생성, Base64 변환, Secrets 등록, 수동/태그 배포 절차 문서화
 - GameEngine JVM 회귀 테스트 및 66개 스테이지 구조 무결성 테스트
 - GitHub Actions Android 7.0(API 24) 실제 실행 smoke test
 - GitHub Actions Android 16(API 36) 실제 실행 smoke test
@@ -258,7 +261,7 @@ Workflow:
 핵심 빌드 명령:
 
 ```text
-./gradlew testDebugUnitTest lintDebug assembleDebug
+./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
 ```
 
 새 ChatGPT 대화에서는 코드 변경 후 항상 최신 workflow run을 확인합니다.
@@ -275,7 +278,8 @@ Workflow:
 2. 66개 스테이지 실제 플레이 검증
    - 스테이지 수/번호/박스·목표 수/좌표 범위 등 구조 무결성 자동 테스트는 완료
 3. Android Studio 실기기 테스트
-4. Debug APK 안정화 후 릴리즈 APK 생성
+4. Release keystore 생성 및 GitHub Actions Secrets 4개 등록 후 첫 Signed APK 생성
+   - 자세한 절차: `RELEASING.md`
 
 ## 중요한 주의사항
 
