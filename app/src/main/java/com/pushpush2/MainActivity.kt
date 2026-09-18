@@ -9,7 +9,6 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import com.pushpush2.audio.AudioPlayer
 import com.pushpush2.data.ProgressStore
 import com.pushpush2.game.Direction
@@ -30,6 +29,7 @@ class MainActivity : Activity() {
     private var currentStageNumber = 1
     private lateinit var engine: GameEngine
     private var clearHandled = false
+    private var pendingStageAdvance: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,6 +51,7 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        cancelPendingStageAdvance()
         audioPlayer.release()
         super.onDestroy()
     }
@@ -181,28 +182,53 @@ class MainActivity : Activity() {
                 totalStages = StageRepository.stages.size
             )
 
-            audioPlayer.play("clear")
-            Toast.makeText(this, "STAGE CLEAR!", Toast.LENGTH_SHORT).show()
-
             val next = currentStageNumber + 1
 
-            AlertDialog.Builder(this)
-                .setTitle("STAGE CLEAR!")
-                .setMessage("${state.moves}번 이동으로 클리어했습니다.")
-                .setNegativeButton("현재 화면", null)
-                .apply {
-                    if (next <= StageRepository.stages.size) {
-                        setPositiveButton("다음 스테이지") { _, _ ->
-                            audioPlayer.play("button")
-                            loadStage(next)
-                        }
-                    }
-                }
-                .show()
+            if (next <= StageRepository.stages.size) {
+                scheduleAutomaticStageAdvance(next)
+            } else {
+                // 원본은 stage_map frame 67의 엔딩으로 진행한다.
+                // 엔딩 화면 이식 전까지 마지막 퍼즐의 클리어 상태를 유지한다.
+                audioPlayer.play("clear")
+            }
+        }
+    }
+
+    private fun scheduleAutomaticStageAdvance(nextStage: Int) {
+        cancelPendingStageAdvance()
+
+        gameView.animate()
+            .alpha(0f)
+            .setDuration(STAGE_CLEAR_FADE_MS)
+            .start()
+
+        val advance = Runnable {
+            pendingStageAdvance = null
+            gameView.animate().cancel()
+            gameView.alpha = 1f
+
+            // 원본 stageFade_chk()도 페이드가 끝난 뒤 clear 사운드를 시작하고
+            // stage_map의 다음 프레임을 불러온다.
+            audioPlayer.play("clear")
+            loadStage(nextStage)
+        }
+
+        pendingStageAdvance = advance
+        gameView.postDelayed(advance, STAGE_CLEAR_FADE_MS)
+    }
+
+    private fun cancelPendingStageAdvance() {
+        pendingStageAdvance?.let { gameView.removeCallbacks(it) }
+        pendingStageAdvance = null
+
+        if (::gameView.isInitialized) {
+            gameView.animate().cancel()
+            gameView.alpha = 1f
         }
     }
 
     private fun restartStage() {
+        cancelPendingStageAdvance()
         clearHandled = false
         engine.reset()
         gameView.resetPlayerAnimation()
@@ -210,6 +236,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadStage(number: Int) {
+        cancelPendingStageAdvance()
         currentStageNumber = number
         clearHandled = false
         engine.load(StageRepository.get(number))
@@ -275,6 +302,10 @@ class MainActivity : Activity() {
 
     private companion object {
         const val KEY_STAGE = "current_stage"
+
+        // 원본은 stage_map._alpha를 10씩 빠르게 낮춘 뒤 다음 프레임으로 이동한다.
+        // Android에서는 짧은 120ms 페이드로 같은 체감을 재현한다.
+        const val STAGE_CLEAR_FADE_MS = 120L
 
         val BACKGROUND: Int = Color.rgb(172, 181, 191)
         val CONTROL_PANEL: Int = Color.rgb(184, 193, 202)
