@@ -668,13 +668,14 @@ class GameView(context: Context) : View(context) {
             floatArrayOf(0.5f, 1.5f)
         )
 
+        // 피처폰 원작 화면처럼 게임판 바깥을 선명한 파란색으로 유지한다.
         val OUTER_BACKGROUND: Int =
-            Color.rgb(8, 10, 12)
+            Color.rgb(45, 132, 218)
 
         val FLOOR_COLOR: Int =
             Color.rgb(255, 255, 255)
 
         val FRAME_COLOR: Int =
-            Color.rgb(98, 103, 108)
+            Color.rgb(24, 54, 82)
     }
 }
