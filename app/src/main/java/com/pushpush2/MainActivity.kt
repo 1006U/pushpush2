@@ -86,7 +86,10 @@ class MainActivity : Activity() {
         updateUi()
         showHeaderState(HeaderState.PLAYING)
 
-        if (savedInstanceState == null) {
+        val shouldShowStartScreen =
+            savedInstanceState?.getBoolean(KEY_START_SCREEN, false) ?: true
+
+        if (shouldShowStartScreen) {
             showStartScreen()
         }
     }
@@ -144,6 +147,7 @@ class MainActivity : Activity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putInt(KEY_STAGE, currentStageNumber)
+        outState.putBoolean(KEY_START_SCREEN, showingStartScreen)
         super.onSaveInstanceState(outState)
     }
 
@@ -834,6 +838,7 @@ class MainActivity : Activity() {
 
     private companion object {
         const val KEY_STAGE = "current_stage"
+        const val KEY_START_SCREEN = "showing_start_screen"
 
         // 원작 10fps에서 alpha를 단계적으로 낮추는 체감을 살리기 위해
         // 클리어 메시지와 캐릭터 반응이 눈에 보이는 시간까지 확보한다.
