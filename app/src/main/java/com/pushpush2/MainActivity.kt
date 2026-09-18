@@ -6,7 +6,6 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -16,6 +15,7 @@ import com.pushpush2.game.Direction
 import com.pushpush2.game.GameEngine
 import com.pushpush2.game.StageRepository
 import com.pushpush2.ui.GameView
+import com.pushpush2.ui.RetroControlsView
 
 class MainActivity : Activity() {
 
@@ -57,47 +57,47 @@ class MainActivity : Activity() {
     private fun buildContentView(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(17, 17, 17))
-            setPadding(dp(12), dp(10), dp(12), dp(14))
+            setBackgroundColor(BACKGROUND)
         }
 
-        val header = LinearLayout(this).apply {
+        val gameShell = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.BLACK)
+            setPadding(dp(10), dp(10), dp(10), dp(8))
+        }
+
+        val infoBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(6), 0, dp(6), dp(6))
         }
 
         stageLabel = TextView(this).apply {
-            setTextColor(Color.WHITE)
-            textSize = 20f
+            setTextColor(Color.rgb(227, 232, 238))
+            textSize = 15f
+            typeface = android.graphics.Typeface.MONOSPACE
         }
 
         moveLabel = TextView(this).apply {
-            setTextColor(Color.LTGRAY)
-            textSize = 14f
+            setTextColor(Color.rgb(163, 174, 187))
+            textSize = 13f
             gravity = Gravity.END
+            typeface = android.graphics.Typeface.MONOSPACE
         }
 
-        header.addView(stageLabel, LinearLayout.LayoutParams(0, dp(48), 1f))
-        header.addView(moveLabel, LinearLayout.LayoutParams(dp(78), dp(48)))
-        header.addView(
-            button("스테이지") {
-                audioPlayer.play("button")
-                showStageSelector()
-            },
-            LinearLayout.LayoutParams(dp(88), dp(48))
+        infoBar.addView(
+            stageLabel,
+            LinearLayout.LayoutParams(0, dp(34), 1f)
         )
-        header.addView(
-            button("↻") {
-                audioPlayer.play("button")
-                restartStage()
-            },
-            LinearLayout.LayoutParams(dp(58), dp(48))
+        infoBar.addView(
+            moveLabel,
+            LinearLayout.LayoutParams(dp(120), dp(34))
         )
 
         gameView = GameView(this)
 
-        root.addView(header)
-        root.addView(
+        gameShell.addView(infoBar)
+        gameShell.addView(
             gameView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -105,53 +105,51 @@ class MainActivity : Activity() {
                 1f
             )
         )
-        root.addView(buildDPad())
+
+        val controlsPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(CONTROL_PANEL)
+            setPadding(dp(8), dp(2), dp(8), dp(8))
+        }
+
+        val controls = RetroControlsView(this).apply {
+            onDirection = { direction -> move(direction) }
+            onStageClick = {
+                audioPlayer.play("button")
+                showStageSelector()
+            }
+            onRetryClick = {
+                audioPlayer.play("button")
+                restartStage()
+            }
+        }
+
+        controlsPanel.addView(
+            controls,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(216)
+            )
+        )
+
+        root.addView(
+            gameShell,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        )
+        root.addView(
+            controlsPanel,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
 
         return root
     }
-
-    private fun buildDPad(): View {
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(0, dp(10), 0, 0)
-        }
-
-        val top = LinearLayout(this).apply {
-            gravity = Gravity.CENTER
-        }
-        top.addView(
-            button("▲") { move(Direction.UP) },
-            LinearLayout.LayoutParams(dp(76), dp(58))
-        )
-
-        val middle = LinearLayout(this).apply {
-            gravity = Gravity.CENTER
-        }
-        middle.addView(
-            button("◀") { move(Direction.LEFT) },
-            LinearLayout.LayoutParams(dp(76), dp(58))
-        )
-        middle.addView(
-            button("▼") { move(Direction.DOWN) },
-            LinearLayout.LayoutParams(dp(76), dp(58))
-        )
-        middle.addView(
-            button("▶") { move(Direction.RIGHT) },
-            LinearLayout.LayoutParams(dp(76), dp(58))
-        )
-
-        container.addView(top)
-        container.addView(middle)
-        return container
-    }
-
-    private fun button(text: String, onClick: () -> Unit): Button =
-        Button(this).apply {
-            this.text = text
-            textSize = 16f
-            setOnClickListener { onClick() }
-        }
 
     private fun move(direction: Direction) {
         if (!engine.move(direction)) return
@@ -170,17 +168,20 @@ class MainActivity : Activity() {
             Toast.makeText(this, "STAGE CLEAR!", Toast.LENGTH_SHORT).show()
 
             val next = currentStageNumber + 1
-            if (next <= StageRepository.stages.size) {
-                AlertDialog.Builder(this)
-                    .setTitle("STAGE CLEAR!")
-                    .setMessage("${engine.state.moves}번 이동으로 클리어했습니다.")
-                    .setNegativeButton("계속 보기", null)
-                    .setPositiveButton("다음 스테이지") { _, _ ->
-                        audioPlayer.play("button")
-                        loadStage(next)
+
+            AlertDialog.Builder(this)
+                .setTitle("STAGE CLEAR!")
+                .setMessage("${engine.state.moves}번 이동으로 클리어했습니다.")
+                .setNegativeButton("현재 화면", null)
+                .apply {
+                    if (next <= StageRepository.stages.size) {
+                        setPositiveButton("다음 스테이지") { _, _ ->
+                            audioPlayer.play("button")
+                            loadStage(next)
+                        }
                     }
-                    .show()
-            }
+                }
+                .show()
         }
     }
 
@@ -202,14 +203,15 @@ class MainActivity : Activity() {
             .coerceAtMost(StageRepository.stages.size)
 
         val choices = StageRepository.stages.map { stage ->
-            val marker = if (stage.number <= unlocked) "✓" else "🔒"
-            "$marker STAGE ${stage.number}  ${stage.name}"
+            val marker = if (stage.number <= unlocked) "●" else "○"
+            "$marker STAGE ${stage.number}"
         }.toTypedArray()
 
         AlertDialog.Builder(this)
-            .setTitle("스테이지 선택")
+            .setTitle("STAGE SELECT")
             .setItems(choices) { dialog, which ->
                 val stage = StageRepository.stages[which]
+
                 if (stage.number <= unlocked) {
                     audioPlayer.play("button")
                     loadStage(stage.number)
@@ -227,8 +229,11 @@ class MainActivity : Activity() {
 
     private fun updateUi() {
         val state = engine.state
-        stageLabel.text = "STAGE ${state.stage.number}"
-        moveLabel.text = "MOVE ${state.moves}"
+        stageLabel.text = "STAGE %02d / %02d".format(
+            state.stage.number,
+            StageRepository.stages.size
+        )
+        moveLabel.text = "MOVE %03d".format(state.moves)
         gameView.render(state)
     }
 
@@ -237,5 +242,8 @@ class MainActivity : Activity() {
 
     private companion object {
         const val KEY_STAGE = "current_stage"
+
+        val BACKGROUND: Int = Color.rgb(172, 181, 191)
+        val CONTROL_PANEL: Int = Color.rgb(184, 193, 202)
     }
 }
