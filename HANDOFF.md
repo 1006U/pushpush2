@@ -84,7 +84,9 @@ Android Studio / Emulator / 실제 스마트폰 테스트
 - 원본 14×14 픽셀 타일 비율 유지
 - 가능한 경우 정수 배율 확대
 - 원본 SWF 사운드 추출용 Windows Python 스크립트
-- move / clear / button 사운드 연결 코드
+- move / clear / button / start / success 사운드 연결
+- 플레이어 Sprite 370의 1~70프레임 원본 10fps 대기/눈 깜빡임 적용
+- Galaxy S8(Android 7.0/API 24)부터 실행 가능하도록 minSdk 24 적용
 - GitHub Actions Debug APK 자동 빌드
 
 ## 원본 SWF 분석 결과
@@ -222,14 +224,16 @@ Workflow:
 
 ## 다음 우선순위
 
-1. 플레이어 Sprite 370의 방향/프레임 정확히 매핑
-2. 상/하/좌/우 이동 애니메이션 적용
-3. 박스 Sprite 356 애니메이션 사용 여부 확인
-4. success / start 사운드가 원본에서 언제 재생되는지 분석
-5. 현대 스마트폰에서 게임 영역과 D-pad 크기 실기기 미세 조정
-6. 66개 스테이지 실제 플레이 검증
-7. Android Studio 에뮬레이터/실기기 테스트
-8. Debug APK 안정화 후 릴리즈 APK 생성
+원본 SWF 재분석 결과 Sprite 370의 1~70프레임은 방향 이동이 아니라 대기/눈 깜빡임 루프이며 이미 적용했습니다.
+또한 박스가 목표에 들어갈 때 박스 Sprite 356은 frame 2부터, 플레이어 Sprite 370은 frame 71부터 반응 애니메이션을 재생하는 것을 확인했습니다.
+
+1. 박스 Sprite 356의 2~13프레임 그래픽 복원 및 애니메이션 적용
+2. 플레이어 Sprite 370의 71~76프레임 성공 반응 애니메이션 적용
+3. 박스 목표 진입 시 두 애니메이션 원본 타이밍 동기화
+4. Galaxy S8 / S10에서 게임 영역과 D-pad 크기 실기기 미세 조정
+5. 66개 스테이지 실제 플레이 검증
+6. Android Studio 에뮬레이터/실기기 테스트
+7. Debug APK 안정화 후 릴리즈 APK 생성
 
 ## 중요한 주의사항
 
