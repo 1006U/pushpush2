@@ -165,12 +165,14 @@ class MainActivity : Activity() {
 
         val state = engine.state
         val boxEnteredGoal =
-            (state.boxes - boxesBefore).any { it in state.stage.goals }
+            (state.boxes - boxesBefore)
+                .firstOrNull { it in state.stage.goals }
 
         audioPlayer.play("move")
 
-        if (boxEnteredGoal) {
+        if (boxEnteredGoal != null) {
             audioPlayer.play("success")
+            gameView.playGoalSuccess(boxEnteredGoal)
         }
 
         updateUi()
