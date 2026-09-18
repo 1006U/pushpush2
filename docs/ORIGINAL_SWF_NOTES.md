@@ -19,6 +19,34 @@
 - 67: 엔딩 화면
 - 68: 빈 프레임
 
+### frame 67 엔딩 분석
+
+원본 엔딩에는 다음 심볼이 배치됩니다.
+
+- Shape 371: 중앙 노랑→빨강 그라데이션 장식
+- Sprite 388 (`text_ending`): 크레딧 텍스트
+- Text 389: `Flash PUSH II v0.95`
+- 벽/박스/플레이어 심볼을 이용한 장식 배치
+
+`text_ending`의 ClipAction은 EnterFrame마다 alpha를 5씩 증가/감소시키고,
+alpha가 0 아래로 내려가면 `nextFrame()`을 호출합니다.
+
+10fps 기준 약 2초 페이드 인 + 약 2초 페이드 아웃 후 다음 크레딧으로 넘어갑니다.
+
+크레딧 순서:
+
+1. Congratulations / Game Clear
+2. The Originator / Hiroyuki Imabayashi - Socoban
+3. The Original Maker / intromobile.com - PUSH II
+4. Copyright / SAMSUNG All Right Reserved
+5. Special Thanks / chang118
+6. Special Thanks / bockdori
+7. Special Thanks / yeom1987
+8. Special Thanks / & you.
+9. Program Producer / ilovecup
+
+Android 앱에도 이 순서와 페이드 주기를 적용했습니다.
+
 각 스테이지의 인스턴스 이름과 위치를 읽어 다음 요소를 복원했습니다.
 
 - `brickN` → 벽
@@ -262,5 +290,6 @@ SWF를 Android에서 직접 실행하지 않습니다.
 6. start / success 사운드 사용 시점 반영 ✅
 7. 박스 2~13 목표 진입 애니메이션 ✅
 8. 플레이어 71~76 성공 반응 애니메이션 ✅
-9. Galaxy S8 / S10 실기기 UI 미세 조정
-10. 66개 스테이지 실제 플레이 검증
+9. stage_map frame 67 엔딩 화면 ✅
+10. Galaxy S8 / S10 실기기 UI 미세 조정
+11. 66개 스테이지 실제 플레이 검증
