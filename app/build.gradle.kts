@@ -5,12 +5,20 @@ plugins {
 
 android {
     namespace = "com.pushpush2"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.pushpush2"
+
+        // Galaxy S8 shipped with Android 7.0 (API 24).
+        // Keep this baseline so the original target device remains supported.
         minSdk = 24
-        targetSdk = 35
+
+        // Target the current stable Android compatibility level while keeping
+        // minSdk independent. Newer Android releases remain installable unless
+        // a future platform explicitly introduces a compatibility issue.
+        targetSdk = 36
+
         versionCode = 1
         versionName = "0.1.0"
     }

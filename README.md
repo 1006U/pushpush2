@@ -39,6 +39,8 @@ WSL2, Docker, 로컬 MCP 서버는 사용하지 않습니다.
 - 원본 사운드 추출 스크립트 추가
 - 이동 / 클리어 / 버튼 사운드 연결 코드 추가
 - GitHub Actions Android 빌드 CI 추가
+- Galaxy S8(Android 7.0/API 24)부터 지원
+- Android 16(API 36) compileSdk/targetSdk 대응
 
 플레이어는 현재 원본 기본 프레임 1장을 사용합니다.
 방향별 이동 애니메이션은 아직 적용 전입니다.
@@ -167,7 +169,7 @@ app\build\outputs\apk\debug\app-debug.apk
 `main` 브랜치에 코드가 올라가면 GitHub Actions가:
 
 ```text
-./gradlew assembleDebug
+./gradlew lintDebug assembleDebug
 ```
 
 를 자동 실행합니다.

@@ -25,8 +25,8 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug
+      - name: Android compatibility checks
+        run: ./gradlew lintDebug assembleDebug
 
       - name: Upload debug APK
         if: success()

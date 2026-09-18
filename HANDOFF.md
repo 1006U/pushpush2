@@ -92,6 +92,9 @@ Android Studio / Emulator / 실제 스마트폰 테스트
 - 목표 위 박스는 원본 frame 13 완료 모습 유지
 - 66스테이지 이후 stage_map frame 67 원본 엔딩 화면/크레딧 순환 적용
 - Galaxy S8(Android 7.0/API 24)부터 실행 가능하도록 minSdk 24 적용
+- Android 16 대응: compileSdk 36 / targetSdk 36
+- AGP 8.13.2 / Gradle 8.13 / JDK 17
+- maxSdkVersion 미지정으로 이후 Android 설치 차단 없음
 - GitHub Actions Debug APK 자동 빌드
 
 ## 원본 SWF 분석 결과
@@ -229,7 +232,7 @@ Workflow:
 핵심 빌드 명령:
 
 ```text
-./gradlew assembleDebug
+./gradlew lintDebug assembleDebug
 ```
 
 새 ChatGPT 대화에서는 코드 변경 후 항상 최신 workflow run을 확인합니다.

@@ -15,6 +15,13 @@
 - 최소 Android 버전: Android 7.0 (API 24)
 - Galaxy S8 호환 기준 포함
 - Galaxy S10 호환 기준 포함
+- minSdk: 24 (Android 7.0 / Galaxy S8 기준)
+- compileSdk: 36
+- targetSdk: 36 (Android 16)
+- AGP: 8.13.2
+- Gradle: 8.13
+- JDK: 17
+- maxSdkVersion 미지정: 이후 Android 설치 차단 없음
 - 세로 화면 고정
 - 게임 보드는 실제 가용 영역에 맞춰 자동 스케일
 - 작은 화면에서도 전체 맵이 잘리지 않도록 축소 허용
@@ -55,6 +62,10 @@
 - [x] 목표 위 박스는 원본 frame 13 완료 모습 유지
 - [x] 66스테이지 클리어 후 원본 stage_map frame 67 엔딩 화면 재현
 - [x] 엔딩 크레딧 9개를 원본처럼 페이드 인/아웃하며 순환
+- [x] Galaxy S8 최소 지원 유지(minSdk 24)
+- [x] Android 16(API 36) compile/target 대응
+- [x] AGP 8.13.2 + Gradle 8.13 빌드 체인 업그레이드
+- [x] CI에서 lintDebug + assembleDebug 호환성 검사
 
 ## 현재 상태
 
@@ -184,6 +195,19 @@ SWF ActionScript의 `Stage_Clear()` / `stageFade_chk()`를 대조한 결과,
 - `Flash PUSH II v0.95` 하단 표기
 - RETRY 또는 STAGE 선택 시 정상적으로 게임 화면으로 복귀
 
+## Android 버전 호환 정책
+
+호환성 기준은 "Galaxy S8부터 이후 Android 버전까지"입니다.
+
+- 최소 실행 버전은 Galaxy S8의 최초 OS인 Android 7.0(API 24)로 고정
+- 최신 Android 동작 검증을 위해 targetSdk는 Android 16(API 36)
+- compileSdk도 36을 사용
+- maxSdkVersion은 지정하지 않아 이후 Android 버전 설치를 제한하지 않음
+- targetSdk를 올려도 minSdk는 독립적으로 유지하므로 S8 지원은 계속 유지
+- 이후 Android 17 이상은 플랫폼의 전체 앱 대상 동작 변경을 확인하며 순차 검증
+
+현재 Google Play의 2026년 신규 앱/업데이트 제출 기준도 Android 16(API 36) 이상입니다.
+
 ## 자동 빌드
 
 GitHub Actions의:
@@ -197,7 +221,7 @@ GitHub Actions의:
 핵심 명령:
 
 ```text
-./gradlew assembleDebug
+./gradlew lintDebug assembleDebug
 ```
 
 성공하면 `pushpush2-debug-apk` Artifact를 업로드합니다.
