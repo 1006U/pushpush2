@@ -25,8 +25,8 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
 
-      - name: Android compatibility checks
-        run: ./gradlew lintDebug assembleDebug
+      - name: Unit tests and Android compatibility checks
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug
 
       - name: Upload debug APK
         if: success()
@@ -35,9 +35,13 @@ jobs:
           name: pushpush2-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
 
-  android-16-smoke:
+  android-smoke:
     needs: build
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [24, 36]
 
     steps:
       - name: Checkout
@@ -55,10 +59,10 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Boot Android 16 and launch app
+      - name: Boot Android and launch app
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 36
+          api-level: ${{ matrix.api-level }}
           target: google_apis
           arch: x86_64
           profile: pixel_6
@@ -70,4 +74,14 @@ jobs:
             adb shell am start -W -n com.pushpush2/.MainActivity
             sleep 3
             test -n "$(adb shell pidof com.pushpush2 | tr -d '\r')" || (echo "PushPush2 process died after launch"; adb logcat -d -t 400; exit 1)
+            mkdir -p app/build/reports/smoke
+            adb exec-out screencap -p > app/build/reports/smoke/api-${{ matrix.api-level }}.png
             adb shell pidof com.pushpush2
+
+      - name: Upload smoke screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pushpush2-smoke-api-${{ matrix.api-level }}
+          path: app/build/reports/smoke/api-${{ matrix.api-level }}.png
+          if-no-files-found: warn
