@@ -44,6 +44,10 @@ class MainActivity : Activity() {
         engine = GameEngine(StageRepository.get(currentStageNumber))
         setContentView(buildContentView())
         updateUi()
+
+        if (savedInstanceState == null) {
+            audioPlayer.play("start")
+        }
     }
 
     override fun onDestroy() {
@@ -154,12 +158,23 @@ class MainActivity : Activity() {
     }
 
     private fun move(direction: Direction) {
+        val boxesBefore = engine.state.boxes
+
         if (!engine.move(direction)) return
 
+        val state = engine.state
+        val boxEnteredGoal =
+            (state.boxes - boxesBefore).any { it in state.stage.goals }
+
         audioPlayer.play("move")
+
+        if (boxEnteredGoal) {
+            audioPlayer.play("success")
+        }
+
         updateUi()
 
-        if (engine.state.isCleared && !clearHandled) {
+        if (state.isCleared && !clearHandled) {
             clearHandled = true
             progressStore.markCleared(
                 stageNumber = currentStageNumber,
@@ -173,7 +188,7 @@ class MainActivity : Activity() {
 
             AlertDialog.Builder(this)
                 .setTitle("STAGE CLEAR!")
-                .setMessage("${engine.state.moves}번 이동으로 클리어했습니다.")
+                .setMessage("${state.moves}번 이동으로 클리어했습니다.")
                 .setNegativeButton("현재 화면", null)
                 .apply {
                     if (next <= StageRepository.stages.size) {
@@ -190,6 +205,7 @@ class MainActivity : Activity() {
     private fun restartStage() {
         clearHandled = false
         engine.reset()
+        gameView.resetPlayerAnimation()
         updateUi()
     }
 
@@ -197,6 +213,7 @@ class MainActivity : Activity() {
         currentStageNumber = number
         clearHandled = false
         engine.load(StageRepository.get(number))
+        gameView.resetPlayerAnimation()
         updateUi()
     }
 
