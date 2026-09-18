@@ -19,6 +19,7 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowInsets
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -130,20 +131,43 @@ class MainActivity : Activity() {
     private fun buildContentView(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(RETRO_BLUE)
+            setBackgroundColor(Color.WHITE)
+
+            setOnApplyWindowInsetsListener { view, insets ->
+                val topInset =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        insets.getInsets(
+                            WindowInsets.Type.statusBars()
+                        ).top
+                    } else {
+                        @Suppress("DEPRECATION")
+                        insets.systemWindowInsetTop
+                    }
+
+                view.setPadding(
+                    0,
+                    topInset,
+                    0,
+                    0
+                )
+
+                insets
+            }
+
+            post { requestApplyInsets() }
         }
 
         val gameShell = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(RETRO_BLUE)
-            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setPadding(dp(4), dp(4), dp(4), dp(4))
         }
 
         val headerBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(RETRO_BLUE)
-            setPadding(dp(2), dp(2), dp(2), dp(6))
+            setPadding(0, 0, 0, dp(4))
         }
 
         headerCharacter = ImageView(this).apply {
@@ -179,7 +203,9 @@ class MainActivity : Activity() {
                 dp(92),
                 1f
             ).apply {
-                marginStart = dp(6)
+                // 원작처럼 캐릭터/대사 패널이 거의 하나의 프레임처럼
+                // 이어져 보이도록 가운데 파란 틈을 없앤다.
+                marginStart = -dp(6)
             }
         )
 
@@ -189,12 +215,12 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(RETRO_STATUS_BLUE)
-            setPadding(dp(10), dp(2), dp(10), dp(2))
+            setPadding(dp(4), 0, dp(4), 0)
         }
 
         stageLabel = TextView(this).apply {
             setTextColor(Color.WHITE)
-            textSize = 18f
+            textSize = 22f
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             includeFontPadding = false
@@ -202,19 +228,19 @@ class MainActivity : Activity() {
 
         moveLabel = TextView(this).apply {
             setTextColor(Color.WHITE)
-            textSize = 18f
-            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            textSize = 22f
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             includeFontPadding = false
         }
 
         statusBar.addView(
             stageLabel,
-            LinearLayout.LayoutParams(0, dp(42), 1f)
+            LinearLayout.LayoutParams(0, dp(48), 0.56f)
         )
         statusBar.addView(
             moveLabel,
-            LinearLayout.LayoutParams(0, dp(42), 1f)
+            LinearLayout.LayoutParams(0, dp(48), 0.44f)
         )
 
         gameShell.addView(
@@ -274,7 +300,12 @@ class MainActivity : Activity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
                 1f
-            )
+            ).apply {
+                // 오리지널 피처폰 화면처럼 파란 게임 영역 양옆에
+                // 얇은 흰색 외곽 여백을 남긴다.
+                marginStart = dp(6)
+                marginEnd = dp(6)
+            }
         )
         root.addView(
             controlsPanel,
