@@ -298,14 +298,27 @@ class MainActivity : Activity() {
         }
 
         val controls = RetroControlsView(this).apply {
-            onDirection = { direction -> move(direction) }
+            onDirection = { direction ->
+                if (!showingStartScreen) {
+                    move(direction)
+                }
+            }
             onStageClick = {
-                audioPlayer.play("button")
-                showStageSelector()
+                if (!showingStartScreen) {
+                    audioPlayer.play("button")
+                    showStageSelector()
+                }
             }
             onRetryClick = {
-                audioPlayer.play("button")
-                restartStage()
+                if (!showingStartScreen) {
+                    audioPlayer.play("button")
+                    restartStage()
+                }
+            }
+            onCenterClick = {
+                if (showingStartScreen) {
+                    startStageOneFromStartScreen()
+                }
             }
         }
 
@@ -318,17 +331,14 @@ class MainActivity : Activity() {
         )
 
         startScreenView = ImageView(this).apply {
-            setBackgroundColor(START_SCREEN_BLUE)
+            setBackgroundColor(Color.BLACK)
             setImageResource(R.drawable.start_screen_pushpush2)
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = false
             visibility = View.GONE
-            isClickable = true
-            isFocusable = true
+            isClickable = false
+            isFocusable = false
             contentDescription = "Push Push 2 start screen"
-            setOnClickListener {
-                startStageOneFromStartScreen()
-            }
         }
 
         root.addView(
@@ -368,8 +378,7 @@ class MainActivity : Activity() {
         showingStartScreen = true
         startScreenView.visibility = View.VISIBLE
         gameShell.visibility = View.GONE
-        controlsPanel.visibility = View.GONE
-        startScreenView.requestFocus()
+        controlsPanel.visibility = View.VISIBLE
     }
 
     private fun startStageOneFromStartScreen() {
