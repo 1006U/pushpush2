@@ -173,7 +173,7 @@ app\build\outputs\apk\debug\app-debug.apk
 `main` 브랜치에 코드가 올라가면 GitHub Actions가:
 
 ```text
-./gradlew testDebugUnitTest lintDebug assembleDebug
+./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
 ```
 
 를 자동 실행합니다.
@@ -187,6 +187,39 @@ pushpush2-smoke-api-36
 ```
 
 따라서 로컬 Android Studio를 열기 전에도 GitHub에서 컴파일 오류를 확인할 수 있습니다.
+
+## 친구 배포용 Signed Release APK
+
+Google Play 공개 없이 친구에게 직접 전달하는 배포 workflow가 있습니다.
+
+```text
+.github/workflows/friend-release.yml
+```
+
+서명키는 저장소에 올리지 않고 GitHub Actions Secrets로만 주입합니다.
+
+필요한 Secret:
+
+```text
+ANDROID_KEYSTORE_BASE64
+ANDROID_KEYSTORE_PASSWORD
+ANDROID_KEY_ALIAS
+ANDROID_KEY_PASSWORD
+```
+
+Actions의 **Friend Release APK**를 수동 실행하면서 `version_name`을 지정하거나,
+`v0.1.0`처럼 `v`로 시작하는 태그를 push하면 서명된 APK Artifact를 생성합니다.
+
+예:
+
+```text
+PushPush2-v0.1.0.apk
+```
+
+GitHub Release를 자동 공개하지 않으므로, 생성된 APK를 직접 내려받아
+카카오톡 / Google Drive / NAS 등으로 친구에게 전달합니다.
+
+최초 keystore 생성과 GitHub Secrets 등록 방법은 `RELEASING.md`를 참고하세요.
 
 ## 현재 프로젝트 구조
 
