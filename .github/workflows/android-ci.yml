@@ -69,10 +69,5 @@ jobs:
             adb shell am force-stop com.pushpush2
             adb shell am start -W -n com.pushpush2/.MainActivity
             sleep 3
-            PID="$(adb shell pidof com.pushpush2 | tr -d '\r')"
-            if [ -z "$PID" ]; then
-              echo "PushPush2 process died after launch"
-              adb logcat -d -t 400
-              exit 1
-            fi
-            echo "PushPush2 is running with PID $PID"
+            test -n "$(adb shell pidof com.pushpush2 | tr -d '\r')" || (echo "PushPush2 process died after launch"; adb logcat -d -t 400; exit 1)
+            adb shell pidof com.pushpush2
