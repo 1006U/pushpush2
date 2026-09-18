@@ -41,17 +41,28 @@ class GameView(context: Context) : View(context) {
     private val playerBlinkClosedBitmap: Bitmap =
         decodeEmbeddedBitmap(PLAYER_BLINK_CLOSED_PNG)
 
+    /*
+     * 원본 Sprite 356 frame 2~13 / Sprite 370 frame 71~76을
+     * game.swf에서 직접 복원한 프레임이다.
+     */
+    private val boxGoalBitmaps: List<Bitmap> =
+        OriginalAnimationFrames.boxGoalPngBase64.map(::decodeEmbeddedBitmap)
+    private val playerSuccessBitmaps: List<Bitmap> =
+        OriginalAnimationFrames.playerSuccessPngBase64.map(::decodeEmbeddedBitmap)
+
     private val sourceRect = Rect(0, 0, ORIGINAL_TILE_PX, ORIGINAL_TILE_PX)
 
     private var gameState: GameState? = null
     private var playerAnimationStartedAtMs = SystemClock.uptimeMillis()
+    private var playerSuccessStartedAtMs: Long? = null
+    private val boxGoalAnimationStarts = mutableMapOf<Position, Long>()
 
     private val animationTick = object : Runnable {
         override fun run() {
             if (!isAttachedToWindow) return
 
             invalidate()
-            postDelayed(this, PLAYER_FRAME_DURATION_MS)
+            postDelayed(this, ORIGINAL_FRAME_DURATION_MS)
         }
     }
 
@@ -61,11 +72,25 @@ class GameView(context: Context) : View(context) {
         }
 
         gameState = state
+
+        val completedBoxes = state.boxes
+            .filterTo(mutableSetOf()) { it in state.stage.goals }
+
+        boxGoalAnimationStarts.keys.retainAll(completedBoxes)
+        invalidate()
+    }
+
+    fun playGoalSuccess(boxPosition: Position) {
+        val now = SystemClock.uptimeMillis()
+        boxGoalAnimationStarts[boxPosition] = now
+        playerSuccessStartedAtMs = now
         invalidate()
     }
 
     fun resetPlayerAnimation() {
         playerAnimationStartedAtMs = SystemClock.uptimeMillis()
+        playerSuccessStartedAtMs = null
+        boxGoalAnimationStarts.clear()
         invalidate()
     }
 
@@ -89,6 +114,7 @@ class GameView(context: Context) : View(context) {
 
         if (width <= 0 || height <= 0) return
 
+        val now = SystemClock.uptimeMillis()
         val horizontalPadding = dp(12f)
         val verticalPadding = dp(12f)
 
@@ -154,14 +180,22 @@ class GameView(context: Context) : View(context) {
                 }
 
                 if (position in state.boxes) {
-                    drawTile(canvas, boxBitmap, destination)
+                    drawTile(
+                        canvas = canvas,
+                        bitmap = currentBoxBitmap(
+                            position = position,
+                            state = state,
+                            now = now
+                        ),
+                        destination = destination
+                    )
                 }
             }
         }
 
         drawTile(
             canvas = canvas,
-            bitmap = currentPlayerBitmap(),
+            bitmap = currentPlayerBitmap(now),
             destination = cellRect(
                 position = state.player,
                 cell = cell,
@@ -171,13 +205,61 @@ class GameView(context: Context) : View(context) {
         )
     }
 
-    private fun currentPlayerBitmap(): Bitmap {
+    private fun currentBoxBitmap(
+        position: Position,
+        state: GameState,
+        now: Long
+    ): Bitmap {
+        if (position !in state.stage.goals) {
+            return boxBitmap
+        }
+
+        val startedAt = boxGoalAnimationStarts[position]
+            ?: return boxGoalBitmaps.last()
+
+        val elapsed = (now - startedAt).coerceAtLeast(0L)
+        val frameIndex =
+            (elapsed / ORIGINAL_FRAME_DURATION_MS).toInt()
+
+        return if (frameIndex < boxGoalBitmaps.size) {
+            boxGoalBitmaps[frameIndex]
+        } else {
+            /*
+             * Sprite 356의 frame 13에는 Stop 액션이 있으므로
+             * 목표 위의 박스는 마지막 붉은 집 프레임을 유지한다.
+             */
+            boxGoalAnimationStarts.remove(position)
+            boxGoalBitmaps.last()
+        }
+    }
+
+    private fun currentPlayerBitmap(now: Long): Bitmap {
+        val successStartedAt = playerSuccessStartedAtMs
+
+        if (successStartedAt != null) {
+            val elapsed = (now - successStartedAt).coerceAtLeast(0L)
+            val successFrameIndex =
+                (elapsed / ORIGINAL_FRAME_DURATION_MS).toInt()
+
+            if (successFrameIndex < playerSuccessBitmaps.size) {
+                return playerSuccessBitmaps[successFrameIndex]
+            }
+
+            /*
+             * Sprite 370은 76프레임 뒤 타임라인 처음으로 돌아간다.
+             * 성공 애니메이션이 끝난 시점부터 평상시 1~70 루프를 다시 시작한다.
+             */
+            playerSuccessStartedAtMs = null
+            playerAnimationStartedAtMs =
+                successStartedAt +
+                    playerSuccessBitmaps.size * ORIGINAL_FRAME_DURATION_MS
+        }
+
         val elapsedMs =
-            (SystemClock.uptimeMillis() - playerAnimationStartedAtMs)
-                .coerceAtLeast(0L)
+            (now - playerAnimationStartedAtMs).coerceAtLeast(0L)
 
         val frame =
-            ((elapsedMs / PLAYER_FRAME_DURATION_MS) % PLAYER_IDLE_FRAME_COUNT)
+            ((elapsedMs / ORIGINAL_FRAME_DURATION_MS) % PLAYER_IDLE_FRAME_COUNT)
                 .toInt() + 1
 
         /*
@@ -235,7 +317,7 @@ class GameView(context: Context) : View(context) {
     private companion object {
         const val ORIGINAL_TILE_PX = 14
         const val PLAYER_IDLE_FRAME_COUNT = 70L
-        const val PLAYER_FRAME_DURATION_MS = 100L
+        const val ORIGINAL_FRAME_DURATION_MS = 100L
 
         const val PLAYER_BLINK_HALF_PNG =
             "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAABmJLR0QA/wD/AP+gvaeTAAAAsUlEQVQokZ2QMRaDIBBE//psLNJzFC0x5xbLeBRvYEkKsixIfL5kGmZ2dwYWoUX8UgOQK2EGP8ExwHAkvb4aj1QmPyV1DDam5jpAusZ0Hi5hMxEgLiFmAPksuWIJSXcaEdZPVIyZaz15a4heuwRrPmexD9pC2wN6AMY5F1S7Me2zF8PaYwvJ6PzEXjzD6Sc8wPm56e1bsKf+ih5seRG55aq7c5KI3HKgNpapVzwH8eeOb12Aa1x/oE/aAAAAAElFTkSuQmCC"
