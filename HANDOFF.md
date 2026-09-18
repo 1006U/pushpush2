@@ -98,6 +98,8 @@ Android Studio / Emulator / 실제 스마트폰 테스트
 - AGP 8.13.2 / Gradle 8.13 / JDK 17
 - maxSdkVersion 미지정으로 이후 Android 설치 차단 없음
 - GitHub Actions Debug APK 자동 빌드
+- GitHub Actions Android 16(API 36) 실제 실행 smoke test
+- 이미지/오디오 디코딩 오류가 앱 시작을 종료하지 않도록 startup-safe 처리
 
 ## 원본 SWF 분석 결과
 
