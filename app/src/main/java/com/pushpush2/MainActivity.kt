@@ -403,8 +403,8 @@ class MainActivity : Activity() {
     private fun updateUi() {
         val state = engine.state
 
-        stageLabel.text = "STAGE %02d".format(state.stage.number)
-        moveLabel.text = "STEP %03d".format(state.moves)
+        stageLabel.text = "STAGE ${state.stage.number}"
+        moveLabel.text = "STEP ${state.moves}"
 
         gameView.render(state)
     }
