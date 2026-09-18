@@ -212,10 +212,24 @@ class GameView(context: Context) : View(context) {
         paint.color = FLOOR_COLOR
         canvas.drawRect(boardRect, paint)
 
+        drawFloorDots(
+            canvas = canvas,
+            boardRect = boardRect,
+            cell = cell
+        )
+
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = maxOf(1f, dp(1f))
+        paint.strokeWidth = maxOf(1f, cell / ORIGINAL_TILE_PX)
         paint.color = FRAME_COLOR
         canvas.drawRect(boardRect, paint)
+
+        drawConnectedWalls(
+            canvas = canvas,
+            state = state,
+            cell = cell,
+            offsetX = offsetX,
+            offsetY = offsetY
+        )
 
         for (y in 0 until stage.height) {
             for (x in 0 until stage.width) {
@@ -228,9 +242,7 @@ class GameView(context: Context) : View(context) {
                     offsetY = offsetY
                 )
 
-                if (position in stage.walls) {
-                    drawTile(canvas, brickBitmap, destination)
-                } else if (position in stage.goals) {
+                if (position !in stage.walls && position in stage.goals) {
                     drawTile(canvas, goalBitmap, destination)
                 }
 
@@ -472,6 +484,195 @@ class GameView(context: Context) : View(context) {
         )
     }
 
+    private fun drawFloorDots(
+        canvas: Canvas,
+        boardRect: RectF,
+        cell: Float
+    ) {
+        val pixel = (cell / ORIGINAL_TILE_PX).coerceAtLeast(1f)
+        val spacing = pixel * 3f
+
+        paint.style = Paint.Style.FILL
+        paint.shader = null
+        paint.color = FLOOR_DOT_COLOR
+
+        var y = boardRect.top + pixel
+        while (y < boardRect.bottom) {
+            var x = boardRect.left + pixel
+            while (x < boardRect.right) {
+                canvas.drawRect(
+                    x,
+                    y,
+                    x + pixel.coerceAtMost(2f),
+                    y + pixel.coerceAtMost(2f),
+                    paint
+                )
+                x += spacing
+            }
+            y += spacing
+        }
+    }
+
+    /**
+     * 원본 피처폰 화면처럼 인접한 벽 타일을 하나의 벽돌 구조로 이어서 그린다.
+     *
+     * 각 14x14 셀마다 동일 PNG를 반복하면 셀 경계가 네모난 테두리로 보여
+     * 벽이 조각난 느낌이 난다. 여기서는 전체 스테이지 좌표를 기준으로
+     * 벽돌 줄/세로 줄눈을 연속적으로 그리고, 실제 외곽에만 검은 테두리를 둔다.
+     */
+    private fun drawConnectedWalls(
+        canvas: Canvas,
+        state: GameState,
+        cell: Float,
+        offsetX: Float,
+        offsetY: Float
+    ) {
+        val stage = state.stage
+        val walls = stage.walls
+        if (walls.isEmpty()) return
+
+        val wallPath = Path().apply {
+            walls.forEach { position ->
+                addRect(
+                    cellRect(
+                        position = position,
+                        cell = cell,
+                        offsetX = offsetX,
+                        offsetY = offsetY
+                    ),
+                    Path.Direction.CW
+                )
+            }
+        }
+
+        val boardRight = offsetX + stage.width * cell
+        val boardBottom = offsetY + stage.height * cell
+        val pixel = (cell / ORIGINAL_TILE_PX).coerceAtLeast(0.75f)
+        val brickRowHeight = cell / 2f
+
+        val saveCount = canvas.save()
+        canvas.clipPath(wallPath)
+
+        paint.style = Paint.Style.FILL
+        paint.shader = null
+        paint.color = WALL_RED
+        canvas.drawRect(
+            offsetX,
+            offsetY,
+            boardRight,
+            boardBottom,
+            paint
+        )
+
+        // 각 벽돌 줄의 검은 줄눈 + 주황색 하이라이트.
+        var row = 0
+        var mortarY = offsetY
+        while (mortarY <= boardBottom + 0.5f) {
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = maxOf(1f, pixel * 1.25f)
+            paint.strokeCap = Paint.Cap.BUTT
+            paint.color = WALL_MORTAR
+            canvas.drawLine(
+                offsetX,
+                mortarY,
+                boardRight,
+                mortarY,
+                paint
+            )
+
+            paint.strokeWidth = maxOf(1f, pixel)
+            paint.color = WALL_HIGHLIGHT
+            val highlightY = mortarY + pixel * 1.45f
+            canvas.drawLine(
+                offsetX,
+                highlightY,
+                boardRight,
+                highlightY,
+                paint
+            )
+
+            // 줄마다 반 칸씩 어긋나는 전형적인 벽돌 패턴.
+            val jointOffset =
+                if (row % 2 == 0) 0f else cell / 2f
+            var jointX = offsetX + jointOffset
+
+            paint.strokeWidth = maxOf(1f, pixel * 1.15f)
+            paint.color = WALL_MORTAR
+
+            while (jointX <= boardRight + 0.5f) {
+                canvas.drawLine(
+                    jointX,
+                    mortarY,
+                    jointX,
+                    (mortarY + brickRowHeight)
+                        .coerceAtMost(boardBottom),
+                    paint
+                )
+                jointX += cell
+            }
+
+            mortarY += brickRowHeight
+            row += 1
+        }
+
+        canvas.restoreToCount(saveCount)
+
+        // 벽 전체 외곽선만 따로 그려 셀별 사각 테두리가 생기지 않게 한다.
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = maxOf(1f, pixel * 1.5f)
+        paint.strokeCap = Paint.Cap.SQUARE
+        paint.color = WALL_MORTAR
+
+        walls.forEach { position ->
+            val rect = cellRect(
+                position = position,
+                cell = cell,
+                offsetX = offsetX,
+                offsetY = offsetY
+            )
+
+            if (Position(position.x, position.y - 1) !in walls) {
+                canvas.drawLine(
+                    rect.left,
+                    rect.top,
+                    rect.right,
+                    rect.top,
+                    paint
+                )
+            }
+
+            if (Position(position.x, position.y + 1) !in walls) {
+                canvas.drawLine(
+                    rect.left,
+                    rect.bottom,
+                    rect.right,
+                    rect.bottom,
+                    paint
+                )
+            }
+
+            if (Position(position.x - 1, position.y) !in walls) {
+                canvas.drawLine(
+                    rect.left,
+                    rect.top,
+                    rect.left,
+                    rect.bottom,
+                    paint
+                )
+            }
+
+            if (Position(position.x + 1, position.y) !in walls) {
+                canvas.drawLine(
+                    rect.right,
+                    rect.top,
+                    rect.right,
+                    rect.bottom,
+                    paint
+                )
+            }
+        }
+    }
+
     private fun currentBoxBitmap(
         position: Position,
         state: GameState,
@@ -668,13 +869,25 @@ class GameView(context: Context) : View(context) {
             floatArrayOf(0.5f, 1.5f)
         )
 
+        // 피처폰 원작 화면처럼 게임판 바깥을 선명한 파란색으로 유지한다.
         val OUTER_BACKGROUND: Int =
-            Color.rgb(8, 10, 12)
+            Color.rgb(45, 132, 218)
 
+        // 피처폰 원작의 따뜻한 게임판 배경과 미세한 LCD 점무늬.
         val FLOOR_COLOR: Int =
-            Color.rgb(255, 255, 255)
+            Color.rgb(255, 232, 188)
+        val FLOOR_DOT_COLOR: Int =
+            Color.rgb(244, 207, 157)
+
+        // 원본 벽 타일에서 추출한 색상에 맞춘 연결형 벽돌 팔레트.
+        val WALL_RED: Int =
+            Color.rgb(189, 24, 0)
+        val WALL_HIGHLIGHT: Int =
+            Color.rgb(222, 121, 0)
+        val WALL_MORTAR: Int =
+            Color.rgb(0, 0, 0)
 
         val FRAME_COLOR: Int =
-            Color.rgb(98, 103, 108)
+            Color.rgb(24, 54, 82)
     }
 }

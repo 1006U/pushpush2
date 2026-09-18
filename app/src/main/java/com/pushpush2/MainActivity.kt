@@ -2,10 +2,16 @@ package com.pushpush2
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.util.Base64
 import android.view.Gravity
 import android.view.View
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -15,6 +21,7 @@ import com.pushpush2.game.Direction
 import com.pushpush2.game.GameEngine
 import com.pushpush2.game.StageRepository
 import com.pushpush2.ui.GameView
+import com.pushpush2.ui.PlayerCharacterAsset
 import com.pushpush2.ui.RetroControlsView
 import com.pushpush2.ui.StageSelectView
 
@@ -23,6 +30,8 @@ class MainActivity : Activity() {
     private lateinit var gameView: GameView
     private lateinit var stageLabel: TextView
     private lateinit var moveLabel: TextView
+    private lateinit var headerCharacter: ImageView
+    private lateinit var headerMessage: TextView
     private lateinit var progressStore: ProgressStore
     private lateinit var audioPlayer: AudioPlayer
 
@@ -30,6 +39,7 @@ class MainActivity : Activity() {
     private lateinit var engine: GameEngine
     private var clearHandled = false
     private var pendingStageAdvance: Runnable? = null
+    private var pendingHeaderReset: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +54,10 @@ class MainActivity : Activity() {
         engine = GameEngine(StageRepository.get(currentStageNumber))
         setContentView(buildContentView())
         updateUi()
+        showHeaderState(
+            HeaderState.START,
+            resetAfterMs = HEADER_START_MS
+        )
 
         if (savedInstanceState == null) {
             audioPlayer.play("start")
@@ -52,6 +66,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         cancelPendingStageAdvance()
+        cancelHeaderReset()
         audioPlayer.release()
         super.onDestroy()
     }
@@ -64,52 +79,115 @@ class MainActivity : Activity() {
     private fun buildContentView(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(BACKGROUND)
+            setBackgroundColor(RETRO_BLUE)
         }
 
         val gameShell = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.BLACK)
-            setPadding(dp(10), dp(10), dp(10), dp(8))
+            setBackgroundColor(RETRO_BLUE)
+            setPadding(dp(6), dp(6), dp(6), dp(6))
         }
 
-        val infoBar = LinearLayout(this).apply {
+        val headerBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(6), 0, dp(6), dp(6))
+            setBackgroundColor(RETRO_BLUE)
+            setPadding(dp(2), dp(2), dp(2), dp(6))
         }
 
-        stageLabel = TextView(this).apply {
-            setTextColor(Color.rgb(227, 232, 238))
-            textSize = 15f
-            typeface = android.graphics.Typeface.MONOSPACE
+        headerCharacter = ImageView(this).apply {
+            background = borderedPanel(Color.WHITE)
+            setPadding(dp(6), dp(6), dp(6), dp(6))
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setImageDrawable(playerPortraitDrawable(PlayerCharacterAsset.IDLE))
+            contentDescription = "PushPush character"
         }
 
-        moveLabel = TextView(this).apply {
-            setTextColor(Color.rgb(163, 174, 187))
-            textSize = 13f
-            gravity = Gravity.END
-            typeface = android.graphics.Typeface.MONOSPACE
+        headerMessage = TextView(this).apply {
+            background = borderedPanel(Color.WHITE)
+            setTextColor(Color.rgb(28, 46, 62))
+            textSize = 17f
+            gravity = Gravity.CENTER
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+            includeFontPadding = false
         }
 
-        infoBar.addView(
-            stageLabel,
-            LinearLayout.LayoutParams(0, dp(34), 1f)
+        headerBar.addView(
+            headerCharacter,
+            LinearLayout.LayoutParams(
+                dp(92),
+                dp(78)
+            )
         )
-        infoBar.addView(
-            moveLabel,
-            LinearLayout.LayoutParams(dp(120), dp(34))
+
+        headerBar.addView(
+            headerMessage,
+            LinearLayout.LayoutParams(
+                0,
+                dp(78),
+                1f
+            ).apply {
+                marginStart = dp(6)
+            }
         )
 
         gameView = GameView(this)
 
-        gameShell.addView(infoBar)
+        val statusBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(RETRO_STATUS_BLUE)
+            setPadding(dp(10), dp(2), dp(10), dp(2))
+        }
+
+        stageLabel = TextView(this).apply {
+            setTextColor(Color.WHITE)
+            textSize = 18f
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            includeFontPadding = false
+        }
+
+        moveLabel = TextView(this).apply {
+            setTextColor(Color.WHITE)
+            textSize = 18f
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            includeFontPadding = false
+        }
+
+        statusBar.addView(
+            stageLabel,
+            LinearLayout.LayoutParams(0, dp(42), 1f)
+        )
+        statusBar.addView(
+            moveLabel,
+            LinearLayout.LayoutParams(0, dp(42), 1f)
+        )
+
+        gameShell.addView(
+            headerBar,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
         gameShell.addView(
             gameView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
                 1f
+            )
+        )
+
+        gameShell.addView(
+            statusBar,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
         )
 
@@ -173,6 +251,10 @@ class MainActivity : Activity() {
         if (boxEnteredGoal != null) {
             audioPlayer.play("success")
             gameView.playGoalSuccess(boxEnteredGoal)
+            showHeaderState(
+                HeaderState.GOAL_SUCCESS,
+                resetAfterMs = HEADER_REACTION_MS
+            )
         }
 
         updateUi()
@@ -183,6 +265,8 @@ class MainActivity : Activity() {
                 stageNumber = currentStageNumber,
                 totalStages = StageRepository.stages.size
             )
+
+            showHeaderState(HeaderState.STAGE_CLEAR)
 
             val next = currentStageNumber + 1
 
@@ -207,8 +291,6 @@ class MainActivity : Activity() {
             gameView.animate().cancel()
             gameView.alpha = 1f
 
-            // 원본 stageFade_chk()도 페이드가 끝난 뒤 clear 사운드를 시작하고
-            // stage_map의 다음 프레임을 불러온다.
             audioPlayer.play("clear")
             loadStage(nextStage)
         }
@@ -234,6 +316,7 @@ class MainActivity : Activity() {
             gameView.showEnding()
             stageLabel.text = "GAME CLEAR"
             moveLabel.text = ""
+            showHeaderState(HeaderState.GAME_CLEAR)
         }
 
         pendingStageAdvance = ending
@@ -256,6 +339,10 @@ class MainActivity : Activity() {
         engine.reset()
         gameView.resetPlayerAnimation()
         updateUi()
+        showHeaderState(
+            HeaderState.RETRY,
+            resetAfterMs = HEADER_REACTION_MS
+        )
     }
 
     private fun loadStage(number: Int) {
@@ -265,6 +352,10 @@ class MainActivity : Activity() {
         engine.load(StageRepository.get(number))
         gameView.resetPlayerAnimation()
         updateUi()
+        showHeaderState(
+            HeaderState.START,
+            resetAfterMs = HEADER_START_MS
+        )
     }
 
     private fun showStageSelector() {
@@ -310,27 +401,125 @@ class MainActivity : Activity() {
     private fun updateUi() {
         val state = engine.state
 
-        stageLabel.text = "STAGE %02d / %02d".format(
-            state.stage.number,
-            StageRepository.stages.size
-        )
-
-        moveLabel.text = "MOVE %03d".format(state.moves)
+        stageLabel.text = "STAGE %02d".format(state.stage.number)
+        moveLabel.text = "STEP %03d".format(state.moves)
 
         gameView.render(state)
     }
 
+    private fun showHeaderState(
+        state: HeaderState,
+        resetAfterMs: Long? = null
+    ) {
+        cancelHeaderReset()
+
+        if (::headerMessage.isInitialized) {
+            headerMessage.text = state.message
+        }
+
+        if (::headerCharacter.isInitialized) {
+            headerCharacter.setImageDrawable(
+                playerPortraitDrawable(state.sprite)
+            )
+        }
+
+        if (resetAfterMs != null) {
+            val reset = Runnable {
+                pendingHeaderReset = null
+                showHeaderState(HeaderState.PLAYING)
+            }
+
+            pendingHeaderReset = reset
+            headerMessage.postDelayed(reset, resetAfterMs)
+        }
+    }
+
+    private fun cancelHeaderReset() {
+        pendingHeaderReset?.let { runnable ->
+            if (::headerMessage.isInitialized) {
+                headerMessage.removeCallbacks(runnable)
+            }
+        }
+        pendingHeaderReset = null
+    }
+
+    private fun playerPortraitDrawable(encoded: String): BitmapDrawable {
+        val fallback = BitmapFactory.decodeResource(
+            resources,
+            R.drawable.tile_player
+        )
+
+        val bitmap = runCatching {
+            val bytes = Base64.decode(
+                encoded,
+                Base64.DEFAULT
+            )
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        }.getOrNull() ?: fallback
+
+        return BitmapDrawable(resources, bitmap).apply {
+            isFilterBitmap = false
+            setAntiAlias(false)
+        }
+    }
+
+    private fun borderedPanel(fillColor: Int): GradientDrawable =
+        GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(fillColor)
+            setStroke(dp(2), RETRO_BORDER)
+        }
+
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
+
+    private enum class HeaderState(
+        val message: String,
+        val sprite: String
+    ) {
+        START(
+            message = "자~!!\n출발~!!",
+            sprite = PlayerCharacterAsset.IDLE
+        ),
+        PLAYING(
+            message = "푸시 푸시~!!\n힘내!!",
+            sprite = PlayerCharacterAsset.IDLE
+        ),
+        GOAL_SUCCESS(
+            message = "좋아~!!\n그렇지!!",
+            sprite = PlayerCharacterAsset.BLINK_HALF
+        ),
+        STAGE_CLEAR(
+            message = "와우~!!\n짠 짠 짠...",
+            sprite = PlayerCharacterAsset.IDLE
+        ),
+        RETRY(
+            message = "앗차~!!\n다시 해봐!",
+            sprite = PlayerCharacterAsset.BLINK_CLOSED
+        ),
+        GAME_CLEAR(
+            message = "와우~!!\nGAME CLEAR!",
+            sprite = PlayerCharacterAsset.IDLE
+        )
+    }
 
     private companion object {
         const val KEY_STAGE = "current_stage"
 
-        // 원본은 stage_map._alpha를 10씩 빠르게 낮춘 뒤 다음 프레임으로 이동한다.
-        // Android에서는 짧은 120ms 페이드로 같은 체감을 재현한다.
-        const val STAGE_CLEAR_FADE_MS = 120L
+        // 원작 10fps에서 alpha를 단계적으로 낮추는 체감을 살리기 위해
+        // 클리어 메시지와 캐릭터 반응이 눈에 보이는 시간까지 확보한다.
+        const val STAGE_CLEAR_FADE_MS = 900L
+        const val HEADER_REACTION_MS = 900L
+        const val HEADER_START_MS = 1200L
 
-        val BACKGROUND: Int = Color.rgb(172, 181, 191)
-        val CONTROL_PANEL: Int = Color.rgb(184, 193, 202)
+        val RETRO_BLUE: Int =
+            Color.rgb(45, 132, 218)
+        val RETRO_STATUS_BLUE: Int =
+            Color.rgb(31, 110, 222)
+        val RETRO_BORDER: Int =
+            Color.rgb(31, 41, 48)
+
+        val CONTROL_PANEL: Int =
+            Color.rgb(184, 193, 202)
     }
 }
