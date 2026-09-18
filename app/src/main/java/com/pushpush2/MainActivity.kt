@@ -42,6 +42,9 @@ class MainActivity : Activity() {
     private lateinit var moveLabel: TextView
     private lateinit var headerCharacter: ImageView
     private lateinit var headerMessage: TextView
+    private lateinit var gameShell: LinearLayout
+    private lateinit var controlsPanel: LinearLayout
+    private lateinit var startScreenView: ImageView
     private lateinit var progressStore: ProgressStore
     private lateinit var audioPlayer: AudioPlayer
 
@@ -52,6 +55,7 @@ class MainActivity : Activity() {
     private var pendingHeaderReset: Runnable? = null
     private var lastWallVibrationAt = 0L
     private var heldGamepadDirection: Direction? = null
+    private var showingStartScreen = false
 
     private val gamepadRepeatRunnable = object : Runnable {
         override fun run() {
@@ -83,7 +87,7 @@ class MainActivity : Activity() {
         showHeaderState(HeaderState.PLAYING)
 
         if (savedInstanceState == null) {
-            audioPlayer.play("start")
+            showStartScreen()
         }
     }
 
@@ -101,6 +105,17 @@ class MainActivity : Activity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (showingStartScreen) {
+            if (
+                event.action == KeyEvent.ACTION_DOWN &&
+                event.repeatCount == 0 &&
+                isStartScreenKey(event.keyCode)
+            ) {
+                startStageOneFromStartScreen()
+            }
+            return true
+        }
+
         if (isHardwareControlKey(event.keyCode)) {
             if (event.action == KeyEvent.ACTION_DOWN) {
                 handleHardwareKeyDown(event)
@@ -112,6 +127,10 @@ class MainActivity : Activity() {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (showingStartScreen) {
+            return true
+        }
+
         if (
             event.action == MotionEvent.ACTION_MOVE &&
             isGamepadMotion(event)
@@ -157,7 +176,7 @@ class MainActivity : Activity() {
             post { requestApplyInsets() }
         }
 
-        val gameShell = LinearLayout(this).apply {
+        gameShell = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(RETRO_BLUE)
             setPadding(dp(4), dp(4), dp(4), dp(4))
@@ -268,7 +287,7 @@ class MainActivity : Activity() {
             )
         )
 
-        val controlsPanel = LinearLayout(this).apply {
+        controlsPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(CONTROL_PANEL)
             setPadding(dp(8), dp(2), dp(8), dp(8))
@@ -291,6 +310,29 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(216)
+            )
+        )
+
+        startScreenView = ImageView(this).apply {
+            setBackgroundColor(START_SCREEN_BLUE)
+            setImageResource(R.drawable.start_screen_pushpush2)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = false
+            visibility = View.GONE
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Push Push 2 start screen"
+            setOnClickListener {
+                startStageOneFromStartScreen()
+            }
+        }
+
+        root.addView(
+            startScreenView,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
             )
         )
 
@@ -317,6 +359,39 @@ class MainActivity : Activity() {
 
         return root
     }
+
+    private fun showStartScreen() {
+        showingStartScreen = true
+        startScreenView.visibility = View.VISIBLE
+        gameShell.visibility = View.GONE
+        controlsPanel.visibility = View.GONE
+        startScreenView.requestFocus()
+    }
+
+    private fun startStageOneFromStartScreen() {
+        if (!showingStartScreen) return
+
+        showingStartScreen = false
+        startScreenView.visibility = View.GONE
+        gameShell.visibility = View.VISIBLE
+        controlsPanel.visibility = View.VISIBLE
+
+        // 원작의 타이틀 화면에서 게임을 시작하면 항상 STAGE 1로 진입한다.
+        loadStage(1)
+        audioPlayer.play("start")
+    }
+
+    private fun isStartScreenKey(keyCode: Int): Boolean =
+        when (keyCode) {
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+            KeyEvent.KEYCODE_SPACE,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_BUTTON_START -> true
+
+            else -> false
+        }
 
     private fun isHardwareControlKey(keyCode: Int): Boolean =
         when (keyCode) {
@@ -776,5 +851,7 @@ class MainActivity : Activity() {
             Color.rgb(31, 110, 222)
         val CONTROL_PANEL: Int =
             Color.rgb(184, 193, 202)
+        val START_SCREEN_BLUE: Int =
+            Color.rgb(39, 132, 224)
     }
 }
