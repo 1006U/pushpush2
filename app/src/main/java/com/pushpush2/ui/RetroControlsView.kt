@@ -38,6 +38,20 @@ class RetroControlsView(context: Context) : View(context) {
     private var dpadRadius = 0f
     private var centerRadius = 0f
 
+    private var pressedDirection: Direction? = null
+    private var pressedSoftKey: SoftKey? = null
+    private var repeating = false
+
+    private val repeatRunnable = object : Runnable {
+        override fun run() {
+            val direction = pressedDirection ?: return
+
+            onDirection?.invoke(direction)
+            repeating = true
+            postDelayed(this, REPEAT_INTERVAL_MS)
+        }
+    }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = resolveSize(dp(216), heightMeasureSpec)
@@ -70,8 +84,18 @@ class RetroControlsView(context: Context) : View(context) {
             top + softHeight
         )
 
-        drawSoftKey(canvas, stageRect, "STAGE")
-        drawSoftKey(canvas, retryRect, "RETRY")
+        drawSoftKey(
+            canvas,
+            stageRect,
+            "STAGE",
+            pressedSoftKey == SoftKey.STAGE
+        )
+        drawSoftKey(
+            canvas,
+            retryRect,
+            "RETRY",
+            pressedSoftKey == SoftKey.RETRY
+        )
 
         dpadRadius = min(dpF(72), (w - dpF(72)) / 2f)
         centerRadius = dpadRadius * 0.34f
@@ -89,6 +113,8 @@ class RetroControlsView(context: Context) : View(context) {
 
         paint.color = Color.rgb(71, 82, 95)
         canvas.drawCircle(dpadCx, dpadCy, dpadRadius, paint)
+
+        drawPressedWedge(canvas)
 
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = dpF(1.5f)
@@ -114,43 +140,100 @@ class RetroControlsView(context: Context) : View(context) {
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action != MotionEvent.ACTION_DOWN) {
-            return true
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                parent?.requestDisallowInterceptTouchEvent(true)
+
+                when {
+                    stageRect.contains(event.x, event.y) -> {
+                        pressedSoftKey = SoftKey.STAGE
+                        invalidate()
+                    }
+
+                    retryRect.contains(event.x, event.y) -> {
+                        pressedSoftKey = SoftKey.RETRY
+                        invalidate()
+                    }
+
+                    else -> {
+                        val direction = directionAt(event.x, event.y)
+                        if (direction != null) {
+                            pressDirection(direction)
+                        }
+                    }
+                }
+
+                return true
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                if (pressedSoftKey != null) {
+                    val stillInside = when (pressedSoftKey) {
+                        SoftKey.STAGE -> stageRect.contains(event.x, event.y)
+                        SoftKey.RETRY -> retryRect.contains(event.x, event.y)
+                        null -> false
+                    }
+
+                    if (!stillInside) {
+                        pressedSoftKey = null
+                        invalidate()
+                    }
+                    return true
+                }
+
+                val direction = directionAt(event.x, event.y)
+
+                if (direction != pressedDirection) {
+                    cancelRepeat()
+
+                    if (direction != null) {
+                        pressDirection(direction)
+                    } else {
+                        pressedDirection = null
+                        invalidate()
+                    }
+                }
+
+                return true
+            }
+
+            MotionEvent.ACTION_UP -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
+
+                when (pressedSoftKey) {
+                    SoftKey.STAGE -> {
+                        if (stageRect.contains(event.x, event.y)) {
+                            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onStageClick?.invoke()
+                        }
+                    }
+
+                    SoftKey.RETRY -> {
+                        if (retryRect.contains(event.x, event.y)) {
+                            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onRetryClick?.invoke()
+                        }
+                    }
+
+                    null -> Unit
+                }
+
+                pressedSoftKey = null
+                releaseDirection()
+                performClick()
+                invalidate()
+                return true
+            }
+
+            MotionEvent.ACTION_CANCEL -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
+                pressedSoftKey = null
+                releaseDirection()
+                invalidate()
+                return true
+            }
         }
 
-        if (stageRect.contains(event.x, event.y)) {
-            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            onStageClick?.invoke()
-            return true
-        }
-
-        if (retryRect.contains(event.x, event.y)) {
-            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            onRetryClick?.invoke()
-            return true
-        }
-
-        val dx = event.x - dpadCx
-        val dy = event.y - dpadCy
-        val distanceSquared = dx * dx + dy * dy
-
-        if (distanceSquared > dpadRadius * dpadRadius) {
-            return true
-        }
-
-        if (distanceSquared < centerRadius * centerRadius) {
-            performClick()
-            return true
-        }
-
-        val direction = if (abs(dx) > abs(dy)) {
-            if (dx < 0f) Direction.LEFT else Direction.RIGHT
-        } else {
-            if (dy < 0f) Direction.UP else Direction.DOWN
-        }
-
-        performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        onDirection?.invoke(direction)
         return true
     }
 
@@ -159,13 +242,74 @@ class RetroControlsView(context: Context) : View(context) {
         return true
     }
 
+    override fun onDetachedFromWindow() {
+        cancelRepeat()
+        super.onDetachedFromWindow()
+    }
+
+    private fun pressDirection(direction: Direction) {
+        if (pressedDirection == direction) {
+            return
+        }
+
+        pressedDirection = direction
+        repeating = false
+
+        performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        onDirection?.invoke(direction)
+
+        removeCallbacks(repeatRunnable)
+        postDelayed(repeatRunnable, INITIAL_REPEAT_DELAY_MS)
+
+        invalidate()
+    }
+
+    private fun releaseDirection() {
+        cancelRepeat()
+        pressedDirection = null
+        repeating = false
+    }
+
+    private fun cancelRepeat() {
+        removeCallbacks(repeatRunnable)
+    }
+
+    private fun directionAt(
+        x: Float,
+        y: Float
+    ): Direction? {
+        val dx = x - dpadCx
+        val dy = y - dpadCy
+        val distanceSquared = dx * dx + dy * dy
+
+        if (distanceSquared > dpadRadius * dpadRadius) {
+            return null
+        }
+
+        if (distanceSquared < centerRadius * centerRadius) {
+            return null
+        }
+
+        return if (abs(dx) > abs(dy)) {
+            if (dx < 0f) Direction.LEFT else Direction.RIGHT
+        } else {
+            if (dy < 0f) Direction.UP else Direction.DOWN
+        }
+    }
+
     private fun drawSoftKey(
         canvas: Canvas,
         rect: RectF,
-        label: String
+        label: String,
+        pressed: Boolean
     ) {
         paint.style = Paint.Style.FILL
-        paint.color = Color.rgb(211, 217, 224)
+        paint.color = if (pressed) {
+            Color.rgb(166, 176, 188)
+        } else {
+            Color.rgb(211, 217, 224)
+        }
+
         canvas.drawRoundRect(rect, dpF(19), dpF(19), paint)
 
         paint.style = Paint.Style.STROKE
@@ -178,6 +322,29 @@ class RetroControlsView(context: Context) : View(context) {
             rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2f
 
         canvas.drawText(label, rect.centerX(), baseline, textPaint)
+    }
+
+    private fun drawPressedWedge(canvas: Canvas) {
+        val direction = pressedDirection ?: return
+
+        val startAngle = when (direction) {
+            Direction.UP -> 225f
+            Direction.RIGHT -> 315f
+            Direction.DOWN -> 45f
+            Direction.LEFT -> 135f
+        }
+
+        paint.style = Paint.Style.FILL
+        paint.color = Color.rgb(54, 65, 77)
+
+        val rect = RectF(
+            dpadCx - dpadRadius,
+            dpadCy - dpadRadius,
+            dpadCx + dpadRadius,
+            dpadCy + dpadRadius
+        )
+
+        canvas.drawArc(rect, startAngle, 90f, true, paint)
     }
 
     private fun drawDivider(
@@ -228,16 +395,19 @@ class RetroControlsView(context: Context) : View(context) {
                 path.lineTo(cx - size, cy + size)
                 path.lineTo(cx + size, cy + size)
             }
+
             Direction.DOWN -> {
                 path.moveTo(cx, cy + size)
                 path.lineTo(cx - size, cy - size)
                 path.lineTo(cx + size, cy - size)
             }
+
             Direction.LEFT -> {
                 path.moveTo(cx - size, cy)
                 path.lineTo(cx + size, cy - size)
                 path.lineTo(cx + size, cy + size)
             }
+
             Direction.RIGHT -> {
                 path.moveTo(cx + size, cy)
                 path.lineTo(cx - size, cy - size)
@@ -248,7 +418,12 @@ class RetroControlsView(context: Context) : View(context) {
         path.close()
 
         paint.style = Paint.Style.FILL
-        paint.color = Color.rgb(225, 231, 237)
+        paint.color = if (pressedDirection == direction) {
+            Color.WHITE
+        } else {
+            Color.rgb(225, 231, 237)
+        }
+
         canvas.drawPath(path, paint)
     }
 
@@ -260,4 +435,14 @@ class RetroControlsView(context: Context) : View(context) {
 
     private fun dpF(value: Float): Float =
         value * resources.displayMetrics.density
+
+    private enum class SoftKey {
+        STAGE,
+        RETRY
+    }
+
+    private companion object {
+        const val INITIAL_REPEAT_DELAY_MS = 280L
+        const val REPEAT_INTERVAL_MS = 110L
+    }
 }
