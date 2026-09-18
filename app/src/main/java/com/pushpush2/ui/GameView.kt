@@ -18,6 +18,7 @@ import android.view.View
 import com.pushpush2.R
 import com.pushpush2.game.GameState
 import com.pushpush2.game.Position
+import java.util.ArrayDeque
 import kotlin.math.floor
 import kotlin.math.min
 
@@ -216,6 +217,14 @@ class GameView(context: Context) : View(context) {
             canvas = canvas,
             boardRect = boardRect,
             cell = cell
+        )
+
+        drawInteriorFloor(
+            canvas = canvas,
+            state = state,
+            cell = cell,
+            offsetX = offsetX,
+            offsetY = offsetY
         )
 
         paint.style = Paint.Style.STROKE
@@ -511,6 +520,122 @@ class GameView(context: Context) : View(context) {
             }
             y += spacing
         }
+    }
+
+    private fun drawInteriorFloor(
+        canvas: Canvas,
+        state: GameState,
+        cell: Float,
+        offsetX: Float,
+        offsetY: Float
+    ) {
+        val floorPositions = playableFloorPositions(state)
+        if (floorPositions.isEmpty()) return
+
+        paint.style = Paint.Style.FILL
+        paint.shader = null
+        paint.color = PLAYFIELD_FLOOR_COLOR
+
+        floorPositions.forEach { position ->
+            canvas.drawRect(
+                cellRect(
+                    position = position,
+                    cell = cell,
+                    offsetX = offsetX,
+                    offsetY = offsetY
+                ),
+                paint
+            )
+        }
+
+        // 피처폰 원작의 흰 통로 타일에 보이는 짧은 대각선 무늬.
+        paint.style = Paint.Style.STROKE
+        paint.strokeCap = Paint.Cap.SQUARE
+        paint.strokeWidth =
+            maxOf(1f, cell / ORIGINAL_TILE_PX)
+        paint.color = PLAYFIELD_DIAGONAL_COLOR
+
+        floorPositions.forEach { position ->
+            val rect = cellRect(
+                position = position,
+                cell = cell,
+                offsetX = offsetX,
+                offsetY = offsetY
+            )
+
+            val slash = cell * 0.18f
+            val anchors = floatArrayOf(0.22f, 0.50f, 0.78f)
+
+            anchors.forEachIndexed { index, anchor ->
+                val startX = rect.left + cell * anchor
+                val startY =
+                    rect.top + cell * (0.72f - index * 0.18f)
+
+                canvas.drawLine(
+                    startX,
+                    startY,
+                    startX + slash,
+                    startY - slash,
+                    paint
+                )
+            }
+        }
+
+        paint.style = Paint.Style.FILL
+    }
+
+    /**
+     * 벽과 상관없이 플레이어가 움직일 수 있는 연결 영역을 내부 통로로 본다.
+     * 박스는 바닥 분류에서는 장애물로 취급하지 않으므로, 퍼즐 진행 중에도
+     * 동일한 사선 바닥 모양이 유지된다.
+     */
+    private fun playableFloorPositions(
+        state: GameState
+    ): Set<Position> {
+        val stage = state.stage
+        val walls = stage.walls
+        val start = state.player
+
+        if (start in walls) return emptySet()
+
+        val visited = mutableSetOf<Position>()
+        val queue = ArrayDeque<Position>()
+
+        visited += start
+        queue.add(start)
+
+        val directions = arrayOf(
+            0 to -1,
+            1 to 0,
+            0 to 1,
+            -1 to 0
+        )
+
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+
+            directions.forEach { (dx, dy) ->
+                val next = Position(
+                    current.x + dx,
+                    current.y + dy
+                )
+
+                val inBounds =
+                    next.x in 0 until stage.width &&
+                        next.y in 0 until stage.height
+
+                if (
+                    inBounds &&
+                    next !in walls &&
+                    next !in visited
+                ) {
+                    visited += next
+                    queue.add(next)
+                }
+            }
+        }
+
+        return visited
     }
 
     /**
@@ -878,6 +1003,13 @@ class GameView(context: Context) : View(context) {
             Color.rgb(255, 232, 188)
         val FLOOR_DOT_COLOR: Int =
             Color.rgb(244, 207, 157)
+
+        // 벽으로 둘러싸인 실제 플레이 통로는 원본처럼 밝은 타일과
+        // 연한 적갈색 대각선 무늬로 바깥 배경과 구분한다.
+        val PLAYFIELD_FLOOR_COLOR: Int =
+            Color.rgb(246, 244, 237)
+        val PLAYFIELD_DIAGONAL_COLOR: Int =
+            Color.rgb(201, 162, 155)
 
         // 원본 벽 타일에서 추출한 색상에 맞춘 연결형 벽돌 팔레트.
         val WALL_RED: Int =
