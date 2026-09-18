@@ -36,9 +36,7 @@ class GameView(context: Context) : View(context) {
     private val brickBitmap: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.tile_brick)
     private val goalBitmap: Bitmap =
-        makeTileBackgroundTransparent(
-            BitmapFactory.decodeResource(resources, R.drawable.tile_goal)
-        )
+        BitmapFactory.decodeResource(resources, R.drawable.tile_goal)
     private val boxBitmap: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.tile_box)
     private val legacyPlayerBitmap: Bitmap =
