@@ -3,6 +3,20 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val releaseVersionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
+val releaseVersionName = System.getenv("VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.1.0"
+
+val releaseKeystoreFile = System.getenv("ANDROID_KEYSTORE_FILE")
+val releaseKeystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+val releaseKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseKeystoreFile,
+    releaseKeystorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.pushpush2"
     compileSdk = 36
@@ -19,8 +33,32 @@ android {
         // a future platform explicitly introduces a compatibility issue.
         targetSdk = 36
 
-        versionCode = 1
-        versionName = "0.1.0"
+        // Local builds use these defaults. GitHub Actions can override both
+        // through VERSION_CODE / VERSION_NAME for friend-distribution builds.
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
+    }
+
+    if (hasReleaseSigning) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseKeystoreFile!!)
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+
+            // Keep the keystore out of Git. CI injects it only at build time.
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
 
     compileOptions {
