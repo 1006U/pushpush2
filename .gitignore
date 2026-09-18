@@ -10,3 +10,11 @@ original/*
 !original/README.md
 .env
 .env.*
+
+# Android release signing material - never commit private keys or passwords.
+*.jks
+*.keystore
+*.p12
+keystore.properties
+signing.properties
+release-keystore/
