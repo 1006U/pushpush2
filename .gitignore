@@ -1,0 +1,12 @@
+.gradle/
+build/
+**/build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+original/*
+!original/README.md
+.env
+.env.*
