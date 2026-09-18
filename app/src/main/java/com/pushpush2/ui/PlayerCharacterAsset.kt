@@ -1,17 +1,18 @@
 package com.pushpush2.ui
 
 /**
- * High-contrast 14x14 teal monster player sprites.
- * Hand-tuned for in-game readability: hard near-black outlines, opaque pixels,
- * simplified shading, and explicit eye/body separation.
+ * Gentle 14x14 player sprites tuned for in-game readability.
+ *
+ * The eyes are kept large and round without angry eyebrow shapes so the
+ * character stays closer to the original feature-phone mascot.
  */
 internal object PlayerCharacterAsset {
     const val IDLE =
-        "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAA/ElEQVR4nI2SoW7DMBCGP8eVFkUDkyYNlYR3KiuoBvYEYyV9kII+QEEfZGRsT1AwDZRNNTcZilQpIIqSKpYHpjhxGms79N/999+d7ywYmIwTO4wBmKoUfd9zZJxYs93zMEs9UaY0crfxxNFQBHBer8iUJlOa83r123G796YRodHuX99ckTGLAI4nRV3k1EXO8aTceJnShPgJwDydAnBze0dd5FfV5+nUcW1u1E8YE4W4COBLf7tAH4/FWjwBWDzOgp1CvAD/6O1JhiZ3G4dNVQonNM8vXdbyyVd9fnQFDu/dR5BxYpvmYpvmYv/C7XRuq6EFhfDVG/9jpirFDw7OkvKpMC5vAAAAAElFTkSuQmCC"
+        "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAApElEQVR4nGNgwAH+QwEuebwAn0YWrKJNE/8zMDAwMDZPwmkoIzYNWEFdPiNWcQ4Bkf/IABufoCZsGtE1MyEbwCkoitU12MRRNH5//xqrRlziGM7lEBCBY7x+xOdXgpoYmib+Z2iaiGkLVBy7H5Ekfnx4wwgDPz68YUQxGBvYd/YWVidxCIj833f2FnYbUyp6/i9bvYkBxQYkFyxbvYkhpaIHRTMAPEO3BcajNMcAAAAASUVORK5CYII="
 
     const val BLINK_HALF =
-        "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAA30lEQVR4nJ1SPQ6CMBh9BRIJcTAxcXf3BMbBE7ixcBAGDsDAQVzcPIGDcTdh7+JEQsJACBCaOpCWtoJ/b3rfz/v62q8EBmzX42YOAFhdETXWAtv1OIsSrDZrTZSlFHYcamLLFAFAHvjIUoospcgDvz8xSjQ3ZMra8niSQ8bgiGma5ThEltKeT9Qt/AlHTHiHsboFAE1ZoCkLCG5CrQnuAMBsvpBNKjdzao0A+tLNhxizy+qKSCHbH4au7U5X3a7DgMt5+Ai26/Gua3nXtfwTF+7kOu70gV/4yx2/Aasr8gS9IHxuHlxUVQAAAABJRU5ErkJggg=="
+        "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAqklEQVR4nGNgwAH+QwEuebwAn0YWrKJNE/8zMDAwMDZPwmkoIzYNWEFdPopaJhiDQ0AERRNHXzOKPnR5uCA6wCWGYSMMcAqKYhiMTQxD4/f3rzEUYRPD6lwOARE4xuZMovxKUBND08T/DE0TMW2BimP3I5LEjw9vGGHgx4c3jCgGYwP7zt7C6iQOAZH/+87ewm5jSkXP/2WrNzGg2IDkgmWrNzGkVPSgaAYAS/2fDbV7KkgAAAAASUVORK5CYII="
 
     const val BLINK_CLOSED =
-        "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAA20lEQVR4nJ1SOw6DMAx9aRgQa6Xu3XuCqgMnYGPhIAwcgIGDdOnGCRgQeyX2LJ0isSKEEqVD+DRpUD+e7Gc/+8UxgWXUD5SNAYAcevIaGwH1AyWzAofT0SDxloHmqUHe2SQA6JIYvGXgLUOXxHpiVhhqyJa0/fW2NHGZBwAyjIDzRSNNDVqV4C3TSjbyWuoM2r4Lm3wPAGieOuXM5sprqdNStgpd+b8nEsD8dLu7iyyHnixEGUZrlb2gpl4bVOV6CNQPlBCjEmJUn/xZ3XI5d/bAL/7bG78xOfTkCTTCeIyvjo2qAAAAAElFTkSuQmCC"
+        "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAw0lEQVR4nIWRoRKDMAyGU26isqIezyvwOvhZ1ARYbnfdQ2BwPABuEjuBm5lCYHaHywzZmpKy37T9ky9JW4CIcFMsfqgj8CS6lUMAAFXfokWVBIi6nFluQhttLIP0tWZcGFdk3h9PlphnKUjeusy/ztpYHF9v1Mbivz0x7HHCDnSmNc/S/d2pot8h9PaUB0s6hKByCJVDH9bGIvlhevKFNq3LrEjsBWN/PIyTOJI2FodxkjsWZYNt1/M/8iZoux6KsmHwBzfynRpbe80EAAAAAElFTkSuQmCC"
 }

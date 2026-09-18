@@ -21,7 +21,7 @@ import com.pushpush2.game.Direction
 import com.pushpush2.game.GameEngine
 import com.pushpush2.game.StageRepository
 import com.pushpush2.ui.GameView
-import com.pushpush2.ui.PlayerCharacterAsset
+import com.pushpush2.ui.HeaderCharacterAsset
 import com.pushpush2.ui.RetroControlsView
 import com.pushpush2.ui.StageSelectView
 
@@ -97,16 +97,16 @@ class MainActivity : Activity() {
 
         headerCharacter = ImageView(this).apply {
             background = borderedPanel(Color.WHITE)
-            setPadding(dp(6), dp(6), dp(6), dp(6))
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setImageDrawable(playerPortraitDrawable(PlayerCharacterAsset.IDLE))
+            setPadding(dp(2), dp(2), dp(2), dp(2))
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setImageDrawable(playerPortraitDrawable(HeaderCharacterAsset.START))
             contentDescription = "PushPush character"
         }
 
         headerMessage = TextView(this).apply {
             background = borderedPanel(Color.WHITE)
             setTextColor(Color.rgb(28, 46, 62))
-            textSize = 17f
+            textSize = 18f
             gravity = Gravity.CENTER
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             setPadding(dp(8), dp(4), dp(8), dp(4))
@@ -116,8 +116,8 @@ class MainActivity : Activity() {
         headerBar.addView(
             headerCharacter,
             LinearLayout.LayoutParams(
-                dp(92),
-                dp(78)
+                dp(132),
+                dp(92)
             )
         )
 
@@ -125,7 +125,7 @@ class MainActivity : Activity() {
             headerMessage,
             LinearLayout.LayoutParams(
                 0,
-                dp(78),
+                dp(92),
                 1f
             ).apply {
                 marginStart = dp(6)
@@ -255,6 +255,8 @@ class MainActivity : Activity() {
                 HeaderState.GOAL_SUCCESS,
                 resetAfterMs = HEADER_REACTION_MS
             )
+        } else {
+            showHeaderState(HeaderState.MOVE)
         }
 
         updateUi()
@@ -458,8 +460,10 @@ class MainActivity : Activity() {
         }.getOrNull() ?: fallback
 
         return BitmapDrawable(resources, bitmap).apply {
-            isFilterBitmap = false
-            setAntiAlias(false)
+            // Header art is a separate remastered asset and is intentionally
+            // filtered when scaled into the larger feature-phone style panel.
+            isFilterBitmap = true
+            setAntiAlias(true)
         }
     }
 
@@ -478,28 +482,32 @@ class MainActivity : Activity() {
         val sprite: String
     ) {
         START(
-            message = "자~!!\n출발~!!",
-            sprite = PlayerCharacterAsset.IDLE
+            message = "영 차~!\n영 차~!",
+            sprite = HeaderCharacterAsset.START
         ),
         PLAYING(
-            message = "푸시 푸시~!!\n힘내!!",
-            sprite = PlayerCharacterAsset.IDLE
+            message = "헛! 둘~!\n헛! 둘~!",
+            sprite = HeaderCharacterAsset.MOVE
+        ),
+        MOVE(
+            message = "헛! 둘~!\n헛! 둘~!",
+            sprite = HeaderCharacterAsset.MOVE
         ),
         GOAL_SUCCESS(
-            message = "좋아~!!\n그렇지!!",
-            sprite = PlayerCharacterAsset.BLINK_HALF
+            message = "와우~!!\n짝 짝 짝 ..",
+            sprite = HeaderCharacterAsset.GOAL_SUCCESS
         ),
         STAGE_CLEAR(
-            message = "와우~!!\n짠 짠 짠...",
-            sprite = PlayerCharacterAsset.IDLE
+            message = "오~예~~\n앗싸~~!!",
+            sprite = HeaderCharacterAsset.STAGE_CLEAR
         ),
         RETRY(
-            message = "앗차~!!\n다시 해봐!",
-            sprite = PlayerCharacterAsset.BLINK_CLOSED
+            message = "영 차~!\n영 차~!",
+            sprite = HeaderCharacterAsset.START
         ),
         GAME_CLEAR(
-            message = "와우~!!\nGAME CLEAR!",
-            sprite = PlayerCharacterAsset.IDLE
+            message = "오~예~~\n앗싸~~!!",
+            sprite = HeaderCharacterAsset.STAGE_CLEAR
         )
     }
 
