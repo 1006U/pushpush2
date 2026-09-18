@@ -1,0 +1,20 @@
+package com.pushpush2.ui
+
+/**
+ * Player character artwork supplied by the user and adapted to the game's
+ * original 14x14 tile grid.
+ *
+ * The source artwork is not stored separately in the repository. These are
+ * compact PNG frames used directly by GameView.
+ */
+internal object PlayerCharacterAsset {
+
+    const val IDLE =
+        "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAABdklEQVR4nJWSvWpVURSEv1n33AewsMgb+FZBIaWKohJM/AG9aqGFYmeE+0RaJJKQn0vUItyQ9BY5+7M4JxKwysCCvWHNzF6zdhgg10MSpq6/njF7+giVKtiYfUAaUDTl3eYTVJKwOXvP7Nk6IRP7/g9FB/nfXEJol0ZooyZTKhaVCbvHP0mKH0fHDApDBdld/CaZcnD0iySgVCagg8/O4eKfKoCKSo/sHB7RC4zunYaPX+bcX1sdHBI+f52zXJ7TKysrN7l7ZxVtJMWnrTkQytZzenZOMkSljZPl2TigLE/Ox2MDGqfLM0gN4dy6vYZDHwQyvl0gES1IG4Vhf75FF8CrSTpmmRqJBclwVxIJ0AHcuOih7zEBQwHmgqEFiKQ1TFEUGqjq1KY2k4mPX75Rmw9fvPXexitVHzyfmepsrakKnSNxQDJxe2+h6vbewm+7+7bW/L5/YFVn70BMdSZMNcN+klyGSaUhNawtggUVaELVNb/2FfwFe9TzRGs+2FgAAAAASUVORK5CYII="
+
+    const val BLINK_HALF =
+        "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAABeUlEQVR4nJWSPWuVURCEn9n7BmwtLFJYSBAEf5WFraCoBI0foFcttFDsjJBfpEWEhCiJYiE3JL3gffexeK8fYOWwxTmcMzuzw4YJ8n9Iwpqbj+fM79xEpQruzl8gDRStPNu6jUoStubPmd/bJGTmOH6nGCD/iksI/UsIbWq2xhCLyoy9oy8sl00VXN648McTsnf4leXYnKni4sZ5UKjZmt3tSsoPn47sHlXtbrvH3297Hz+rPwQcNLx8s0P3CIQkvH67w2Jxyqisr59DRZukeLW9A4SyR45PTkmmqLT5tjhZDSiLb6erYwPN8eIEUlM4l65cnbwIBKIwFYloQXrVGA52thkC+HeSrrJMrYgFyXRXEgkwAJxdjjCOmIChALNk+gJE0o0pikIDVYPaapvMvPXwidreePDUa3cfqXr9/tzUYHerCoMr4oRk5u7+oaq7+4e+2zuwu31/8NGqwdGJmBpMWNMATMOvwqTSSEFPVrGgAi1U/edq/4Wfl1sHa38YQ7QAAAAASUVORK5CYII="
+
+    const val BLINK_CLOSED =
+        "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAABbElEQVR4nJWSvWpVQRSFv7XvyQNYWOQNfC0LW0FRCSb+gF610EKxM0KeSIsgCQkJUYtwQ9IL5uzP4hwhYpXFDOxhZu2112LCBLkekrDmxssly8cPUKmCzeU7pIGilTdbj1BJwtbyLcsnG4QsHMdfFAPkf3EJof8KoU0t1qhYVBbsnXwH4NvRCVOHaQfZO/4JFIdHP0gCCrVYs7udpQTsHlXtbrvHf+70t4CDhvefdugeJ4WEj593WK0uGJX19ZuoaJMUH7Z3gFD2yNn5BckUlTanq/PZoKxOL+aygeZsdQ6pKZxbt+/Mc0zWojAtEtGC9NwYDna2GQJ4NUnnLFMzsSCZzkoiAQaAG5cjjCMmYCjAXDI9ASLpxhRFoYGqQW21TRY+fP5Kbe8/e+3dzReq3nu6NDXY3arC4EyckCzc3T9WdXf/2C97B3a3Xw8OrRocnYipwYQ1DcBkfg6TSiMFPY2KBRVooeqaX/sK/gD3swCs96U8uAAAAABJRU5ErkJggg=="
+}
