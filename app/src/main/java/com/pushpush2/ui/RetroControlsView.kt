@@ -38,7 +38,8 @@ class RetroControlsView(context: Context) : View(context) {
     private var dpadRadius = 0f
     private var dpadRx = 0f
     private var dpadRy = 0f
-    private var centerRadius = 0f
+    private var centerRx = 0f
+    private var centerRy = 0f
     private var ringInnerRx = 0f
     private var ringInnerRy = 0f
 
@@ -101,7 +102,8 @@ class RetroControlsView(context: Context) : View(context) {
         dpadRadius = min(dpF(72), (w - dpF(72)) / 2f)
         dpadRx = dpadRadius * 1.10f
         dpadRy = dpadRadius * 0.88f
-        centerRadius = dpadRadius * 0.27f
+        centerRx = dpadRx * 0.25f
+        centerRy = dpadRy * 0.23f
         ringInnerRx = dpadRx * 0.51f
         ringInnerRy = dpadRy * 0.51f
 
@@ -253,8 +255,8 @@ class RetroControlsView(context: Context) : View(context) {
         if (outer > 1f) return null
 
         val inner =
-            (dx * dx) / (centerRadius * centerRadius) +
-                (dy * dy) / (centerRadius * centerRadius)
+            (dx * dx) / (centerRx * centerRx) +
+                (dy * dy) / (centerRy * centerRy)
 
         if (inner < 1f) return null
 
@@ -353,34 +355,33 @@ class RetroControlsView(context: Context) : View(context) {
             )
         }
 
-        // 중앙 확인키는 원본 다이얼처럼 둥근 형태 유지.
+        // 중앙 확인키도 바깥 다이얼과 같은 계열의 가로 타원형으로 맞춘다.
+        val centerRect = RectF(
+            dpadCx - centerRx,
+            dpadCy - centerRy,
+            dpadCx + centerRx,
+            dpadCy + centerRy
+        )
+
         paint.style = Paint.Style.FILL
         paint.color = Color.rgb(142, 153, 166)
-        canvas.drawCircle(
-            dpadCx,
-            dpadCy,
-            centerRadius,
-            paint
-        )
+        canvas.drawOval(centerRect, paint)
 
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = dpF(1.6f)
         paint.color = Color.rgb(43, 54, 66)
-        canvas.drawCircle(
-            dpadCx,
-            dpadCy,
-            centerRadius,
-            paint
+        canvas.drawOval(centerRect, paint)
+
+        val centerMarkRect = RectF(
+            dpadCx - centerRx * 0.18f,
+            dpadCy - centerRy * 0.17f,
+            dpadCx + centerRx * 0.18f,
+            dpadCy + centerRy * 0.17f
         )
 
         paint.style = Paint.Style.FILL
         paint.color = Color.rgb(93, 107, 122)
-        canvas.drawCircle(
-            dpadCx,
-            dpadCy,
-            centerRadius * 0.15f,
-            paint
-        )
+        canvas.drawOval(centerMarkRect, paint)
 
         Direction.entries.forEach { direction ->
             drawRoundedIndicator(
