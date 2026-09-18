@@ -10,6 +10,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import com.pushpush2.audio.AudioPlayer
 import com.pushpush2.data.ProgressStore
 import com.pushpush2.game.Direction
 import com.pushpush2.game.GameEngine
@@ -22,6 +23,7 @@ class MainActivity : Activity() {
     private lateinit var stageLabel: TextView
     private lateinit var moveLabel: TextView
     private lateinit var progressStore: ProgressStore
+    private lateinit var audioPlayer: AudioPlayer
 
     private var currentStageNumber = 1
     private lateinit var engine: GameEngine
@@ -31,6 +33,8 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
 
         progressStore = ProgressStore(this)
+        audioPlayer = AudioPlayer(this)
+
         currentStageNumber = savedInstanceState?.getInt(KEY_STAGE, 1) ?: 1
         currentStageNumber =
             currentStageNumber.coerceAtMost(progressStore.highestUnlockedStage())
@@ -38,6 +42,11 @@ class MainActivity : Activity() {
         engine = GameEngine(StageRepository.get(currentStageNumber))
         setContentView(buildContentView())
         updateUi()
+    }
+
+    override fun onDestroy() {
+        audioPlayer.release()
+        super.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -71,11 +80,17 @@ class MainActivity : Activity() {
         header.addView(stageLabel, LinearLayout.LayoutParams(0, dp(48), 1f))
         header.addView(moveLabel, LinearLayout.LayoutParams(dp(78), dp(48)))
         header.addView(
-            button("스테이지") { showStageSelector() },
+            button("스테이지") {
+                audioPlayer.play("button")
+                showStageSelector()
+            },
             LinearLayout.LayoutParams(dp(88), dp(48))
         )
         header.addView(
-            button("↻") { restartStage() },
+            button("↻") {
+                audioPlayer.play("button")
+                restartStage()
+            },
             LinearLayout.LayoutParams(dp(58), dp(48))
         )
 
@@ -141,6 +156,7 @@ class MainActivity : Activity() {
     private fun move(direction: Direction) {
         if (!engine.move(direction)) return
 
+        audioPlayer.play("move")
         updateUi()
 
         if (engine.state.isCleared && !clearHandled) {
@@ -150,6 +166,7 @@ class MainActivity : Activity() {
                 totalStages = StageRepository.stages.size
             )
 
+            audioPlayer.play("clear")
             Toast.makeText(this, "STAGE CLEAR!", Toast.LENGTH_SHORT).show()
 
             val next = currentStageNumber + 1
@@ -159,6 +176,7 @@ class MainActivity : Activity() {
                     .setMessage("${engine.state.moves}번 이동으로 클리어했습니다.")
                     .setNegativeButton("계속 보기", null)
                     .setPositiveButton("다음 스테이지") { _, _ ->
+                        audioPlayer.play("button")
                         loadStage(next)
                     }
                     .show()
@@ -193,6 +211,7 @@ class MainActivity : Activity() {
             .setItems(choices) { dialog, which ->
                 val stage = StageRepository.stages[which]
                 if (stage.number <= unlocked) {
+                    audioPlayer.play("button")
                     loadStage(stage.number)
                     dialog.dismiss()
                 } else {
