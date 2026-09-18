@@ -15,6 +15,9 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Base64
 import android.view.Gravity
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -47,6 +50,21 @@ class MainActivity : Activity() {
     private var pendingStageAdvance: Runnable? = null
     private var pendingHeaderReset: Runnable? = null
     private var lastWallVibrationAt = 0L
+    private var heldGamepadDirection: Direction? = null
+
+    private val gamepadRepeatRunnable = object : Runnable {
+        override fun run() {
+            val direction = heldGamepadDirection ?: return
+            move(direction)
+
+            if (::gameView.isInitialized) {
+                gameView.postDelayed(
+                    this,
+                    GAMEPAD_REPEAT_INTERVAL_MS
+                )
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,11 +86,40 @@ class MainActivity : Activity() {
         }
     }
 
+    override fun onPause() {
+        stopGamepadRepeat()
+        super.onPause()
+    }
+
     override fun onDestroy() {
         cancelPendingStageAdvance()
         cancelHeaderReset()
+        stopGamepadRepeat()
         audioPlayer.release()
         super.onDestroy()
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (isHardwareControlKey(event.keyCode)) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                handleHardwareKeyDown(event)
+            }
+            return true
+        }
+
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (
+            event.action == MotionEvent.ACTION_MOVE &&
+            isGamepadMotion(event)
+        ) {
+            handleGamepadMotion(event)
+            return true
+        }
+
+        return super.dispatchGenericMotionEvent(event)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -238,6 +285,132 @@ class MainActivity : Activity() {
         )
 
         return root
+    }
+
+    private fun isHardwareControlKey(keyCode: Int): Boolean =
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_W,
+            KeyEvent.KEYCODE_A,
+            KeyEvent.KEYCODE_S,
+            KeyEvent.KEYCODE_D,
+            KeyEvent.KEYCODE_R,
+            KeyEvent.KEYCODE_M,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+            KeyEvent.KEYCODE_BUTTON_B,
+            KeyEvent.KEYCODE_BUTTON_Y,
+            KeyEvent.KEYCODE_BUTTON_START,
+            KeyEvent.KEYCODE_BUTTON_SELECT -> true
+
+            else -> false
+        }
+
+    private fun handleHardwareKeyDown(event: KeyEvent) {
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_W -> move(Direction.UP)
+
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_S -> move(Direction.DOWN)
+
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_A -> move(Direction.LEFT)
+
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_D -> move(Direction.RIGHT)
+
+            KeyEvent.KEYCODE_R,
+            KeyEvent.KEYCODE_BUTTON_B,
+            KeyEvent.KEYCODE_BUTTON_Y -> {
+                if (event.repeatCount == 0) {
+                    audioPlayer.play("button")
+                    restartStage()
+                }
+            }
+
+            KeyEvent.KEYCODE_M,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+            KeyEvent.KEYCODE_BUTTON_START,
+            KeyEvent.KEYCODE_BUTTON_SELECT -> {
+                if (event.repeatCount == 0) {
+                    audioPlayer.play("button")
+                    showStageSelector()
+                }
+            }
+        }
+    }
+
+    private fun isGamepadMotion(event: MotionEvent): Boolean {
+        val source = event.source
+
+        return (
+            source and InputDevice.SOURCE_JOYSTICK
+            ) == InputDevice.SOURCE_JOYSTICK ||
+            (
+                source and InputDevice.SOURCE_GAMEPAD
+                ) == InputDevice.SOURCE_GAMEPAD
+    }
+
+    private fun handleGamepadMotion(event: MotionEvent) {
+        val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+        val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+        val stickX = event.getAxisValue(MotionEvent.AXIS_X)
+        val stickY = event.getAxisValue(MotionEvent.AXIS_Y)
+
+        val x = if (kotlin.math.abs(hatX) >= GAMEPAD_DEAD_ZONE) {
+            hatX
+        } else {
+            stickX
+        }
+
+        val y = if (kotlin.math.abs(hatY) >= GAMEPAD_DEAD_ZONE) {
+            hatY
+        } else {
+            stickY
+        }
+
+        val direction = when {
+            kotlin.math.abs(x) < GAMEPAD_DEAD_ZONE &&
+                kotlin.math.abs(y) < GAMEPAD_DEAD_ZONE -> null
+
+            kotlin.math.abs(x) > kotlin.math.abs(y) ->
+                if (x < 0f) Direction.LEFT else Direction.RIGHT
+
+            else ->
+                if (y < 0f) Direction.UP else Direction.DOWN
+        }
+
+        updateHeldGamepadDirection(direction)
+    }
+
+    private fun updateHeldGamepadDirection(direction: Direction?) {
+        if (direction == heldGamepadDirection) return
+
+        stopGamepadRepeat()
+
+        if (direction == null) return
+
+        heldGamepadDirection = direction
+        move(direction)
+
+        if (::gameView.isInitialized) {
+            gameView.postDelayed(
+                gamepadRepeatRunnable,
+                GAMEPAD_INITIAL_REPEAT_DELAY_MS
+            )
+        }
+    }
+
+    private fun stopGamepadRepeat() {
+        if (::gameView.isInitialized) {
+            gameView.removeCallbacks(gamepadRepeatRunnable)
+        }
+        heldGamepadDirection = null
     }
 
     private fun move(direction: Direction) {
@@ -562,6 +735,9 @@ class MainActivity : Activity() {
         const val HEADER_REACTION_MS = 900L
         const val WALL_VIBRATION_MS = 55L
         const val WALL_VIBRATION_COOLDOWN_MS = 140L
+        const val GAMEPAD_INITIAL_REPEAT_DELAY_MS = 280L
+        const val GAMEPAD_REPEAT_INTERVAL_MS = 110L
+        const val GAMEPAD_DEAD_ZONE = 0.55f
 
         val RETRO_BLUE: Int =
             Color.rgb(45, 132, 218)
