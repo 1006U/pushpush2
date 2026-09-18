@@ -102,7 +102,14 @@ class RetroControlsView(context: Context) : View(context) {
         )
 
         dpadRadius = min(dpF(72), (w - dpF(72)) / 2f)
-        dpadRx = dpadRadius * 1.10f
+
+        // Keep the original vertical footprint but make the Anycall-style
+        // navigation key noticeably wider on modern phone screens. The
+        // width cap prevents clipping on narrower devices.
+        dpadRx = min(
+            dpadRadius * 1.32f,
+            (w - dpF(40)) / 2f
+        )
         dpadRy = dpadRadius * 0.88f
         centerRx = dpadRx * 0.25f
         centerRy = dpadRy * 0.23f
