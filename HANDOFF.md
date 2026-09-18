@@ -94,6 +94,9 @@ Android Studio / Emulator / 실제 스마트폰 테스트
 - Galaxy S8(Android 7.0/API 24)부터 실행 가능하도록 minSdk 24 적용
 - Android 16 대응: compileSdk 36 / targetSdk 36
 - 사용자 제공 새 캐릭터 이미지를 14×14 타일로 적용
+- 피처폰 원작형 상단 캐릭터/대사 패널 적용
+- 게임판 바깥 원작형 파란 배경 적용
+- STAGE/STEP 하단 파란 상태바 적용
 - 새 캐릭터의 기본/눈 깜빡임/성공 반응 프레임 적용
 - AGP 8.13.2 / Gradle 8.13 / JDK 17
 - maxSdkVersion 미지정으로 이후 Android 설치 차단 없음
