@@ -384,17 +384,6 @@ class MainActivity : Activity() {
         gameShell.visibility = View.GONE
         gameClearScreenView.visibility = View.VISIBLE
         controlsPanel.visibility = View.VISIBLE
-
-        val returnToStageOne = Runnable {
-            pendingStageAdvance = null
-            returnToStageOne()
-        }
-
-        pendingStageAdvance = returnToStageOne
-        gameClearScreenView.postDelayed(
-            returnToStageOne,
-            ENDING_DISPLAY_MS
-        )
     }
 
     private fun returnToStageOne() {
@@ -873,7 +862,6 @@ class MainActivity : Activity() {
         // 원작 10fps에서 alpha를 단계적으로 낮추는 체감을 살리기 위해
         // 클리어 메시지와 캐릭터 반응이 눈에 보이는 시간까지 확보한다.
         const val STAGE_CLEAR_FADE_MS = 900L
-        const val ENDING_DISPLAY_MS = 3000L
         const val HEADER_REACTION_MS = 900L
         const val WALL_VIBRATION_MS = 55L
         const val WALL_VIBRATION_COOLDOWN_MS = 140L
