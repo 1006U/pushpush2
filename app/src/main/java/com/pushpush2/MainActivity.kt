@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.pushpush2.audio.AudioPlayer
@@ -16,6 +17,7 @@ import com.pushpush2.game.GameEngine
 import com.pushpush2.game.StageRepository
 import com.pushpush2.ui.GameView
 import com.pushpush2.ui.RetroControlsView
+import com.pushpush2.ui.StageSelectView
 
 class MainActivity : Activity() {
 
@@ -202,38 +204,52 @@ class MainActivity : Activity() {
         val unlocked = progressStore.highestUnlockedStage()
             .coerceAtMost(StageRepository.stages.size)
 
-        val choices = StageRepository.stages.map { stage ->
-            val marker = if (stage.number <= unlocked) "●" else "○"
-            "$marker STAGE ${stage.number}"
-        }.toTypedArray()
+        var dialog: AlertDialog? = null
 
-        AlertDialog.Builder(this)
+        val stageGrid = StageSelectView(
+            context = this,
+            totalStages = StageRepository.stages.size,
+            unlockedStages = unlocked,
+            currentStage = currentStageNumber
+        ) { selectedStage ->
+            audioPlayer.play("button")
+            loadStage(selectedStage)
+            dialog?.dismiss()
+        }.apply {
+            setPadding(dp(8), dp(8), dp(8), dp(12))
+        }
+
+        val scrollView = ScrollView(this).apply {
+            isFillViewport = true
+            setBackgroundColor(CONTROL_PANEL)
+            addView(
+                stageGrid,
+                ScrollView.LayoutParams(
+                    ScrollView.LayoutParams.MATCH_PARENT,
+                    ScrollView.LayoutParams.WRAP_CONTENT
+                )
+            )
+        }
+
+        dialog = AlertDialog.Builder(this)
             .setTitle("STAGE SELECT")
-            .setItems(choices) { dialog, which ->
-                val stage = StageRepository.stages[which]
+            .setView(scrollView)
+            .setNegativeButton("닫기", null)
+            .create()
 
-                if (stage.number <= unlocked) {
-                    audioPlayer.play("button")
-                    loadStage(stage.number)
-                    dialog.dismiss()
-                } else {
-                    Toast.makeText(
-                        this,
-                        "이전 스테이지를 먼저 클리어하세요.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-            .show()
+        dialog.show()
     }
 
     private fun updateUi() {
         val state = engine.state
+
         stageLabel.text = "STAGE %02d / %02d".format(
             state.stage.number,
             StageRepository.stages.size
         )
+
         moveLabel.text = "MOVE %03d".format(state.moves)
+
         gameView.render(state)
     }
 
