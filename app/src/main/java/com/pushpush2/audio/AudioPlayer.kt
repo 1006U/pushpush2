@@ -17,24 +17,40 @@ class AudioPlayer(
 
         if (resourceId == 0) return
 
-        val player = MediaPlayer.create(context, resourceId) ?: return
+        /*
+         * MediaPlayer codec support can differ by Android version/emulator image.
+         * Sound playback must never be able to terminate the game Activity.
+         */
+        val player = runCatching {
+            MediaPlayer.create(context, resourceId)
+        }.getOrNull() ?: return
 
         activePlayers += player
+
         player.setOnCompletionListener {
             activePlayers -= it
-            it.release()
+            runCatching { it.release() }
         }
+
         player.setOnErrorListener { mediaPlayer, _, _ ->
             activePlayers -= mediaPlayer
-            mediaPlayer.release()
+            runCatching { mediaPlayer.release() }
             true
         }
-        player.start()
+
+        val started = runCatching {
+            player.start()
+        }.isSuccess
+
+        if (!started) {
+            activePlayers -= player
+            runCatching { player.release() }
+        }
     }
 
     fun release() {
         activePlayers.toList().forEach {
-            it.release()
+            runCatching { it.release() }
         }
         activePlayers.clear()
     }
