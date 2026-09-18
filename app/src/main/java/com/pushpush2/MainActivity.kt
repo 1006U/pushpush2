@@ -54,7 +54,10 @@ class MainActivity : Activity() {
         engine = GameEngine(StageRepository.get(currentStageNumber))
         setContentView(buildContentView())
         updateUi()
-        showHeaderState(HeaderState.START)
+        showHeaderState(
+            HeaderState.START,
+            resetAfterMs = HEADER_START_MS
+        )
 
         if (savedInstanceState == null) {
             audioPlayer.play("start")
@@ -349,7 +352,10 @@ class MainActivity : Activity() {
         engine.load(StageRepository.get(number))
         gameView.resetPlayerAnimation()
         updateUi()
-        showHeaderState(HeaderState.START)
+        showHeaderState(
+            HeaderState.START,
+            resetAfterMs = HEADER_START_MS
+        )
     }
 
     private fun showStageSelector() {
@@ -504,6 +510,7 @@ class MainActivity : Activity() {
         // 클리어 메시지와 캐릭터 반응이 눈에 보이는 시간까지 확보한다.
         const val STAGE_CLEAR_FADE_MS = 900L
         const val HEADER_REACTION_MS = 900L
+        const val HEADER_START_MS = 1200L
 
         val RETRO_BLUE: Int =
             Color.rgb(45, 132, 218)
