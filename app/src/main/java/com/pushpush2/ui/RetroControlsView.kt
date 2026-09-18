@@ -18,6 +18,7 @@ class RetroControlsView(context: Context) : View(context) {
     var onDirection: ((Direction) -> Unit)? = null
     var onStageClick: (() -> Unit)? = null
     var onRetryClick: (() -> Unit)? = null
+    var onCenterClick: (() -> Unit)? = null
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
@@ -45,6 +46,7 @@ class RetroControlsView(context: Context) : View(context) {
 
     private var pressedDirection: Direction? = null
     private var pressedSoftKey: SoftKey? = null
+    private var pressedCenter = false
 
     private val repeatRunnable = object : Runnable {
         override fun run() {
@@ -129,6 +131,12 @@ class RetroControlsView(context: Context) : View(context) {
                         invalidate()
                     }
 
+                    centerAt(event.x, event.y) -> {
+                        pressedCenter = true
+                        performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        invalidate()
+                    }
+
                     else -> {
                         directionAt(event.x, event.y)?.let(::pressDirection)
                     }
@@ -138,6 +146,12 @@ class RetroControlsView(context: Context) : View(context) {
             }
 
             MotionEvent.ACTION_MOVE -> {
+                if (pressedCenter) {
+                    pressedCenter = centerAt(event.x, event.y)
+                    invalidate()
+                    return true
+                }
+
                 if (pressedSoftKey != null) {
                     val stillInside = when (pressedSoftKey) {
                         SoftKey.STAGE -> stageRect.contains(event.x, event.y)
@@ -171,6 +185,10 @@ class RetroControlsView(context: Context) : View(context) {
             MotionEvent.ACTION_UP -> {
                 parent?.requestDisallowInterceptTouchEvent(false)
 
+                if (pressedCenter && centerAt(event.x, event.y)) {
+                    onCenterClick?.invoke()
+                }
+
                 when (pressedSoftKey) {
                     SoftKey.STAGE -> {
                         if (stageRect.contains(event.x, event.y)) {
@@ -190,6 +208,7 @@ class RetroControlsView(context: Context) : View(context) {
                 }
 
                 pressedSoftKey = null
+                pressedCenter = false
                 releaseDirection()
                 performClick()
                 invalidate()
@@ -199,6 +218,7 @@ class RetroControlsView(context: Context) : View(context) {
             MotionEvent.ACTION_CANCEL -> {
                 parent?.requestDisallowInterceptTouchEvent(false)
                 pressedSoftKey = null
+                pressedCenter = false
                 releaseDirection()
                 invalidate()
                 return true
@@ -239,6 +259,19 @@ class RetroControlsView(context: Context) : View(context) {
 
     private fun cancelRepeat() {
         removeCallbacks(repeatRunnable)
+    }
+
+    private fun centerAt(
+        x: Float,
+        y: Float
+    ): Boolean {
+        if (centerRx <= 0f || centerRy <= 0f) return false
+
+        val dx = x - dpadCx
+        val dy = y - dpadCy
+
+        return (dx * dx) / (centerRx * centerRx) +
+            (dy * dy) / (centerRy * centerRy) <= 1f
     }
 
     private fun directionAt(
@@ -363,13 +396,28 @@ class RetroControlsView(context: Context) : View(context) {
             dpadCy + centerRy
         )
 
+        if (pressedCenter) {
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = dpF(6f)
+            paint.color = Color.argb(72, 0, 151, 255)
+            canvas.drawOval(centerRect, paint)
+        }
+
         paint.style = Paint.Style.FILL
-        paint.color = Color.rgb(142, 153, 166)
+        paint.color = if (pressedCenter) {
+            LED_BLUE_DARK
+        } else {
+            Color.rgb(142, 153, 166)
+        }
         canvas.drawOval(centerRect, paint)
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = dpF(1.6f)
-        paint.color = Color.rgb(43, 54, 66)
+        paint.strokeWidth = if (pressedCenter) dpF(2f) else dpF(1.6f)
+        paint.color = if (pressedCenter) {
+            LED_BLUE_BRIGHT
+        } else {
+            Color.rgb(43, 54, 66)
+        }
         canvas.drawOval(centerRect, paint)
 
         val centerMarkRect = RectF(
@@ -380,7 +428,11 @@ class RetroControlsView(context: Context) : View(context) {
         )
 
         paint.style = Paint.Style.FILL
-        paint.color = Color.rgb(93, 107, 122)
+        paint.color = if (pressedCenter) {
+            Color.rgb(220, 244, 255)
+        } else {
+            Color.rgb(93, 107, 122)
+        }
         canvas.drawOval(centerMarkRect, paint)
 
         Direction.entries.forEach { direction ->

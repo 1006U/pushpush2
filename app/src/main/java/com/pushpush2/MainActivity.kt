@@ -45,6 +45,7 @@ class MainActivity : Activity() {
     private lateinit var gameShell: LinearLayout
     private lateinit var controlsPanel: LinearLayout
     private lateinit var startScreenView: ImageView
+    private lateinit var gameClearScreenView: ImageView
     private lateinit var progressStore: ProgressStore
     private lateinit var audioPlayer: AudioPlayer
 
@@ -56,6 +57,7 @@ class MainActivity : Activity() {
     private var lastWallVibrationAt = 0L
     private var heldGamepadDirection: Direction? = null
     private var showingStartScreen = false
+    private var showingGameClearScreen = false
 
     private val gamepadRepeatRunnable = object : Runnable {
         override fun run() {
@@ -86,11 +88,14 @@ class MainActivity : Activity() {
         updateUi()
         showHeaderState(HeaderState.PLAYING)
 
+        val shouldShowGameClear =
+            savedInstanceState?.getBoolean(KEY_GAME_CLEAR_SCREEN, false) ?: false
         val shouldShowStartScreen =
             savedInstanceState?.getBoolean(KEY_START_SCREEN, false) ?: true
 
-        if (shouldShowStartScreen) {
-            showStartScreen()
+        when {
+            shouldShowGameClear -> showGameClearScreen()
+            shouldShowStartScreen -> showStartScreen()
         }
     }
 
@@ -108,11 +113,22 @@ class MainActivity : Activity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (showingGameClearScreen) {
+            if (
+                event.action == KeyEvent.ACTION_DOWN &&
+                event.repeatCount == 0 &&
+                isConfirmKey(event.keyCode)
+            ) {
+                returnToHomeScreen()
+            }
+            return true
+        }
+
         if (showingStartScreen) {
             if (
                 event.action == KeyEvent.ACTION_DOWN &&
                 event.repeatCount == 0 &&
-                isStartScreenKey(event.keyCode)
+                isConfirmKey(event.keyCode)
             ) {
                 startStageOneFromStartScreen()
             }
@@ -130,7 +146,7 @@ class MainActivity : Activity() {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
-        if (showingStartScreen) {
+        if (showingStartScreen || showingGameClearScreen) {
             return true
         }
 
@@ -148,6 +164,7 @@ class MainActivity : Activity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putInt(KEY_STAGE, currentStageNumber)
         outState.putBoolean(KEY_START_SCREEN, showingStartScreen)
+        outState.putBoolean(KEY_GAME_CLEAR_SCREEN, showingGameClearScreen)
         super.onSaveInstanceState(outState)
     }
 
@@ -298,14 +315,28 @@ class MainActivity : Activity() {
         }
 
         val controls = RetroControlsView(this).apply {
-            onDirection = { direction -> move(direction) }
+            onDirection = { direction ->
+                if (!showingStartScreen && !showingGameClearScreen) {
+                    move(direction)
+                }
+            }
             onStageClick = {
-                audioPlayer.play("button")
-                showStageSelector()
+                if (!showingStartScreen && !showingGameClearScreen) {
+                    audioPlayer.play("button")
+                    showStageSelector()
+                }
             }
             onRetryClick = {
-                audioPlayer.play("button")
-                restartStage()
+                if (!showingStartScreen && !showingGameClearScreen) {
+                    audioPlayer.play("button")
+                    restartStage()
+                }
+            }
+            onCenterClick = {
+                when {
+                    showingGameClearScreen -> returnToHomeScreen()
+                    showingStartScreen -> startStageOneFromStartScreen()
+                }
             }
         }
 
@@ -318,21 +349,38 @@ class MainActivity : Activity() {
         )
 
         startScreenView = ImageView(this).apply {
-            setBackgroundColor(START_SCREEN_BLUE)
+            setBackgroundColor(Color.BLACK)
             setImageResource(R.drawable.start_screen_pushpush2)
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = false
             visibility = View.GONE
-            isClickable = true
-            isFocusable = true
+            isClickable = false
+            isFocusable = false
             contentDescription = "Push Push 2 start screen"
-            setOnClickListener {
-                startStageOneFromStartScreen()
-            }
+        }
+
+        gameClearScreenView = ImageView(this).apply {
+            setBackgroundColor(Color.BLACK)
+            setImageResource(R.drawable.game_clear_screen)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = false
+            visibility = View.GONE
+            isClickable = false
+            isFocusable = false
+            contentDescription = "Push Push 2 game clear screen"
         }
 
         root.addView(
             startScreenView,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        )
+
+        root.addView(
+            gameClearScreenView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
@@ -365,18 +413,26 @@ class MainActivity : Activity() {
     }
 
     private fun showStartScreen() {
+        cancelPendingStageAdvance()
+        cancelHeaderReset()
+        stopGamepadRepeat()
+
+        showingGameClearScreen = false
         showingStartScreen = true
+
+        gameClearScreenView.visibility = View.GONE
         startScreenView.visibility = View.VISIBLE
         gameShell.visibility = View.GONE
-        controlsPanel.visibility = View.GONE
-        startScreenView.requestFocus()
+        controlsPanel.visibility = View.VISIBLE
     }
 
     private fun startStageOneFromStartScreen() {
         if (!showingStartScreen) return
 
         showingStartScreen = false
+        showingGameClearScreen = false
         startScreenView.visibility = View.GONE
+        gameClearScreenView.visibility = View.GONE
         gameShell.visibility = View.VISIBLE
         controlsPanel.visibility = View.VISIBLE
 
@@ -385,7 +441,28 @@ class MainActivity : Activity() {
         audioPlayer.play("start")
     }
 
-    private fun isStartScreenKey(keyCode: Int): Boolean =
+    private fun showGameClearScreen() {
+        cancelPendingStageAdvance()
+        cancelHeaderReset()
+        stopGamepadRepeat()
+
+        showingStartScreen = false
+        showingGameClearScreen = true
+
+        startScreenView.visibility = View.GONE
+        gameShell.visibility = View.GONE
+        gameClearScreenView.visibility = View.VISIBLE
+        controlsPanel.visibility = View.VISIBLE
+    }
+
+    private fun returnToHomeScreen() {
+        if (!showingGameClearScreen) return
+
+        audioPlayer.play("button")
+        showStartScreen()
+    }
+
+    private fun isConfirmKey(keyCode: Int): Boolean =
         when (keyCode) {
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER,
@@ -647,10 +724,7 @@ class MainActivity : Activity() {
             gameView.alpha = 1f
 
             audioPlayer.play("clear")
-            gameView.showEnding()
-            stageLabel.text = "GAME CLEAR"
-            moveLabel.text = ""
-            showHeaderState(HeaderState.GAME_CLEAR)
+            showGameClearScreen()
         }
 
         pendingStageAdvance = ending
@@ -839,6 +913,7 @@ class MainActivity : Activity() {
     private companion object {
         const val KEY_STAGE = "current_stage"
         const val KEY_START_SCREEN = "showing_start_screen"
+        const val KEY_GAME_CLEAR_SCREEN = "showing_game_clear_screen"
 
         // 원작 10fps에서 alpha를 단계적으로 낮추는 체감을 살리기 위해
         // 클리어 메시지와 캐릭터 반응이 눈에 보이는 시간까지 확보한다.
