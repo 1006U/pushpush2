@@ -26,7 +26,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Unit tests and Android compatibility checks
-        run: ./gradlew testDebugUnitTest lintDebug assembleDebug
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
 
       - name: Upload debug APK
         if: success()
