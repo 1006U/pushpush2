@@ -67,6 +67,9 @@
 - [x] AGP 8.13.2 + Gradle 8.13 빌드 체인 업그레이드
 - [x] CI에서 lintDebug + assembleDebug 호환성 검사
 - [x] Android 16 API 36 에뮬레이터 실제 앱 시작 smoke test 추가
+- [x] 피처폰 원작형 상단 캐릭터 + 대사 패널 적용
+- [x] 게임판 바깥 배경 검정 → 원작형 파란색으로 변경
+- [x] STAGE / STEP 표시를 게임판 아래 파란 상태바로 이동
 - [x] 임베디드 Bitmap 디코딩 실패가 앱 시작을 종료하지 않도록 fallback 적용
 - [x] 성공 애니메이션 프레임을 필요 시점에 lazy 로딩
 - [x] MediaPlayer 코덱/재생 오류가 Activity를 종료하지 않도록 방어 처리
@@ -217,6 +220,18 @@ SWF ActionScript의 `Stage_Clear()` / `stageFade_chk()`를 대조한 결과,
 - 원본 ClipAction처럼 약 2초 페이드 인 + 2초 페이드 아웃
 - `Flash PUSH II v0.95` 하단 표기
 - RETRY 또는 STAGE 선택 시 정상적으로 게임 화면으로 복귀
+
+## 피처폰 원작 UI
+
+실제 피처폰 시절 PUSH PUSH 화면을 참고해 Android UI를 다음처럼 조정했습니다.
+
+- 상단 왼쪽: 현재 플레이어 캐릭터 초상
+- 상단 오른쪽: 흰색 대사 패널
+- 목표 진입/클리어 시 상단 메시지 변경
+- 게임판 바깥 여백: 검정색 대신 원작 느낌의 파란색
+- 게임판 아래: 파란 상태바
+- 상태 표기: `STAGE 01` / `STEP 009` 형식
+- 터치 D-pad와 STAGE/RETRY 버튼은 스마트폰 조작을 위해 유지
 
 ## Android 버전 호환 정책
 
