@@ -10,22 +10,21 @@ data class Stage(
     val boxes: Set<Position>,
     val playerStart: Position
 ) {
+    fun contains(position: Position): Boolean =
+        position.x in 0 until width && position.y in 0 until height
+
     companion object {
-        fun fromAscii(number: Int, name: String, raw: String): Stage {
-            val lines = raw.trimIndent()
-                .trim('\n')
-                .lines()
+        fun fromRows(number: Int, name: String, rows: List<String>): Stage {
+            require(rows.isNotEmpty()) { "Stage must contain at least one row." }
 
-            require(lines.isNotEmpty()) { "Stage must contain at least one row." }
-
-            val width = lines.maxOf { it.length }
-            val height = lines.size
+            val width = rows.maxOf { it.length }
+            val height = rows.size
             val walls = mutableSetOf<Position>()
             val goals = mutableSetOf<Position>()
             val boxes = mutableSetOf<Position>()
             var player: Position? = null
 
-            lines.forEachIndexed { y, line ->
+            rows.forEachIndexed { y, line ->
                 line.forEachIndexed { x, c ->
                     val p = Position(x, y)
                     when (c) {
@@ -45,7 +44,7 @@ data class Stage(
                 }
             }
 
-            require(player != null) { "Stage requires one player (@ or +)." }
+            require(player != null) { "Stage $number requires one player (@ or +)." }
             require(boxes.size == goals.size) {
                 "Stage $number must have the same number of boxes and goals."
             }
@@ -61,5 +60,12 @@ data class Stage(
                 playerStart = player!!
             )
         }
+
+        fun fromAscii(number: Int, name: String, raw: String): Stage =
+            fromRows(
+                number = number,
+                name = name,
+                rows = raw.trimIndent().trim('\n').lines()
+            )
     }
 }
