@@ -44,7 +44,6 @@ class MainActivity : Activity() {
     private lateinit var headerMessage: TextView
     private lateinit var gameShell: LinearLayout
     private lateinit var controlsPanel: LinearLayout
-    private lateinit var startScreenView: ImageView
     private lateinit var gameClearScreenView: ImageView
     private lateinit var progressStore: ProgressStore
     private lateinit var audioPlayer: AudioPlayer
@@ -56,7 +55,6 @@ class MainActivity : Activity() {
     private var pendingHeaderReset: Runnable? = null
     private var lastWallVibrationAt = 0L
     private var heldGamepadDirection: Direction? = null
-    private var showingStartScreen = false
     private var showingGameClearScreen = false
 
     private val gamepadRepeatRunnable = object : Runnable {
@@ -90,12 +88,9 @@ class MainActivity : Activity() {
 
         val shouldShowGameClear =
             savedInstanceState?.getBoolean(KEY_GAME_CLEAR_SCREEN, false) ?: false
-        val shouldShowStartScreen =
-            savedInstanceState?.getBoolean(KEY_START_SCREEN, false) ?: true
 
-        when {
-            shouldShowGameClear -> showGameClearScreen()
-            shouldShowStartScreen -> showStartScreen()
+        if (shouldShowGameClear) {
+            showGameClearScreen()
         }
     }
 
@@ -119,18 +114,7 @@ class MainActivity : Activity() {
                 event.repeatCount == 0 &&
                 isConfirmKey(event.keyCode)
             ) {
-                returnToHomeScreen()
-            }
-            return true
-        }
-
-        if (showingStartScreen) {
-            if (
-                event.action == KeyEvent.ACTION_DOWN &&
-                event.repeatCount == 0 &&
-                isConfirmKey(event.keyCode)
-            ) {
-                startStageOneFromStartScreen()
+                returnToStageOne()
             }
             return true
         }
@@ -146,7 +130,7 @@ class MainActivity : Activity() {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
-        if (showingStartScreen || showingGameClearScreen) {
+        if (showingGameClearScreen) {
             return true
         }
 
@@ -163,7 +147,6 @@ class MainActivity : Activity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putInt(KEY_STAGE, currentStageNumber)
-        outState.putBoolean(KEY_START_SCREEN, showingStartScreen)
         outState.putBoolean(KEY_GAME_CLEAR_SCREEN, showingGameClearScreen)
         super.onSaveInstanceState(outState)
     }
@@ -316,26 +299,25 @@ class MainActivity : Activity() {
 
         val controls = RetroControlsView(this).apply {
             onDirection = { direction ->
-                if (!showingStartScreen && !showingGameClearScreen) {
+                if (!showingGameClearScreen) {
                     move(direction)
                 }
             }
             onStageClick = {
-                if (!showingStartScreen && !showingGameClearScreen) {
+                if (!showingGameClearScreen) {
                     audioPlayer.play("button")
                     showStageSelector()
                 }
             }
             onRetryClick = {
-                if (!showingStartScreen && !showingGameClearScreen) {
+                if (!showingGameClearScreen) {
                     audioPlayer.play("button")
                     restartStage()
                 }
             }
             onCenterClick = {
-                when {
-                    showingGameClearScreen -> returnToHomeScreen()
-                    showingStartScreen -> startStageOneFromStartScreen()
+                if (showingGameClearScreen) {
+                    returnToStageOne()
                 }
             }
         }
@@ -348,17 +330,6 @@ class MainActivity : Activity() {
             )
         )
 
-        startScreenView = ImageView(this).apply {
-            setBackgroundColor(Color.BLACK)
-            setImageResource(R.drawable.start_screen_pushpush2)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            adjustViewBounds = false
-            visibility = View.GONE
-            isClickable = false
-            isFocusable = false
-            contentDescription = "Push Push 2 start screen"
-        }
-
         gameClearScreenView = ImageView(this).apply {
             setBackgroundColor(Color.BLACK)
             setImageResource(R.drawable.game_clear_screen)
@@ -369,15 +340,6 @@ class MainActivity : Activity() {
             isFocusable = false
             contentDescription = "Push Push 2 game clear screen"
         }
-
-        root.addView(
-            startScreenView,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        )
 
         root.addView(
             gameClearScreenView,
@@ -412,54 +374,30 @@ class MainActivity : Activity() {
         return root
     }
 
-    private fun showStartScreen() {
-        cancelPendingStageAdvance()
-        cancelHeaderReset()
-        stopGamepadRepeat()
-
-        showingGameClearScreen = false
-        showingStartScreen = true
-
-        gameClearScreenView.visibility = View.GONE
-        startScreenView.visibility = View.VISIBLE
-        gameShell.visibility = View.GONE
-        controlsPanel.visibility = View.VISIBLE
-    }
-
-    private fun startStageOneFromStartScreen() {
-        if (!showingStartScreen) return
-
-        showingStartScreen = false
-        showingGameClearScreen = false
-        startScreenView.visibility = View.GONE
-        gameClearScreenView.visibility = View.GONE
-        gameShell.visibility = View.VISIBLE
-        controlsPanel.visibility = View.VISIBLE
-
-        // 원작의 타이틀 화면에서 게임을 시작하면 항상 STAGE 1로 진입한다.
-        loadStage(1)
-        audioPlayer.play("start")
-    }
-
     private fun showGameClearScreen() {
         cancelPendingStageAdvance()
         cancelHeaderReset()
         stopGamepadRepeat()
 
-        showingStartScreen = false
         showingGameClearScreen = true
 
-        startScreenView.visibility = View.GONE
         gameShell.visibility = View.GONE
         gameClearScreenView.visibility = View.VISIBLE
         controlsPanel.visibility = View.VISIBLE
     }
 
-    private fun returnToHomeScreen() {
+    private fun returnToStageOne() {
         if (!showingGameClearScreen) return
 
-        audioPlayer.play("button")
-        showStartScreen()
+        pendingStageAdvance?.let { gameClearScreenView.removeCallbacks(it) }
+        pendingStageAdvance = null
+        showingGameClearScreen = false
+
+        gameClearScreenView.visibility = View.GONE
+        gameShell.visibility = View.VISIBLE
+        controlsPanel.visibility = View.VISIBLE
+
+        loadStage(1)
     }
 
     private fun isConfirmKey(keyCode: Int): Boolean =
@@ -732,7 +670,14 @@ class MainActivity : Activity() {
     }
 
     private fun cancelPendingStageAdvance() {
-        pendingStageAdvance?.let { gameView.removeCallbacks(it) }
+        pendingStageAdvance?.let { runnable ->
+            if (::gameView.isInitialized) {
+                gameView.removeCallbacks(runnable)
+            }
+            if (::gameClearScreenView.isInitialized) {
+                gameClearScreenView.removeCallbacks(runnable)
+            }
+        }
         pendingStageAdvance = null
 
         if (::gameView.isInitialized) {
@@ -912,7 +857,6 @@ class MainActivity : Activity() {
 
     private companion object {
         const val KEY_STAGE = "current_stage"
-        const val KEY_START_SCREEN = "showing_start_screen"
         const val KEY_GAME_CLEAR_SCREEN = "showing_game_clear_screen"
 
         // 원작 10fps에서 alpha를 단계적으로 낮추는 체감을 살리기 위해
@@ -931,7 +875,5 @@ class MainActivity : Activity() {
             Color.rgb(31, 110, 222)
         val CONTROL_PANEL: Int =
             Color.rgb(184, 193, 202)
-        val START_SCREEN_BLUE: Int =
-            Color.rgb(39, 132, 224)
     }
 }
