@@ -30,6 +30,7 @@ class MainActivity : Activity() {
     private lateinit var gameView: GameView
     private lateinit var stageLabel: TextView
     private lateinit var moveLabel: TextView
+    private lateinit var headerCharacter: ImageView
     private lateinit var headerMessage: TextView
     private lateinit var progressStore: ProgressStore
     private lateinit var audioPlayer: AudioPlayer
@@ -38,6 +39,7 @@ class MainActivity : Activity() {
     private lateinit var engine: GameEngine
     private var clearHandled = false
     private var pendingStageAdvance: Runnable? = null
+    private var pendingHeaderReset: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,7 +54,7 @@ class MainActivity : Activity() {
         engine = GameEngine(StageRepository.get(currentStageNumber))
         setContentView(buildContentView())
         updateUi()
-        setHeaderMessage("푸시 푸시!!\n준비~!")
+        showHeaderState(HeaderState.START)
 
         if (savedInstanceState == null) {
             audioPlayer.play("start")
@@ -61,6 +63,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         cancelPendingStageAdvance()
+        cancelHeaderReset()
         audioPlayer.release()
         super.onDestroy()
     }
@@ -89,11 +92,11 @@ class MainActivity : Activity() {
             setPadding(dp(2), dp(2), dp(2), dp(6))
         }
 
-        val characterPortrait = ImageView(this).apply {
+        headerCharacter = ImageView(this).apply {
             background = borderedPanel(Color.WHITE)
             setPadding(dp(6), dp(6), dp(6), dp(6))
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setImageDrawable(playerPortraitDrawable())
+            setImageDrawable(playerPortraitDrawable(PlayerCharacterAsset.IDLE))
             contentDescription = "PushPush character"
         }
 
@@ -108,7 +111,7 @@ class MainActivity : Activity() {
         }
 
         headerBar.addView(
-            characterPortrait,
+            headerCharacter,
             LinearLayout.LayoutParams(
                 dp(92),
                 dp(78)
@@ -245,7 +248,10 @@ class MainActivity : Activity() {
         if (boxEnteredGoal != null) {
             audioPlayer.play("success")
             gameView.playGoalSuccess(boxEnteredGoal)
-            setHeaderMessage("좋아~!!\n짠 짠 짠...")
+            showHeaderState(
+                HeaderState.GOAL_SUCCESS,
+                resetAfterMs = HEADER_REACTION_MS
+            )
         }
 
         updateUi()
@@ -257,7 +263,7 @@ class MainActivity : Activity() {
                 totalStages = StageRepository.stages.size
             )
 
-            setHeaderMessage("와우~!!\n짠 짠 짠...")
+            showHeaderState(HeaderState.STAGE_CLEAR)
 
             val next = currentStageNumber + 1
 
@@ -307,7 +313,7 @@ class MainActivity : Activity() {
             gameView.showEnding()
             stageLabel.text = "GAME CLEAR"
             moveLabel.text = ""
-            setHeaderMessage("GAME CLEAR!!\n축하해!")
+            showHeaderState(HeaderState.GAME_CLEAR)
         }
 
         pendingStageAdvance = ending
@@ -330,7 +336,10 @@ class MainActivity : Activity() {
         engine.reset()
         gameView.resetPlayerAnimation()
         updateUi()
-        setHeaderMessage("다시~!!\nGO!")
+        showHeaderState(
+            HeaderState.RETRY,
+            resetAfterMs = HEADER_REACTION_MS
+        )
     }
 
     private fun loadStage(number: Int) {
@@ -340,7 +349,7 @@ class MainActivity : Activity() {
         engine.load(StageRepository.get(number))
         gameView.resetPlayerAnimation()
         updateUi()
-        setHeaderMessage("STAGE %02d\nREADY!".format(number))
+        showHeaderState(HeaderState.START)
     }
 
     private fun showStageSelector() {
@@ -392,13 +401,43 @@ class MainActivity : Activity() {
         gameView.render(state)
     }
 
-    private fun setHeaderMessage(message: String) {
+    private fun showHeaderState(
+        state: HeaderState,
+        resetAfterMs: Long? = null
+    ) {
+        cancelHeaderReset()
+
         if (::headerMessage.isInitialized) {
-            headerMessage.text = message
+            headerMessage.text = state.message
+        }
+
+        if (::headerCharacter.isInitialized) {
+            headerCharacter.setImageDrawable(
+                playerPortraitDrawable(state.sprite)
+            )
+        }
+
+        if (resetAfterMs != null) {
+            val reset = Runnable {
+                pendingHeaderReset = null
+                showHeaderState(HeaderState.PLAYING)
+            }
+
+            pendingHeaderReset = reset
+            headerMessage.postDelayed(reset, resetAfterMs)
         }
     }
 
-    private fun playerPortraitDrawable(): BitmapDrawable {
+    private fun cancelHeaderReset() {
+        pendingHeaderReset?.let { runnable ->
+            if (::headerMessage.isInitialized) {
+                headerMessage.removeCallbacks(runnable)
+            }
+        }
+        pendingHeaderReset = null
+    }
+
+    private fun playerPortraitDrawable(encoded: String): BitmapDrawable {
         val fallback = BitmapFactory.decodeResource(
             resources,
             R.drawable.tile_player
@@ -406,7 +445,7 @@ class MainActivity : Activity() {
 
         val bitmap = runCatching {
             val bytes = Base64.decode(
-                PlayerCharacterAsset.IDLE,
+                encoded,
                 Base64.DEFAULT
             )
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
@@ -428,9 +467,43 @@ class MainActivity : Activity() {
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
+    private enum class HeaderState(
+        val message: String,
+        val sprite: String
+    ) {
+        START(
+            message = "자~!!\n출발~!!",
+            sprite = PlayerCharacterAsset.IDLE
+        ),
+        PLAYING(
+            message = "푸시 푸시~!!\n힘내!!",
+            sprite = PlayerCharacterAsset.IDLE
+        ),
+        GOAL_SUCCESS(
+            message = "좋아~!!\n그렇지!!",
+            sprite = PlayerCharacterAsset.BLINK_HALF
+        ),
+        STAGE_CLEAR(
+            message = "와우~!!\n짠 짠 짠...",
+            sprite = PlayerCharacterAsset.IDLE
+        ),
+        RETRY(
+            message = "앗차~!!\n다시 해봐!",
+            sprite = PlayerCharacterAsset.BLINK_CLOSED
+        ),
+        GAME_CLEAR(
+            message = "와우~!!\nGAME CLEAR!",
+            sprite = PlayerCharacterAsset.IDLE
+        )
+    }
+
     private companion object {
         const val KEY_STAGE = "current_stage"
-        const val STAGE_CLEAR_FADE_MS = 120L
+
+        // 원작 10fps에서 alpha를 단계적으로 낮추는 체감을 살리기 위해
+        // 클리어 메시지와 캐릭터 반응이 눈에 보이는 시간까지 확보한다.
+        const val STAGE_CLEAR_FADE_MS = 900L
+        const val HEADER_REACTION_MS = 900L
 
         val RETRO_BLUE: Int =
             Color.rgb(45, 132, 218)
