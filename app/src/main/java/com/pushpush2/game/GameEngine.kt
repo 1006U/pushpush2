@@ -17,13 +17,18 @@ class GameEngine(stage: Stage) {
         if (state.isCleared) return false
 
         val next = state.player + direction
+
+        if (!state.stage.contains(next)) return false
         if (next in state.stage.walls) return false
 
         val boxes = state.boxes.toMutableSet()
 
         if (next in boxes) {
             val pushed = next + direction
+
+            if (!state.stage.contains(pushed)) return false
             if (pushed in state.stage.walls || pushed in boxes) return false
+
             boxes.remove(next)
             boxes.add(pushed)
         }
