@@ -38,28 +38,48 @@ class GameView(context: Context) : View(context) {
         BitmapFactory.decodeResource(resources, R.drawable.tile_goal)
     private val boxBitmap: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.tile_box)
+    private val legacyPlayerBitmap: Bitmap =
+        BitmapFactory.decodeResource(resources, R.drawable.tile_player)
+
     private val playerBitmap: Bitmap =
-        decodeEmbeddedBitmap(PlayerCharacterAsset.IDLE)
+        decodeEmbeddedBitmapOrFallback(
+            PlayerCharacterAsset.IDLE,
+            legacyPlayerBitmap
+        )
+
     private val playerBlinkHalfBitmap: Bitmap =
-        decodeEmbeddedBitmap(PlayerCharacterAsset.BLINK_HALF)
+        decodeEmbeddedBitmapOrFallback(
+            PlayerCharacterAsset.BLINK_HALF,
+            playerBitmap
+        )
+
     private val playerBlinkClosedBitmap: Bitmap =
-        decodeEmbeddedBitmap(PlayerCharacterAsset.BLINK_CLOSED)
+        decodeEmbeddedBitmapOrFallback(
+            PlayerCharacterAsset.BLINK_CLOSED,
+            playerBitmap
+        )
 
     /*
-     * Box Sprite 356의 목표 진입 애니메이션은 원본 SWF 프레임을 유지한다.
-     * 플레이어는 사용자가 제공한 새 캐릭터가 애니메이션 중 예전 그림으로
-     * 바뀌지 않도록 동일한 새 캐릭터 프레임만 사용한다.
+     * 성공 애니메이션 프레임은 앱 시작 시 한꺼번에 디코딩하지 않는다.
+     * 일부 기기/Android 버전에서 BitmapFactory가 특정 프레임을 읽지 못해도
+     * Activity 전체가 종료되지 않도록 필요 시점에 lazy 로딩하고 fallback한다.
      */
-    private val boxGoalBitmaps: List<Bitmap> =
-        OriginalAnimationFrames.boxGoalPngBase64.map(::decodeEmbeddedBitmap)
-    private val playerSuccessBitmaps: List<Bitmap> = listOf(
-        playerBitmap,
-        playerBlinkHalfBitmap,
-        playerBlinkClosedBitmap,
-        playerBlinkHalfBitmap,
-        playerBitmap,
-        playerBitmap
-    )
+    private val boxGoalBitmaps: List<Bitmap> by lazy(LazyThreadSafetyMode.NONE) {
+        OriginalAnimationFrames.boxGoalPngBase64.map { encoded ->
+            decodeEmbeddedBitmapOrFallback(encoded, boxBitmap)
+        }
+    }
+
+    private val playerSuccessBitmaps: List<Bitmap> by lazy(LazyThreadSafetyMode.NONE) {
+        listOf(
+            playerBitmap,
+            playerBlinkHalfBitmap,
+            playerBlinkClosedBitmap,
+            playerBlinkHalfBitmap,
+            playerBitmap,
+            playerBitmap
+        )
+    }
 
     private val sourceRect = Rect(0, 0, ORIGINAL_TILE_PX, ORIGINAL_TILE_PX)
 
@@ -530,11 +550,14 @@ class GameView(context: Context) : View(context) {
             rawCell
         }
 
-    private fun decodeEmbeddedBitmap(encoded: String): Bitmap {
-        val bytes = Base64.decode(encoded, Base64.DEFAULT)
-        return requireNotNull(
+    private fun decodeEmbeddedBitmapOrFallback(
+        encoded: String,
+        fallback: Bitmap
+    ): Bitmap {
+        return runCatching {
+            val bytes = Base64.decode(encoded, Base64.DEFAULT)
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        )
+        }.getOrNull() ?: fallback
     }
 
     private fun drawTile(

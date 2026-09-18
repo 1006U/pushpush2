@@ -66,6 +66,10 @@
 - [x] Android 16(API 36) compile/target 대응
 - [x] AGP 8.13.2 + Gradle 8.13 빌드 체인 업그레이드
 - [x] CI에서 lintDebug + assembleDebug 호환성 검사
+- [x] Android 16 API 36 에뮬레이터 실제 앱 시작 smoke test 추가
+- [x] 임베디드 Bitmap 디코딩 실패가 앱 시작을 종료하지 않도록 fallback 적용
+- [x] 성공 애니메이션 프레임을 필요 시점에 lazy 로딩
+- [x] MediaPlayer 코덱/재생 오류가 Activity를 종료하지 않도록 방어 처리
 - [x] 사용자 제공 캐릭터 이미지를 14×14 플레이어 타일로 적용
 - [x] 새 캐릭터 기준 눈 깜빡임/성공 반응 프레임 통일
 
