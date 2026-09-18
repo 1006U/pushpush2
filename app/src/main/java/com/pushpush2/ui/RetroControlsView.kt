@@ -11,9 +11,7 @@ import android.view.MotionEvent
 import android.view.View
 import com.pushpush2.game.Direction
 import kotlin.math.abs
-import kotlin.math.cos
 import kotlin.math.min
-import kotlin.math.sin
 
 class RetroControlsView(context: Context) : View(context) {
 
@@ -38,8 +36,11 @@ class RetroControlsView(context: Context) : View(context) {
     private var dpadCx = 0f
     private var dpadCy = 0f
     private var dpadRadius = 0f
+    private var dpadRx = 0f
+    private var dpadRy = 0f
     private var centerRadius = 0f
-    private var ringInnerRadius = 0f
+    private var ringInnerRx = 0f
+    private var ringInnerRy = 0f
 
     private var pressedDirection: Direction? = null
     private var pressedSoftKey: SoftKey? = null
@@ -98,10 +99,14 @@ class RetroControlsView(context: Context) : View(context) {
         )
 
         dpadRadius = min(dpF(72), (w - dpF(72)) / 2f)
-        centerRadius = dpadRadius * 0.28f
-        ringInnerRadius = dpadRadius * 0.47f
+        dpadRx = dpadRadius * 1.10f
+        dpadRy = dpadRadius * 0.88f
+        centerRadius = dpadRadius * 0.27f
+        ringInnerRx = dpadRx * 0.51f
+        ringInnerRy = dpadRy * 0.51f
+
         dpadCx = w / 2f
-        dpadCy = top + softHeight + dpF(18) + dpadRadius
+        dpadCy = top + softHeight + dpF(18) + dpadRy
 
         drawAnycallDpad(canvas)
     }
@@ -240,17 +245,20 @@ class RetroControlsView(context: Context) : View(context) {
     ): Direction? {
         val dx = x - dpadCx
         val dy = y - dpadCy
-        val distanceSquared = dx * dx + dy * dy
 
-        if (distanceSquared > dpadRadius * dpadRadius) {
-            return null
-        }
+        val outer =
+            (dx * dx) / (dpadRx * dpadRx) +
+                (dy * dy) / (dpadRy * dpadRy)
 
-        if (distanceSquared < centerRadius * centerRadius) {
-            return null
-        }
+        if (outer > 1f) return null
 
-        return if (abs(dx) > abs(dy)) {
+        val inner =
+            (dx * dx) / (centerRadius * centerRadius) +
+                (dy * dy) / (centerRadius * centerRadius)
+
+        if (inner < 1f) return null
+
+        return if (abs(dx / dpadRx) > abs(dy / dpadRy)) {
             if (dx < 0f) Direction.LEFT else Direction.RIGHT
         } else {
             if (dy < 0f) Direction.UP else Direction.DOWN
@@ -315,25 +323,28 @@ class RetroControlsView(context: Context) : View(context) {
     }
 
     private fun drawAnycallDpad(canvas: Canvas) {
-        // 애니콜 네비게이션 키처럼 바깥쪽 금속 링을 먼저 그린다.
+        // 사진의 애니콜 네비게이션 키처럼 가로로 살짝 넓은 타원형 외곽.
+        val shadowRect = RectF(
+            dpadCx - dpadRx - dpF(8),
+            dpadCy - dpadRy - dpF(4),
+            dpadCx + dpadRx + dpF(8),
+            dpadCy + dpadRy + dpF(8)
+        )
+
         paint.style = Paint.Style.FILL
         paint.color = Color.rgb(188, 197, 207)
-        canvas.drawCircle(
-            dpadCx,
-            dpadCy + dpF(3),
-            dpadRadius + dpF(8),
-            paint
+        canvas.drawOval(shadowRect, paint)
+
+        val bezelRect = RectF(
+            dpadCx - dpadRx - dpF(3),
+            dpadCy - dpadRy - dpF(2),
+            dpadCx + dpadRx + dpF(3),
+            dpadCy + dpadRy + dpF(3)
         )
 
         paint.color = Color.rgb(91, 103, 116)
-        canvas.drawCircle(
-            dpadCx,
-            dpadCy,
-            dpadRadius + dpF(3),
-            paint
-        )
+        canvas.drawOval(bezelRect, paint)
 
-        // 눌린 방향 뒤로 파란 LED halo가 퍼지는 느낌.
         pressedDirection?.let { direction ->
             drawLedHalo(canvas, direction)
         }
@@ -346,7 +357,7 @@ class RetroControlsView(context: Context) : View(context) {
             )
         }
 
-        // 중심 확인키.
+        // 중앙 확인키는 원본 다이얼처럼 둥근 형태 유지.
         paint.style = Paint.Style.FILL
         paint.color = Color.rgb(142, 153, 166)
         canvas.drawCircle(
@@ -366,32 +377,33 @@ class RetroControlsView(context: Context) : View(context) {
             paint
         )
 
-        // 원본 애니콜 다이얼의 작은 중심 점 느낌.
         paint.style = Paint.Style.FILL
         paint.color = Color.rgb(93, 107, 122)
         canvas.drawCircle(
             dpadCx,
             dpadCy,
-            centerRadius * 0.16f,
+            centerRadius * 0.15f,
             paint
         )
 
         Direction.entries.forEach { direction ->
-            drawArrow(
+            drawRoundedIndicator(
                 canvas = canvas,
                 direction = direction,
                 pressed = pressedDirection == direction
             )
         }
 
-        // 외곽선.
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = dpF(1.6f)
         paint.color = Color.rgb(27, 35, 44)
-        canvas.drawCircle(
-            dpadCx,
-            dpadCy,
-            dpadRadius,
+        canvas.drawOval(
+            RectF(
+                dpadCx - dpadRx,
+                dpadCy - dpadRy,
+                dpadCx + dpadRx,
+                dpadCy + dpadRy
+            ),
             paint
         )
     }
@@ -402,26 +414,26 @@ class RetroControlsView(context: Context) : View(context) {
         pressed: Boolean
     ) {
         val startAngle = when (direction) {
-            Direction.UP -> 233f
-            Direction.RIGHT -> 323f
-            Direction.DOWN -> 53f
-            Direction.LEFT -> 143f
+            Direction.UP -> 228f
+            Direction.RIGHT -> 318f
+            Direction.DOWN -> 48f
+            Direction.LEFT -> 138f
         }
 
-        val sweep = 74f
+        val sweep = 84f
 
         val outerRect = RectF(
-            dpadCx - dpadRadius,
-            dpadCy - dpadRadius,
-            dpadCx + dpadRadius,
-            dpadCy + dpadRadius
+            dpadCx - dpadRx,
+            dpadCy - dpadRy,
+            dpadCx + dpadRx,
+            dpadCy + dpadRy
         )
 
         val innerRect = RectF(
-            dpadCx - ringInnerRadius,
-            dpadCy - ringInnerRadius,
-            dpadCx + ringInnerRadius,
-            dpadCy + ringInnerRadius
+            dpadCx - ringInnerRx,
+            dpadCy - ringInnerRy,
+            dpadCx + ringInnerRx,
+            dpadCy + ringInnerRy
         )
 
         val path = Path().apply {
@@ -448,19 +460,18 @@ class RetroControlsView(context: Context) : View(context) {
         canvas.drawPath(path, paint)
 
         if (pressed) {
-            // 안쪽에 한 번 더 밝은 선을 넣어 실제 LED가 켜진 듯 보이게 한다.
             paint.style = Paint.Style.STROKE
             paint.strokeWidth = dpF(1.2f)
             paint.color = LED_BLUE_PALE
             canvas.drawArc(
                 RectF(
-                    dpadCx - dpadRadius * 0.86f,
-                    dpadCy - dpadRadius * 0.86f,
-                    dpadCx + dpadRadius * 0.86f,
-                    dpadCy + dpadRadius * 0.86f
+                    dpadCx - dpadRx * 0.86f,
+                    dpadCy - dpadRy * 0.86f,
+                    dpadCx + dpadRx * 0.86f,
+                    dpadCy + dpadRy * 0.86f
                 ),
-                startAngle + 5f,
-                sweep - 10f,
+                startAngle + 7f,
+                sweep - 14f,
                 false,
                 paint
             )
@@ -471,93 +482,139 @@ class RetroControlsView(context: Context) : View(context) {
         canvas: Canvas,
         direction: Direction
     ) {
-        val angle = when (direction) {
-            Direction.UP -> -90f
-            Direction.RIGHT -> 0f
-            Direction.DOWN -> 90f
-            Direction.LEFT -> 180f
+        val gx = when (direction) {
+            Direction.LEFT -> dpadCx - dpadRx * 0.64f
+            Direction.RIGHT -> dpadCx + dpadRx * 0.64f
+            else -> dpadCx
         }
 
-        val radians = Math.toRadians(angle.toDouble())
-        val glowDistance = dpadRadius * 0.63f
-        val gx = dpadCx + cos(radians).toFloat() * glowDistance
-        val gy = dpadCy + sin(radians).toFloat() * glowDistance
+        val gy = when (direction) {
+            Direction.UP -> dpadCy - dpadRy * 0.64f
+            Direction.DOWN -> dpadCy + dpadRy * 0.64f
+            else -> dpadCy
+        }
 
         paint.style = Paint.Style.FILL
         paint.color = Color.argb(35, 0, 119, 255)
-        canvas.drawCircle(
-            gx,
-            gy,
-            dpadRadius * 0.46f,
+        canvas.drawOval(
+            RectF(
+                gx - dpF(20),
+                gy - dpF(13),
+                gx + dpF(20),
+                gy + dpF(13)
+            ),
             paint
         )
 
-        paint.color = Color.argb(58, 0, 153, 255)
-        canvas.drawCircle(
-            gx,
-            gy,
-            dpadRadius * 0.33f,
+        paint.color = Color.argb(62, 0, 153, 255)
+        canvas.drawOval(
+            RectF(
+                gx - dpF(13),
+                gy - dpF(8),
+                gx + dpF(13),
+                gy + dpF(8)
+            ),
             paint
         )
     }
 
-    private fun drawArrow(
+    /**
+     * 사진의 방향 표시는 날카로운 삼각형이 아니라 둥근 작은 버튼/슬롯처럼
+     * 보여서, 방향에 따라 가로 또는 세로로 긴 캡슐 모양으로 그린다.
+     */
+    private fun drawRoundedIndicator(
         canvas: Canvas,
         direction: Direction,
         pressed: Boolean
     ) {
-        val distance = dpadRadius * 0.70f
-        val size = dpadRadius * 0.105f
+        val distanceX = dpadRx * 0.66f
+        val distanceY = dpadRy * 0.66f
 
         val cx = when (direction) {
-            Direction.LEFT -> dpadCx - distance
-            Direction.RIGHT -> dpadCx + distance
+            Direction.LEFT -> dpadCx - distanceX
+            Direction.RIGHT -> dpadCx + distanceX
             else -> dpadCx
         }
 
         val cy = when (direction) {
-            Direction.UP -> dpadCy - distance
-            Direction.DOWN -> dpadCy + distance
+            Direction.UP -> dpadCy - distanceY
+            Direction.DOWN -> dpadCy + distanceY
             else -> dpadCy
         }
 
-        val path = Path()
+        val horizontal =
+            direction == Direction.LEFT ||
+                direction == Direction.RIGHT
 
-        when (direction) {
-            Direction.UP -> {
-                path.moveTo(cx, cy - size)
-                path.lineTo(cx - size, cy + size)
-                path.lineTo(cx + size, cy + size)
-            }
+        val halfW = if (horizontal) dpF(5.5f) else dpF(10f)
+        val halfH = if (horizontal) dpF(10f) else dpF(5.5f)
 
-            Direction.DOWN -> {
-                path.moveTo(cx, cy + size)
-                path.lineTo(cx - size, cy - size)
-                path.lineTo(cx + size, cy - size)
-            }
+        val rect = RectF(
+            cx - halfW,
+            cy - halfH,
+            cx + halfW,
+            cy + halfH
+        )
 
-            Direction.LEFT -> {
-                path.moveTo(cx - size, cy)
-                path.lineTo(cx + size, cy - size)
-                path.lineTo(cx + size, cy + size)
-            }
-
-            Direction.RIGHT -> {
-                path.moveTo(cx + size, cy)
-                path.lineTo(cx - size, cy - size)
-                path.lineTo(cx - size, cy + size)
-            }
+        if (pressed) {
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = dpF(5f)
+            paint.color = Color.argb(78, 0, 151, 255)
+            canvas.drawRoundRect(
+                rect,
+                dpF(8),
+                dpF(8),
+                paint
+            )
         }
-
-        path.close()
 
         paint.style = Paint.Style.FILL
         paint.color = if (pressed) {
-            Color.WHITE
+            Color.rgb(218, 244, 255)
         } else {
-            Color.rgb(225, 231, 237)
+            Color.rgb(207, 217, 227)
         }
-        canvas.drawPath(path, paint)
+        canvas.drawRoundRect(
+            rect,
+            dpF(8),
+            dpF(8),
+            paint
+        )
+
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = dpF(1f)
+        paint.color = if (pressed) {
+            LED_BLUE_PALE
+        } else {
+            Color.rgb(64, 75, 88)
+        }
+        canvas.drawRoundRect(
+            rect,
+            dpF(8),
+            dpF(8),
+            paint
+        )
+
+        val inset = dpF(2f)
+        val inner = RectF(
+            rect.left + inset,
+            rect.top + inset,
+            rect.right - inset,
+            rect.bottom - inset
+        )
+
+        paint.style = Paint.Style.FILL
+        paint.color = if (pressed) {
+            Color.rgb(115, 211, 255)
+        } else {
+            Color.rgb(238, 242, 246)
+        }
+        canvas.drawRoundRect(
+            inner,
+            dpF(6),
+            dpF(6),
+            paint
+        )
     }
 
     private fun dp(value: Int): Int =
