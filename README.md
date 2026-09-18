@@ -39,11 +39,13 @@ WSL2, Docker, 로컬 MCP 서버는 사용하지 않습니다.
 - 원본 사운드 추출 스크립트 추가
 - 이동 / 클리어 / 버튼 사운드 연결 코드 추가
 - GitHub Actions Android 빌드 CI 추가
+- GameEngine JVM 회귀 테스트 + 66개 스테이지 구조 무결성 테스트
 - Galaxy S8(Android 7.0/API 24)부터 지원
 - Android 16(API 36) compileSdk/targetSdk 대응
+- CI에서 API 24 / API 36 에뮬레이터 실제 실행 및 화면 캡처
 
-플레이어는 현재 원본 기본 프레임 1장을 사용합니다.
-방향별 이동 애니메이션은 아직 적용 전입니다.
+플레이어는 원본 Sprite 370의 1~70프레임 대기/눈 깜빡임과 71~76프레임 성공 반응 타이밍을 재현합니다.
+현재 인게임 캐릭터 그래픽은 사용자 제공 캐릭터를 14×14 픽셀 타일에 맞춰 사용합니다.
 
 ## 원본 SWF 분석 결과
 
@@ -137,8 +139,10 @@ app\src\main\res\raw\
 현재 연결된 동작:
 
 - 이동 성공 → `move.mp3`
+- 박스를 목표에 넣음 → `success.mp3`
 - 스테이지 클리어 → `clear.mp3`
 - 스테이지 선택 / 재시작 / 다음 스테이지 → `button.mp3`
+- 인트로 제거에 따라 `start` 사운드는 현재 자동 재생하지 않음
 
 ## Android Studio에서 실행
 
@@ -169,18 +173,18 @@ app\build\outputs\apk\debug\app-debug.apk
 `main` 브랜치에 코드가 올라가면 GitHub Actions가:
 
 ```text
-./gradlew lintDebug assembleDebug
+./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
 를 자동 실행합니다.
 
-성공하면 Actions 실행 결과에:
+성공하면 Actions 실행 결과에 Debug APK와 API별 smoke screenshot Artifact가 생성됩니다.
 
 ```text
 pushpush2-debug-apk
+pushpush2-smoke-api-24
+pushpush2-smoke-api-36
 ```
-
-Artifact가 생성됩니다.
 
 따라서 로컬 Android Studio를 열기 전에도 GitHub에서 컴파일 오류를 확인할 수 있습니다.
 
@@ -231,13 +235,11 @@ pushpush2/
 
 ## 다음 작업
 
-1. 플레이어 방향별 원본 프레임 분석
-2. 이동 애니메이션 적용
-3. 원본 240×250 화면 배치 재현
-4. 터치패드 길게 누르기 / 반복 이동
-5. 66개 스테이지 실제 플레이 검증
-6. 실기기 테스트
-7. APK 릴리즈
+1. Galaxy S8 / S10 실기기에서 게임 영역과 D-pad 크기 미세 조정
+2. 66개 스테이지 실제 플레이 검증
+3. Android Studio 실기기 테스트
+4. Debug APK 안정화
+5. 릴리즈 APK 생성
 
 현재 진행상황은 `PROJECT_STATUS.md`에 기록합니다.
 
