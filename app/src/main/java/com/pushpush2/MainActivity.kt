@@ -54,10 +54,7 @@ class MainActivity : Activity() {
         engine = GameEngine(StageRepository.get(currentStageNumber))
         setContentView(buildContentView())
         updateUi()
-        showHeaderState(
-            HeaderState.START,
-            resetAfterMs = HEADER_START_MS
-        )
+        showHeaderState(HeaderState.PLAYING)
 
         if (savedInstanceState == null) {
             audioPlayer.play("start")
@@ -99,7 +96,7 @@ class MainActivity : Activity() {
             background = brickPanel(Color.WHITE)
             setPadding(dp(8), dp(8), dp(8), dp(8))
             scaleType = ImageView.ScaleType.FIT_CENTER
-            setImageDrawable(playerPortraitDrawable(HeaderCharacterAsset.START))
+            setImageDrawable(playerPortraitDrawable(HeaderCharacterAsset.MOVE))
             contentDescription = "PushPush character"
         }
 
@@ -237,11 +234,12 @@ class MainActivity : Activity() {
     }
 
     private fun move(direction: Direction) {
-        val boxesBefore = engine.state.boxes
+        val boxesBefore = engine.state.boxes.toSet()
 
         if (!engine.move(direction)) return
 
         val state = engine.state
+        val boxMoved = state.boxes != boxesBefore
         val boxEnteredGoal =
             (state.boxes - boxesBefore)
                 .firstOrNull { it in state.stage.goals }
@@ -253,6 +251,11 @@ class MainActivity : Activity() {
             gameView.playGoalSuccess(boxEnteredGoal)
             showHeaderState(
                 HeaderState.GOAL_SUCCESS,
+                resetAfterMs = HEADER_REACTION_MS
+            )
+        } else if (boxMoved) {
+            showHeaderState(
+                HeaderState.PUSH,
                 resetAfterMs = HEADER_REACTION_MS
             )
         } else {
@@ -341,10 +344,7 @@ class MainActivity : Activity() {
         engine.reset()
         gameView.resetPlayerAnimation()
         updateUi()
-        showHeaderState(
-            HeaderState.RETRY,
-            resetAfterMs = HEADER_REACTION_MS
-        )
+        showHeaderState(HeaderState.PLAYING)
     }
 
     private fun loadStage(number: Int) {
@@ -354,10 +354,7 @@ class MainActivity : Activity() {
         engine.load(StageRepository.get(number))
         gameView.resetPlayerAnimation()
         updateUi()
-        showHeaderState(
-            HeaderState.START,
-            resetAfterMs = HEADER_START_MS
-        )
+        showHeaderState(HeaderState.PLAYING)
     }
 
     private fun showStageSelector() {
@@ -480,10 +477,6 @@ class MainActivity : Activity() {
         val message: String,
         val sprite: String
     ) {
-        START(
-            message = "영 차~!\n영 차~!",
-            sprite = HeaderCharacterAsset.START
-        ),
         PLAYING(
             message = "헛! 둘~!\n헛! 둘~!",
             sprite = HeaderCharacterAsset.MOVE
@@ -491,6 +484,10 @@ class MainActivity : Activity() {
         MOVE(
             message = "헛! 둘~!\n헛! 둘~!",
             sprite = HeaderCharacterAsset.MOVE
+        ),
+        PUSH(
+            message = "영 차~!\n영 차~!",
+            sprite = HeaderCharacterAsset.START
         ),
         GOAL_SUCCESS(
             message = "와우~!!\n짝 짝 짝 ..",
@@ -501,8 +498,8 @@ class MainActivity : Activity() {
             sprite = HeaderCharacterAsset.STAGE_CLEAR
         ),
         RETRY(
-            message = "영 차~!\n영 차~!",
-            sprite = HeaderCharacterAsset.START
+            message = "헛! 둘~!\n헛! 둘~!",
+            sprite = HeaderCharacterAsset.MOVE
         ),
         GAME_CLEAR(
             message = "오~예~~\n앗싸~~!!",
@@ -517,7 +514,6 @@ class MainActivity : Activity() {
         // 클리어 메시지와 캐릭터 반응이 눈에 보이는 시간까지 확보한다.
         const val STAGE_CLEAR_FADE_MS = 900L
         const val HEADER_REACTION_MS = 900L
-        const val HEADER_START_MS = 1200L
 
         val RETRO_BLUE: Int =
             Color.rgb(45, 132, 218)
