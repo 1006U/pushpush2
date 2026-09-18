@@ -238,12 +238,13 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(RETRO_STATUS_BLUE)
-            setPadding(dp(4), 0, dp(4), 0)
+            setPadding(dp(6), dp(2), dp(6), dp(2))
         }
 
         stageLabel = TextView(this).apply {
             setTextColor(Color.WHITE)
-            textSize = 22f
+            textSize = 28f
+            textScaleX = 1.10f
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             includeFontPadding = false
@@ -251,7 +252,8 @@ class MainActivity : Activity() {
 
         moveLabel = TextView(this).apply {
             setTextColor(Color.WHITE)
-            textSize = 22f
+            textSize = 28f
+            textScaleX = 1.10f
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             includeFontPadding = false
@@ -259,11 +261,11 @@ class MainActivity : Activity() {
 
         statusBar.addView(
             stageLabel,
-            LinearLayout.LayoutParams(0, dp(48), 0.56f)
+            LinearLayout.LayoutParams(0, dp(60), 0.56f)
         )
         statusBar.addView(
             moveLabel,
-            LinearLayout.LayoutParams(0, dp(48), 0.44f)
+            LinearLayout.LayoutParams(0, dp(60), 0.44f)
         )
 
         gameShell.addView(
