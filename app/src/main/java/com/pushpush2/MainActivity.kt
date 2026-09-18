@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.Base64
 import android.view.Gravity
@@ -22,6 +21,7 @@ import com.pushpush2.game.GameEngine
 import com.pushpush2.game.StageRepository
 import com.pushpush2.ui.GameView
 import com.pushpush2.ui.HeaderCharacterAsset
+import com.pushpush2.ui.RetroBrickFrameDrawable
 import com.pushpush2.ui.RetroControlsView
 import com.pushpush2.ui.StageSelectView
 
@@ -96,20 +96,20 @@ class MainActivity : Activity() {
         }
 
         headerCharacter = ImageView(this).apply {
-            background = borderedPanel(Color.WHITE)
-            setPadding(dp(2), dp(2), dp(2), dp(2))
+            background = brickPanel(Color.WHITE)
+            setPadding(dp(8), dp(8), dp(8), dp(8))
             scaleType = ImageView.ScaleType.FIT_CENTER
             setImageDrawable(playerPortraitDrawable(HeaderCharacterAsset.START))
             contentDescription = "PushPush character"
         }
 
         headerMessage = TextView(this).apply {
-            background = borderedPanel(Color.WHITE)
+            background = brickPanel(Color.WHITE)
             setTextColor(Color.rgb(28, 46, 62))
             textSize = 18f
             gravity = Gravity.CENTER
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setPadding(dp(8), dp(4), dp(8), dp(4))
+            setPadding(dp(14), dp(10), dp(14), dp(10))
             includeFontPadding = false
         }
 
@@ -467,12 +467,11 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun borderedPanel(fillColor: Int): GradientDrawable =
-        GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            setColor(fillColor)
-            setStroke(dp(2), RETRO_BORDER)
-        }
+    private fun brickPanel(fillColor: Int): RetroBrickFrameDrawable =
+        RetroBrickFrameDrawable(
+            fillColor = fillColor,
+            borderWidthPx = dp(8).toFloat()
+        )
 
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
@@ -524,9 +523,6 @@ class MainActivity : Activity() {
             Color.rgb(45, 132, 218)
         val RETRO_STATUS_BLUE: Int =
             Color.rgb(31, 110, 222)
-        val RETRO_BORDER: Int =
-            Color.rgb(31, 41, 48)
-
         val CONTROL_PANEL: Int =
             Color.rgb(184, 193, 202)
     }
