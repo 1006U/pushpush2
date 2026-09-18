@@ -39,25 +39,27 @@ class GameView(context: Context) : View(context) {
     private val boxBitmap: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.tile_box)
     private val playerBitmap: Bitmap =
-        BitmapFactory.decodeResource(resources, R.drawable.tile_player)
-
-    /*
-     * Sprite 370의 기본 루프에서 사용하는 Shape 358/359를 14x14 PNG로
-     * 복원한 데이터다. 원본 SWF 바이너리는 저장소에 포함하지 않는다.
-     */
+        decodeEmbeddedBitmap(PlayerCharacterAsset.IDLE)
     private val playerBlinkHalfBitmap: Bitmap =
-        decodeEmbeddedBitmap(PLAYER_BLINK_HALF_PNG)
+        decodeEmbeddedBitmap(PlayerCharacterAsset.BLINK_HALF)
     private val playerBlinkClosedBitmap: Bitmap =
-        decodeEmbeddedBitmap(PLAYER_BLINK_CLOSED_PNG)
+        decodeEmbeddedBitmap(PlayerCharacterAsset.BLINK_CLOSED)
 
     /*
-     * 원본 Sprite 356 frame 2~13 / Sprite 370 frame 71~76을
-     * game.swf에서 직접 복원한 프레임이다.
+     * Box Sprite 356의 목표 진입 애니메이션은 원본 SWF 프레임을 유지한다.
+     * 플레이어는 사용자가 제공한 새 캐릭터가 애니메이션 중 예전 그림으로
+     * 바뀌지 않도록 동일한 새 캐릭터 프레임만 사용한다.
      */
     private val boxGoalBitmaps: List<Bitmap> =
         OriginalAnimationFrames.boxGoalPngBase64.map(::decodeEmbeddedBitmap)
-    private val playerSuccessBitmaps: List<Bitmap> =
-        OriginalAnimationFrames.playerSuccessPngBase64.map(::decodeEmbeddedBitmap)
+    private val playerSuccessBitmaps: List<Bitmap> = listOf(
+        playerBitmap,
+        playerBlinkHalfBitmap,
+        playerBlinkClosedBitmap,
+        playerBlinkHalfBitmap,
+        playerBitmap,
+        playerBitmap
+    )
 
     private val sourceRect = Rect(0, 0, ORIGINAL_TILE_PX, ORIGINAL_TILE_PX)
 
@@ -642,12 +644,6 @@ class GameView(context: Context) : View(context) {
             floatArrayOf(-1.5f, 3.5f),
             floatArrayOf(0.5f, 1.5f)
         )
-
-        const val PLAYER_BLINK_HALF_PNG =
-            "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAABmJLR0QA/wD/AP+gvaeTAAAAsUlEQVQokZ2QMRaDIBBE//psLNJzFC0x5xbLeBRvYEkKsixIfL5kGmZ2dwYWoUX8UgOQK2EGP8ExwHAkvb4aj1QmPyV1DDam5jpAusZ0Hi5hMxEgLiFmAPksuWIJSXcaEdZPVIyZaz15a4heuwRrPmexD9pC2wN6AMY5F1S7Me2zF8PaYwvJ6PzEXjzD6Sc8wPm56e1bsKf+ih5seRG55aq7c5KI3HKgNpapVzwH8eeOb12Aa1x/oE/aAAAAAElFTkSuQmCC"
-
-        const val PLAYER_BLINK_CLOSED_PNG =
-            "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAABmJLR0QA/wD/AP+gvaeTAAAAnElEQVQokZ2SOw6DMBBEZ1AaF+l9FCjtg0MJR8kNXDrFesH4g6OMhLS/N6wtE7ViowYAzJOpAC5o9oBbSsOzz6wow6VMALa9+jsfoRxWJRMBn6DOBtN4sq1r1VyzF+dgJD/WDqiDqmBg041+tr3q4VhlVesWKaRPIbwB63yz1171B70AIEZhSQ5jzatbJTmMgfuTu7n24tMIf57xC89mQF/nbBXlAAAAAElFTkSuQmCC"
 
         val OUTER_BACKGROUND: Int =
             Color.rgb(8, 10, 12)
