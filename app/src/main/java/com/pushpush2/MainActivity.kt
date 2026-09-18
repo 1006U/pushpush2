@@ -22,7 +22,6 @@ import com.pushpush2.game.GameEngine
 import com.pushpush2.game.StageRepository
 import com.pushpush2.ui.GameView
 import com.pushpush2.ui.HeaderCharacterAsset
-import com.pushpush2.ui.PlayerCharacterAsset
 import com.pushpush2.ui.RetroControlsView
 import com.pushpush2.ui.StageSelectView
 
