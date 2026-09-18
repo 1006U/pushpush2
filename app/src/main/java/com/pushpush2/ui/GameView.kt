@@ -5,9 +5,13 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Shader
+import android.graphics.Typeface
 import android.os.SystemClock
 import android.util.Base64
 import android.view.View
@@ -21,6 +25,11 @@ class GameView(context: Context) : View(context) {
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         isFilterBitmap = false
+    }
+
+    private val endingTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
     }
 
     private val brickBitmap: Bitmap =
@@ -55,6 +64,7 @@ class GameView(context: Context) : View(context) {
     private var gameState: GameState? = null
     private var playerAnimationStartedAtMs = SystemClock.uptimeMillis()
     private var playerSuccessStartedAtMs: Long? = null
+    private var endingStartedAtMs: Long? = null
     private val boxGoalAnimationStarts = mutableMapOf<Position, Long>()
 
     private val animationTick = object : Runnable {
@@ -87,9 +97,19 @@ class GameView(context: Context) : View(context) {
         invalidate()
     }
 
+    fun showEnding() {
+        val now = SystemClock.uptimeMillis()
+        endingStartedAtMs = now
+        playerAnimationStartedAtMs = now
+        playerSuccessStartedAtMs = null
+        boxGoalAnimationStarts.clear()
+        invalidate()
+    }
+
     fun resetPlayerAnimation() {
         playerAnimationStartedAtMs = SystemClock.uptimeMillis()
         playerSuccessStartedAtMs = null
+        endingStartedAtMs = null
         boxGoalAnimationStarts.clear()
         invalidate()
     }
@@ -109,12 +129,30 @@ class GameView(context: Context) : View(context) {
         super.onDraw(canvas)
         canvas.drawColor(OUTER_BACKGROUND)
 
-        val state = gameState ?: return
-        val stage = state.stage
-
         if (width <= 0 || height <= 0) return
 
         val now = SystemClock.uptimeMillis()
+        val endingStartedAt = endingStartedAtMs
+
+        if (endingStartedAt != null) {
+            drawEnding(
+                canvas = canvas,
+                now = now,
+                startedAt = endingStartedAt
+            )
+            return
+        }
+
+        val state = gameState ?: return
+        drawStage(canvas, state, now)
+    }
+
+    private fun drawStage(
+        canvas: Canvas,
+        state: GameState,
+        now: Long
+    ) {
+        val stage = state.stage
         val horizontalPadding = dp(12f)
         val verticalPadding = dp(12f)
 
@@ -132,13 +170,7 @@ class GameView(context: Context) : View(context) {
          * Pixel-art 타일이 흐릿해지지 않도록 가능한 경우 정수 픽셀 배율을 사용한다.
          * 아주 작은 화면에서는 rawCell을 그대로 사용해서 전체 맵이 잘리지 않게 한다.
          */
-        val cell = if (rawCell >= ORIGINAL_TILE_PX) {
-            val integerScale = floor(rawCell / ORIGINAL_TILE_PX)
-                .coerceAtLeast(1f)
-            ORIGINAL_TILE_PX * integerScale
-        } else {
-            rawCell
-        }
+        val cell = integerFriendlyCell(rawCell)
 
         val boardWidth = stage.width * cell
         val boardHeight = stage.height * cell
@@ -154,6 +186,7 @@ class GameView(context: Context) : View(context) {
         )
 
         paint.style = Paint.Style.FILL
+        paint.shader = null
         paint.color = FLOOR_COLOR
         canvas.drawRect(boardRect, paint)
 
@@ -202,6 +235,218 @@ class GameView(context: Context) : View(context) {
                 offsetX = offsetX,
                 offsetY = offsetY
             )
+        )
+    }
+
+    private fun drawEnding(
+        canvas: Canvas,
+        now: Long,
+        startedAt: Long
+    ) {
+        val horizontalPadding = dp(12f)
+        val verticalPadding = dp(12f)
+
+        val availableWidth =
+            (width.toFloat() - horizontalPadding * 2f).coerceAtLeast(1f)
+        val availableHeight =
+            (height.toFloat() - verticalPadding * 2f).coerceAtLeast(1f)
+
+        val rawCell = min(
+            availableWidth / ENDING_SPAN_TILES,
+            availableHeight / ENDING_SPAN_TILES
+        )
+        val cell = integerFriendlyCell(rawCell)
+
+        val centerX = width / 2f
+        val centerY = height / 2f - cell * 0.15f
+
+        drawEndingGradientShape(canvas, centerX, centerY, cell)
+
+        ENDING_BRICKS.forEach { point ->
+            drawTile(
+                canvas = canvas,
+                bitmap = brickBitmap,
+                destination = endingTileRect(
+                    gx = point[0],
+                    gy = point[1],
+                    cell = cell,
+                    centerX = centerX,
+                    centerY = centerY
+                )
+            )
+        }
+
+        ENDING_BOXES.forEach { point ->
+            drawTile(
+                canvas = canvas,
+                bitmap = boxBitmap,
+                destination = endingTileRect(
+                    gx = point[0],
+                    gy = point[1],
+                    cell = cell,
+                    centerX = centerX,
+                    centerY = centerY
+                )
+            )
+        }
+
+        drawTile(
+            canvas = canvas,
+            bitmap = currentPlayerBitmap(now),
+            destination = endingTileRect(
+                gx = -2.5f,
+                gy = 3.5f,
+                cell = cell,
+                centerX = centerX,
+                centerY = centerY
+            )
+        )
+
+        drawEndingCredits(
+            canvas = canvas,
+            elapsed = (now - startedAt).coerceAtLeast(0L),
+            centerX = centerX,
+            centerY = centerY,
+            cell = cell
+        )
+    }
+
+    private fun drawEndingGradientShape(
+        canvas: Canvas,
+        centerX: Float,
+        centerY: Float,
+        cell: Float
+    ) {
+        fun x(value: Float): Float = centerX + value * cell
+        fun y(value: Float): Float = centerY + value * cell
+
+        val path = Path().apply {
+            fillType = Path.FillType.EVEN_ODD
+
+            moveTo(x(1.5f), y(-4.5f))
+            lineTo(x(1.5f), y(-2.5f))
+            lineTo(x(2.5f), y(-2.5f))
+            lineTo(x(2.5f), y(-1.5f))
+            lineTo(x(3.5f), y(-1.5f))
+            lineTo(x(3.5f), y(-0.5f))
+            lineTo(x(4.5f), y(-0.5f))
+            lineTo(x(4.5f), y(0.5f))
+            lineTo(x(3.5f), y(0.5f))
+            lineTo(x(3.5f), y(4.5f))
+            lineTo(x(-3.5f), y(4.5f))
+            lineTo(x(-3.5f), y(0.5f))
+            lineTo(x(-4.5f), y(0.5f))
+            lineTo(x(-4.5f), y(-0.5f))
+            lineTo(x(-3.5f), y(-0.5f))
+            lineTo(x(-3.5f), y(-1.5f))
+            lineTo(x(-2.5f), y(-1.5f))
+            lineTo(x(-2.5f), y(-2.5f))
+            lineTo(x(-1.5f), y(-2.5f))
+            lineTo(x(-1.5f), y(-3.5f))
+            lineTo(x(-0.5f), y(-3.5f))
+            lineTo(x(-0.5f), y(-2.5f))
+            lineTo(x(0.5f), y(-2.5f))
+            lineTo(x(0.5f), y(-4.5f))
+            close()
+
+            addRect(
+                x(0.5f),
+                y(-2.5f),
+                x(1.5f),
+                y(-1.5f),
+                Path.Direction.CW
+            )
+            addRect(
+                x(-2.0f),
+                y(0.5f),
+                x(0.0f),
+                y(2.5f),
+                Path.Direction.CW
+            )
+        }
+
+        paint.style = Paint.Style.FILL
+        paint.shader = LinearGradient(
+            centerX,
+            y(-4.5f),
+            centerX,
+            y(4.5f),
+            ENDING_GRADIENT_TOP,
+            ENDING_GRADIENT_BOTTOM,
+            Shader.TileMode.CLAMP
+        )
+        canvas.drawPath(path, paint)
+        paint.shader = null
+    }
+
+    private fun drawEndingCredits(
+        canvas: Canvas,
+        elapsed: Long,
+        centerX: Float,
+        centerY: Float,
+        cell: Float
+    ) {
+        val index =
+            ((elapsed / ENDING_CREDIT_CYCLE_MS) % ENDING_CREDITS.size)
+                .toInt()
+        val inCycle = elapsed % ENDING_CREDIT_CYCLE_MS
+        val alphaProgress =
+            if (inCycle <= ENDING_CREDIT_FADE_MS) {
+                inCycle.toFloat() / ENDING_CREDIT_FADE_MS
+            } else {
+                1f -
+                    (inCycle - ENDING_CREDIT_FADE_MS).toFloat() /
+                    ENDING_CREDIT_FADE_MS
+            }.coerceIn(0f, 1f)
+
+        val alpha = (alphaProgress * 255f).toInt()
+        val credit = ENDING_CREDITS[index]
+
+        endingTextPaint.textSize = cell * 0.57f
+        endingTextPaint.color =
+            Color.argb(alpha, 0, 153, 255)
+        canvas.drawText(
+            credit.first,
+            centerX,
+            centerY - cell * 0.8f,
+            endingTextPaint
+        )
+
+        endingTextPaint.textSize = cell * 0.43f
+        endingTextPaint.color =
+            Color.argb(alpha, 255, 255, 255)
+        canvas.drawText(
+            credit.second,
+            centerX,
+            centerY + cell * 0.15f,
+            endingTextPaint
+        )
+
+        endingTextPaint.textSize = cell * 0.42f
+        endingTextPaint.color = Color.WHITE
+        canvas.drawText(
+            "Flash PUSH II v0.95",
+            centerX,
+            centerY + cell * 5.4f,
+            endingTextPaint
+        )
+    }
+
+    private fun endingTileRect(
+        gx: Float,
+        gy: Float,
+        cell: Float,
+        centerX: Float,
+        centerY: Float
+    ): RectF {
+        val left = centerX + gx * cell
+        val top = centerY + gy * cell
+
+        return RectF(
+            left,
+            top,
+            left + cell,
+            top + cell
         )
     }
 
@@ -274,6 +519,15 @@ class GameView(context: Context) : View(context) {
         }
     }
 
+    private fun integerFriendlyCell(rawCell: Float): Float =
+        if (rawCell >= ORIGINAL_TILE_PX) {
+            val integerScale = floor(rawCell / ORIGINAL_TILE_PX)
+                .coerceAtLeast(1f)
+            ORIGINAL_TILE_PX * integerScale
+        } else {
+            rawCell
+        }
+
     private fun decodeEmbeddedBitmap(encoded: String): Bitmap {
         val bytes = Base64.decode(encoded, Base64.DEFAULT)
         return requireNotNull(
@@ -318,6 +572,76 @@ class GameView(context: Context) : View(context) {
         const val ORIGINAL_TILE_PX = 14
         const val PLAYER_IDLE_FRAME_COUNT = 70L
         const val ORIGINAL_FRAME_DURATION_MS = 100L
+
+        const val ENDING_SPAN_TILES = 12f
+        const val ENDING_CREDIT_FADE_MS = 2000L
+        const val ENDING_CREDIT_CYCLE_MS = 4000L
+
+        val ENDING_GRADIENT_TOP: Int =
+            Color.rgb(255, 223, 0)
+        val ENDING_GRADIENT_BOTTOM: Int =
+            Color.rgb(255, 0, 0)
+
+        val ENDING_CREDITS: Array<Pair<String, String>> = arrayOf(
+            "Congratulations" to "Game Clear",
+            "The Originator" to "Hiroyuki Imabayashi - Socoban",
+            "The Original Maker" to "intromobile.com - PUSH II",
+            "Copyright" to "SAMSUNG All Right Reserved",
+            "Special Thanks" to "chang118",
+            "Special Thanks" to "bockdori",
+            "Special Thanks" to "yeom1987",
+            "Special Thanks" to "& you.",
+            "Program Producer" to "ilovecup"
+        )
+
+        val ENDING_BRICKS: Array<FloatArray> = arrayOf(
+            floatArrayOf(-5.5f, 0.5f),
+            floatArrayOf(4.5f, 0.5f),
+            floatArrayOf(-1.5f, -4.5f),
+            floatArrayOf(-0.5f, -4.5f),
+            floatArrayOf(0.5f, -5.5f),
+            floatArrayOf(1.5f, -5.5f),
+            floatArrayOf(1.5f, -4.5f),
+            floatArrayOf(1.5f, -3.5f),
+            floatArrayOf(2.5f, -2.5f),
+            floatArrayOf(3.5f, -1.5f),
+            floatArrayOf(4.5f, -0.5f),
+            floatArrayOf(-4.5f, 0.5f),
+            floatArrayOf(-5.5f, -0.5f),
+            floatArrayOf(-4.5f, -1.5f),
+            floatArrayOf(-3.5f, -2.5f),
+            floatArrayOf(-2.5f, -3.5f),
+            floatArrayOf(-0.5f, -3.5f),
+            floatArrayOf(-3.5f, 4.5f),
+            floatArrayOf(-4.5f, 1.5f),
+            floatArrayOf(-4.5f, 2.5f),
+            floatArrayOf(-4.5f, 3.5f),
+            floatArrayOf(-4.5f, 4.5f),
+            floatArrayOf(-2.5f, 4.5f),
+            floatArrayOf(-1.5f, 4.5f),
+            floatArrayOf(-0.5f, 4.5f),
+            floatArrayOf(3.5f, 0.5f),
+            floatArrayOf(3.5f, 1.5f),
+            floatArrayOf(3.5f, 2.5f),
+            floatArrayOf(3.5f, 3.5f),
+            floatArrayOf(3.5f, 4.5f),
+            floatArrayOf(2.5f, 4.5f),
+            floatArrayOf(1.5f, 4.5f),
+            floatArrayOf(0.5f, 4.5f),
+            floatArrayOf(0.5f, -2.5f)
+        )
+
+        val ENDING_BOXES: Array<FloatArray> = arrayOf(
+            floatArrayOf(2.5f, 3.5f),
+            floatArrayOf(1.5f, 3.5f),
+            floatArrayOf(0.5f, 3.5f),
+            floatArrayOf(-0.5f, 3.5f),
+            floatArrayOf(1.5f, 2.5f),
+            floatArrayOf(0.5f, 2.5f),
+            floatArrayOf(-0.5f, 2.5f),
+            floatArrayOf(-1.5f, 3.5f),
+            floatArrayOf(0.5f, 1.5f)
+        )
 
         const val PLAYER_BLINK_HALF_PNG =
             "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAABmJLR0QA/wD/AP+gvaeTAAAAsUlEQVQokZ2QMRaDIBBE//psLNJzFC0x5xbLeBRvYEkKsixIfL5kGmZ2dwYWoUX8UgOQK2EGP8ExwHAkvb4aj1QmPyV1DDam5jpAusZ0Hi5hMxEgLiFmAPksuWIJSXcaEdZPVIyZaz15a4heuwRrPmexD9pC2wN6AMY5F1S7Me2zF8PaYwvJ6PzEXjzD6Sc8wPm56e1bsKf+ih5seRG55aq7c5KI3HKgNpapVzwH8eeOb12Aa1x/oE/aAAAAAElFTkSuQmCC"
