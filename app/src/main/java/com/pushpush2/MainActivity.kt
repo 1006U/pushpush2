@@ -326,8 +326,6 @@ class MainActivity : Activity() {
 
         gameClearScreenView.visibility = View.GONE
         gameShell.visibility = View.VISIBLE
-        controlsPanel.visibility = View.VISIBLE
-
         loadStage(1)
     }
 
