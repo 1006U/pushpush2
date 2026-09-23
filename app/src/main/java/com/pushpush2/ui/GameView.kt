@@ -610,9 +610,13 @@ class GameView(context: Context) : View(context) {
         val floorPositions = playableFloorPositions(state)
         if (floorPositions.isEmpty()) return
 
+        /*
+         * 원본 통로 타일은 차가운 회색 흰색이 아니라 살짝 분홍/베이지가
+         * 섞인 밝은 바탕이고, 타일마다 굵은 계단식 대각선 1개가 반복된다.
+         * 안티앨리어스 선 대신 작은 정사각형 블록을 이어서 픽셀 느낌을 낸다.
+         */
         paint.style = Paint.Style.FILL
         paint.shader = null
-        paint.color = PLAYFIELD_FLOOR_COLOR
 
         floorPositions.forEach { position ->
             canvas.drawRect(
@@ -622,16 +626,15 @@ class GameView(context: Context) : View(context) {
                     offsetX = offsetX,
                     offsetY = offsetY
                 ),
-                paint
+                paint.apply {
+                    color = PLAYFIELD_FLOOR_COLOR
+                }
             )
         }
 
-        // 피처폰 원작의 흰 통로 타일에 보이는 짧은 대각선 무늬.
-        paint.style = Paint.Style.STROKE
-        paint.strokeCap = Paint.Cap.SQUARE
-        paint.strokeWidth =
-            maxOf(1f, cell / ORIGINAL_TILE_PX)
-        paint.color = PLAYFIELD_DIAGONAL_COLOR
+        val block = (cell * 0.13f).coerceAtLeast(1f)
+        val halo = (cell * 0.18f).coerceAtLeast(block)
+        val step = cell * 0.105f
 
         floorPositions.forEach { position ->
             val rect = cellRect(
@@ -641,25 +644,35 @@ class GameView(context: Context) : View(context) {
                 offsetY = offsetY
             )
 
-            val slash = cell * 0.18f
-            val anchors = floatArrayOf(0.22f, 0.50f, 0.78f)
+            val centerX = rect.centerX()
+            val centerY = rect.centerY()
+            val startX = centerX - step * 2f
+            val startY = centerY + step * 2f
 
-            anchors.forEachIndexed { index, anchor ->
-                val startX = rect.left + cell * anchor
-                val startY =
-                    rect.top + cell * (0.72f - index * 0.18f)
+            repeat(5) { index ->
+                val cx = startX + step * index
+                val cy = startY - step * index
 
-                canvas.drawLine(
-                    startX,
-                    startY,
-                    startX + slash,
-                    startY - slash,
+                // 원본 LCD 가장자리의 연한 분홍 번짐을 먼저 깐다.
+                paint.color = PLAYFIELD_DIAGONAL_HALO
+                canvas.drawRect(
+                    cx - halo / 2f,
+                    cy - halo / 2f,
+                    cx + halo / 2f,
+                    cy + halo / 2f,
+                    paint
+                )
+
+                paint.color = PLAYFIELD_DIAGONAL_COLOR
+                canvas.drawRect(
+                    cx - block / 2f,
+                    cy - block / 2f,
+                    cx + block / 2f,
+                    cy + block / 2f,
                     paint
                 )
             }
         }
-
-        paint.style = Paint.Style.FILL
     }
 
     /**
@@ -1147,12 +1160,14 @@ class GameView(context: Context) : View(context) {
         val FLOOR_TILE_GRID: Int =
             Color.rgb(224, 177, 126)
 
-        // 벽으로 둘러싸인 실제 플레이 통로는 원본처럼 밝은 타일과
-        // 연한 적갈색 대각선 무늬로 바깥 배경과 구분한다.
+        // 원본 내부 통로 타일의 따뜻한 크림/분홍 바탕과
+        // 굵은 픽셀 계단식 적갈색 대각선 무늬.
         val PLAYFIELD_FLOOR_COLOR: Int =
-            Color.rgb(246, 244, 237)
+            Color.rgb(248, 232, 218)
+        val PLAYFIELD_DIAGONAL_HALO: Int =
+            Color.rgb(210, 165, 151)
         val PLAYFIELD_DIAGONAL_COLOR: Int =
-            Color.rgb(201, 162, 155)
+            Color.rgb(108, 72, 64)
 
         // 원본 벽 타일에서 추출한 색상에 맞춘 연결형 벽돌 팔레트.
         val WALL_RED: Int =
