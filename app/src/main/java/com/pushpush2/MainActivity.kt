@@ -58,7 +58,7 @@ class MainActivity : Activity() {
     private var clearHandled = false
     private var pendingStageAdvance: Runnable? = null
     private var pendingHeaderReset: Runnable? = null
-    private var lastWallVibrationAt = 0L
+    private var lastBlockedMoveVibrationAt = 0L
     private var heldGamepadDirection: Direction? = null
     private var showingGameClearScreen = false
 
@@ -571,16 +571,23 @@ class MainActivity : Activity() {
 
     private fun move(direction: Direction) {
         val before = engine.state
-        val next = before.player + direction
-
-        if (next in before.stage.walls) {
-            vibrateWallBlocked()
-            return
-        }
-
         val boxesBefore = before.boxes.toSet()
 
-        if (!engine.move(direction)) return
+        /*
+         * Treat every rejected movement the same way:
+         * - wall in front of the player
+         * - stage boundary
+         * - box blocked by a wall
+         * - box blocked by another box
+         * - any other GameEngine movement rejection
+         *
+         * The engine is the single source of truth for whether movement
+         * actually happened, so vibration cannot miss a blocked-push case.
+         */
+        if (!engine.move(direction)) {
+            vibrateBlockedMove()
+            return
+        }
 
         val state = engine.state
         val boxMoved = state.boxes != boxesBefore
@@ -630,12 +637,12 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun vibrateWallBlocked() {
+    private fun vibrateBlockedMove() {
         val now = SystemClock.uptimeMillis()
-        if (now - lastWallVibrationAt < WALL_VIBRATION_COOLDOWN_MS) {
+        if (now - lastBlockedMoveVibrationAt < BLOCKED_MOVE_VIBRATION_COOLDOWN_MS) {
             return
         }
-        lastWallVibrationAt = now
+        lastBlockedMoveVibrationAt = now
 
         val vibrator: Vibrator? =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -651,13 +658,13 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator.vibrate(
                 VibrationEffect.createOneShot(
-                    WALL_VIBRATION_MS,
+                    BLOCKED_MOVE_VIBRATION_MS,
                     VibrationEffect.DEFAULT_AMPLITUDE
                 )
             )
         } else {
             @Suppress("DEPRECATION")
-            vibrator.vibrate(WALL_VIBRATION_MS)
+            vibrator.vibrate(BLOCKED_MOVE_VIBRATION_MS)
         }
     }
 
@@ -1061,8 +1068,8 @@ class MainActivity : Activity() {
         // 클리어 메시지와 캐릭터 반응이 눈에 보이는 시간까지 확보한다.
         const val STAGE_CLEAR_FADE_MS = 900L
         const val HEADER_REACTION_MS = 900L
-        const val WALL_VIBRATION_MS = 55L
-        const val WALL_VIBRATION_COOLDOWN_MS = 140L
+        const val BLOCKED_MOVE_VIBRATION_MS = 55L
+        const val BLOCKED_MOVE_VIBRATION_COOLDOWN_MS = 140L
         const val GAMEPAD_INITIAL_REPEAT_DELAY_MS = 280L
         const val GAMEPAD_REPEAT_INTERVAL_MS = 110L
         const val GAMEPAD_DEAD_ZONE = 0.55f
