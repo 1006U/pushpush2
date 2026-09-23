@@ -334,6 +334,10 @@ class MainActivity : Activity() {
                     returnToStageOne()
                 }
             }
+            onExitClick = {
+                audioPlayer.play("button")
+                finishAndRemoveTask()
+            }
         }
 
         controlsPanel.addView(
