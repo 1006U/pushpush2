@@ -58,7 +58,7 @@ class RetroControlsView(context: Context) : View(context) {
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
-        val height = resolveSize(dp(216), heightMeasureSpec)
+        val height = resolveSize(dp(248), heightMeasureSpec)
         setMeasuredDimension(width, height)
     }
 
@@ -101,16 +101,15 @@ class RetroControlsView(context: Context) : View(context) {
             pressed = pressedSoftKey == SoftKey.RETRY
         )
 
-        dpadRadius = min(dpF(72), (w - dpF(72)) / 2f)
+        // Use more of the available lower screen area while keeping the
+        // Anycall-style horizontal shape. Width is always capped to the view.
+        dpadRadius = min(dpF(84), (w - dpF(48)) / 2f)
 
-        // Stretch the Anycall-style navigation key close to the left/right
-        // edges requested for touch play, while keeping the original
-        // vertical footprint. The width cap prevents clipping on small phones.
         dpadRx = min(
             dpadRadius * 1.90f,
-            (w - dpF(16)) / 2f
+            (w - dpF(8)) / 2f
         )
-        dpadRy = dpadRadius * 0.88f
+        dpadRy = dpadRadius * 0.90f
         centerRx = dpadRx * 0.25f
         centerRy = dpadRy * 0.23f
         ringInnerRx = dpadRx * 0.51f
