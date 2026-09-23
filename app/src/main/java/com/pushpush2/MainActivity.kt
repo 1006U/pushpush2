@@ -360,7 +360,6 @@ class MainActivity : Activity() {
             KeyEvent.KEYCODE_S,
             KeyEvent.KEYCODE_D,
             KeyEvent.KEYCODE_R,
-            KeyEvent.KEYCODE_G,
             KeyEvent.KEYCODE_M,
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER,
