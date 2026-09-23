@@ -3,9 +3,11 @@ package com.pushpush2.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
@@ -37,6 +39,18 @@ class GameView(context: Context) : View(context) {
         BitmapFactory.decodeResource(resources, R.drawable.tile_brick)
     private val goalBitmap: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.tile_goal)
+    private val interiorFloorBitmap: Bitmap =
+        BitmapFactory.decodeResource(
+            resources,
+            R.drawable.tile_interior_floor
+        )
+    private val interiorFloorSourceRect: Rect =
+        Rect(
+            0,
+            0,
+            interiorFloorBitmap.width,
+            interiorFloorBitmap.height
+        )
     private val boxBitmap: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.tile_box)
     private val legacyPlayerBitmap: Bitmap =
@@ -61,15 +75,26 @@ class GameView(context: Context) : View(context) {
         )
 
     /*
-     * 성공 애니메이션 프레임은 앱 시작 시 한꺼번에 디코딩하지 않는다.
-     * 일부 기기/Android 버전에서 BitmapFactory가 특정 프레임을 읽지 못해도
-     * Activity 전체가 종료되지 않도록 필요 시점에 lazy 로딩하고 fallback한다.
+     * 목표에 공이 들어갔을 때의 원본 애니메이션 프레임.
+     * 14x14 원본 프레임을 nearest-neighbor로 56x56 업스케일한 PNG를
+     * 리소스로 직접 사용해 런타임 Base64 디코딩 없이 픽셀 형태를 보존한다.
      */
     private val boxGoalBitmaps: List<Bitmap> by lazy(LazyThreadSafetyMode.NONE) {
-        OriginalAnimationFrames.boxGoalPngBase64.map { encoded ->
-            makeTileBackgroundTransparent(
-                decodeEmbeddedBitmapOrFallback(encoded, boxBitmap)
-            )
+        listOf(
+            R.drawable.tile_goal_after_02,
+            R.drawable.tile_goal_after_03,
+            R.drawable.tile_goal_after_04,
+            R.drawable.tile_goal_after_05,
+            R.drawable.tile_goal_after_06,
+            R.drawable.tile_goal_after_07,
+            R.drawable.tile_goal_after_08,
+            R.drawable.tile_goal_after_09,
+            R.drawable.tile_goal_after_10,
+            R.drawable.tile_goal_after_11,
+            R.drawable.tile_goal_after_02,
+            R.drawable.tile_goal_after_02
+        ).map { resourceId ->
+            BitmapFactory.decodeResource(resources, resourceId)
         }
     }
 
@@ -84,7 +109,7 @@ class GameView(context: Context) : View(context) {
         )
     }
 
-    private val sourceRect = Rect(0, 0, ORIGINAL_TILE_PX, ORIGINAL_TILE_PX)
+    private val sourceRect = Rect()
 
     private var gameState: GameState? = null
     private var playerAnimationStartedAtMs = SystemClock.uptimeMillis()
@@ -103,11 +128,18 @@ class GameView(context: Context) : View(context) {
     }
 
     fun render(state: GameState) {
-        if (gameState?.stage?.number != state.stage.number) {
+        val stageChanged =
+            gameState?.stage?.number != state.stage.number
+
+        if (stageChanged) {
             resetPlayerAnimation()
         }
 
         gameState = state
+
+        if (stageChanged) {
+            requestLayout()
+        }
 
         val completedBoxes = state.boxes
             .filterTo(mutableSetOf()) { it in state.stage.goals }
@@ -153,6 +185,37 @@ class GameView(context: Context) : View(context) {
         super.onDetachedFromWindow()
     }
 
+    override fun onMeasure(
+        widthMeasureSpec: Int,
+        heightMeasureSpec: Int
+    ) {
+        val measuredWidth =
+            MeasureSpec.getSize(widthMeasureSpec).coerceAtLeast(1)
+
+        val horizontalPadding = dp(4f)
+        val verticalPadding = dp(4f)
+        val stage = gameState?.stage
+
+        val desiredHeight =
+            if (stage != null && stage.width > 0 && stage.height > 0) {
+                val boardWidth =
+                    (measuredWidth - horizontalPadding * 2f)
+                        .coerceAtLeast(1f)
+                val cell = boardWidth / stage.width.toFloat()
+
+                kotlin.math.ceil(
+                    stage.height * cell + verticalPadding * 2f
+                ).toInt()
+            } else {
+                measuredWidth
+            }
+
+        setMeasuredDimension(
+            resolveSize(measuredWidth, widthMeasureSpec),
+            resolveSize(desiredHeight, heightMeasureSpec)
+        )
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         canvas.drawColor(OUTER_BACKGROUND)
@@ -181,8 +244,8 @@ class GameView(context: Context) : View(context) {
         now: Long
     ) {
         val stage = state.stage
-        val horizontalPadding = dp(12f)
-        val verticalPadding = dp(12f)
+        val horizontalPadding = dp(4f)
+        val verticalPadding = dp(4f)
 
         val availableWidth =
             (width.toFloat() - horizontalPadding * 2f).coerceAtLeast(1f)
@@ -232,8 +295,13 @@ class GameView(context: Context) : View(context) {
             offsetY = offsetY
         )
 
+        /*
+         * 원본 게임판 외곽선은 검은/남색 박스처럼 강하게 보이지 않고
+         * 바깥 파란 영역과 자연스럽게 이어지는 얇은 파란 선에 가깝다.
+         */
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = maxOf(1f, cell / ORIGINAL_TILE_PX)
+        paint.strokeWidth =
+            maxOf(1f, (cell / ORIGINAL_TILE_PX) * 0.55f)
         paint.color = FRAME_COLOR
         canvas.drawRect(boardRect, paint)
 
@@ -503,28 +571,61 @@ class GameView(context: Context) : View(context) {
         boardRect: RectF,
         cell: Float
     ) {
-        val pixel = (cell / ORIGINAL_TILE_PX).coerceAtLeast(1f)
-        val spacing = pixel * 3f
+        /*
+         * 원본 베이지 영역은 점 9개가 떠 있는 형태가 아니라,
+         * 게임 타일 하나 전체가 3x3 = 9개의 작은 정사각형으로 꽉 나뉜다.
+         * 각 작은 칸의 테두리를 보이게 해서 원본의 큐브 단면/LCD 타일 느낌을 낸다.
+         */
+        val stageColumns =
+            (boardRect.width() / cell).toInt().coerceAtLeast(1)
+        val stageRows =
+            (boardRect.height() / cell).toInt().coerceAtLeast(1)
+
+        val miniSize = cell / 3f
+        val gridWidth =
+            maxOf(1f, (cell / ORIGINAL_TILE_PX) * 0.72f)
+
+        paint.shader = null
+        paint.strokeCap = Paint.Cap.BUTT
+
+        for (tileY in 0 until stageRows) {
+            val tileTop = boardRect.top + tileY * cell
+
+            for (tileX in 0 until stageColumns) {
+                val tileLeft = boardRect.left + tileX * cell
+
+                for (miniY in 0 until 3) {
+                    for (miniX in 0 until 3) {
+                        val left = tileLeft + miniX * miniSize
+                        val top = tileTop + miniY * miniSize
+                        val right = left + miniSize
+                        val bottom = top + miniSize
+
+                        paint.style = Paint.Style.FILL
+                        paint.color =
+                            if ((tileX + tileY + miniX + miniY) % 2 == 0) {
+                                FLOOR_TILE_LIGHT
+                            } else {
+                                FLOOR_TILE_WARM
+                            }
+                        canvas.drawRect(left, top, right, bottom, paint)
+
+                        paint.style = Paint.Style.STROKE
+                        paint.strokeWidth = gridWidth
+                        paint.color = FLOOR_TILE_GRID
+                        canvas.drawRect(
+                            left + gridWidth / 2f,
+                            top + gridWidth / 2f,
+                            right - gridWidth / 2f,
+                            bottom - gridWidth / 2f,
+                            paint
+                        )
+                    }
+                }
+            }
+        }
 
         paint.style = Paint.Style.FILL
-        paint.shader = null
-        paint.color = FLOOR_DOT_COLOR
-
-        var y = boardRect.top + pixel
-        while (y < boardRect.bottom) {
-            var x = boardRect.left + pixel
-            while (x < boardRect.right) {
-                canvas.drawRect(
-                    x,
-                    y,
-                    x + pixel.coerceAtMost(2f),
-                    y + pixel.coerceAtMost(2f),
-                    paint
-                )
-                x += spacing
-            }
-            y += spacing
-        }
     }
 
     private fun drawInteriorFloor(
@@ -537,56 +638,32 @@ class GameView(context: Context) : View(context) {
         val floorPositions = playableFloorPositions(state)
         if (floorPositions.isEmpty()) return
 
-        paint.style = Paint.Style.FILL
-        paint.shader = null
-        paint.color = PLAYFIELD_FLOOR_COLOR
+        /*
+         * 사용자 제공 원본 대각선 타일 이미지를 그대로 사용한다.
+         * 벡터 선을 재구성하지 않고 원본 픽셀을 nearest-neighbor로
+         * 각 게임 셀에 확대/축소해서 피처폰 원작 질감을 유지한다.
+         */
+        val previousFilterBitmap = paint.isFilterBitmap
+        paint.isFilterBitmap = false
 
         floorPositions.forEach { position ->
-            canvas.drawRect(
+            val destination =
                 cellRect(
                     position = position,
                     cell = cell,
                     offsetX = offsetX,
                     offsetY = offsetY
-                ),
+                )
+
+            canvas.drawBitmap(
+                interiorFloorBitmap,
+                interiorFloorSourceRect,
+                destination,
                 paint
             )
         }
 
-        // 피처폰 원작의 흰 통로 타일에 보이는 짧은 대각선 무늬.
-        paint.style = Paint.Style.STROKE
-        paint.strokeCap = Paint.Cap.SQUARE
-        paint.strokeWidth =
-            maxOf(1f, cell / ORIGINAL_TILE_PX)
-        paint.color = PLAYFIELD_DIAGONAL_COLOR
-
-        floorPositions.forEach { position ->
-            val rect = cellRect(
-                position = position,
-                cell = cell,
-                offsetX = offsetX,
-                offsetY = offsetY
-            )
-
-            val slash = cell * 0.18f
-            val anchors = floatArrayOf(0.22f, 0.50f, 0.78f)
-
-            anchors.forEachIndexed { index, anchor ->
-                val startX = rect.left + cell * anchor
-                val startY =
-                    rect.top + cell * (0.72f - index * 0.18f)
-
-                canvas.drawLine(
-                    startX,
-                    startY,
-                    startX + slash,
-                    startY - slash,
-                    paint
-                )
-            }
-        }
-
-        paint.style = Paint.Style.FILL
+        paint.isFilterBitmap = previousFilterBitmap
     }
 
     /**
@@ -647,9 +724,70 @@ class GameView(context: Context) : View(context) {
      * 원본 피처폰 화면처럼 인접한 벽 타일을 하나의 벽돌 구조로 이어서 그린다.
      *
      * 각 14x14 셀마다 동일 PNG를 반복하면 셀 경계가 네모난 테두리로 보여
-     * 벽이 조각난 느낌이 난다. 여기서는 전체 스테이지 좌표를 기준으로
-     * 벽돌 줄/세로 줄눈을 연속적으로 그리고, 실제 외곽에만 검은 테두리를 둔다.
+     * 벽이 조각난 느낌이 난다. 전체 스테이지 좌표를 기준으로 벽돌 줄/세로
+     * 줄눈만 이어서 그리고, 원본처럼 벽 전체를 감싸는 별도 검은 외곽선은
+     * 그리지 않는다.
      */
+    /**
+     * The original SWF draws decorative brick cells on the outside of convex
+     * floor corners. Those cells are not collision walls; they only close the
+     * visible gap where two perpendicular collision walls meet.
+     *
+     * Keep Stage.walls untouched so Sokoban movement remains identical to the
+     * extracted original collision data, and add the corner bricks only while
+     * rendering.
+     */
+    private fun visualWallPositions(
+        state: GameState
+    ): Set<Position> {
+        val stage = state.stage
+        val collisionWalls = stage.walls
+        val floor = playableFloorPositions(state)
+
+        if (collisionWalls.isEmpty() || floor.isEmpty()) {
+            return collisionWalls
+        }
+
+        val visualWalls = collisionWalls.toMutableSet()
+
+        val corners = arrayOf(
+            intArrayOf(-1, -1),
+            intArrayOf(1, -1),
+            intArrayOf(-1, 1),
+            intArrayOf(1, 1)
+        )
+
+        floor.forEach { cell ->
+            corners.forEach { corner ->
+                val dx = corner[0]
+                val dy = corner[1]
+
+                val horizontalWall =
+                    Position(cell.x + dx, cell.y)
+                val verticalWall =
+                    Position(cell.x, cell.y + dy)
+                val outerCorner =
+                    Position(cell.x + dx, cell.y + dy)
+
+                val cornerInBounds =
+                    outerCorner.x in 0 until stage.width &&
+                        outerCorner.y in 0 until stage.height
+
+                if (
+                    cornerInBounds &&
+                    horizontalWall in collisionWalls &&
+                    verticalWall in collisionWalls &&
+                    outerCorner !in floor &&
+                    outerCorner !in collisionWalls
+                ) {
+                    visualWalls += outerCorner
+                }
+            }
+        }
+
+        return visualWalls
+    }
+
     private fun drawConnectedWalls(
         canvas: Canvas,
         state: GameState,
@@ -657,10 +795,19 @@ class GameView(context: Context) : View(context) {
         offsetX: Float,
         offsetY: Float
     ) {
-        val stage = state.stage
-        val walls = stage.walls
+        val walls = visualWallPositions(state)
         if (walls.isEmpty()) return
 
+        /*
+         * Draw every wall cell as one continuous textured shape instead of
+         * scaling the brick bitmap independently for each cell.
+         *
+         * Stage coordinates stay exactly as extracted from the original SWF.
+         * Using a single path prevents sub-pixel gaps between neighbouring
+         * cells when the responsive board produces a fractional cell size.
+         * The current tile_brick.png remains the texture source, with nearest-
+         * neighbour sampling so the pixel-art edges stay crisp.
+         */
         val wallPath = Path().apply {
             walls.forEach { position ->
                 addRect(
@@ -675,132 +822,34 @@ class GameView(context: Context) : View(context) {
             }
         }
 
-        val boardRight = offsetX + stage.width * cell
-        val boardBottom = offsetY + stage.height * cell
-        val pixel = (cell / ORIGINAL_TILE_PX).coerceAtLeast(0.75f)
-        val brickRowHeight = cell / 2f
+        val textureMatrix = Matrix().apply {
+            setScale(
+                cell / brickBitmap.width.toFloat(),
+                cell / brickBitmap.height.toFloat()
+            )
+            postTranslate(offsetX, offsetY)
+        }
 
-        val saveCount = canvas.save()
-        canvas.clipPath(wallPath)
+        val brickShader = BitmapShader(
+            brickBitmap,
+            Shader.TileMode.REPEAT,
+            Shader.TileMode.REPEAT
+        ).apply {
+            setLocalMatrix(textureMatrix)
+        }
 
+        val previousShader = paint.shader
+        val previousStyle = paint.style
+        val previousFilterBitmap = paint.isFilterBitmap
+
+        paint.shader = brickShader
         paint.style = Paint.Style.FILL
-        paint.shader = null
-        paint.color = WALL_RED
-        canvas.drawRect(
-            offsetX,
-            offsetY,
-            boardRight,
-            boardBottom,
-            paint
-        )
+        paint.isFilterBitmap = false
+        canvas.drawPath(wallPath, paint)
 
-        // 각 벽돌 줄의 검은 줄눈 + 주황색 하이라이트.
-        var row = 0
-        var mortarY = offsetY
-        while (mortarY <= boardBottom + 0.5f) {
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = maxOf(1f, pixel * 1.25f)
-            paint.strokeCap = Paint.Cap.BUTT
-            paint.color = WALL_MORTAR
-            canvas.drawLine(
-                offsetX,
-                mortarY,
-                boardRight,
-                mortarY,
-                paint
-            )
-
-            paint.strokeWidth = maxOf(1f, pixel)
-            paint.color = WALL_HIGHLIGHT
-            val highlightY = mortarY + pixel * 1.45f
-            canvas.drawLine(
-                offsetX,
-                highlightY,
-                boardRight,
-                highlightY,
-                paint
-            )
-
-            // 줄마다 반 칸씩 어긋나는 전형적인 벽돌 패턴.
-            val jointOffset =
-                if (row % 2 == 0) 0f else cell / 2f
-            var jointX = offsetX + jointOffset
-
-            paint.strokeWidth = maxOf(1f, pixel * 1.15f)
-            paint.color = WALL_MORTAR
-
-            while (jointX <= boardRight + 0.5f) {
-                canvas.drawLine(
-                    jointX,
-                    mortarY,
-                    jointX,
-                    (mortarY + brickRowHeight)
-                        .coerceAtMost(boardBottom),
-                    paint
-                )
-                jointX += cell
-            }
-
-            mortarY += brickRowHeight
-            row += 1
-        }
-
-        canvas.restoreToCount(saveCount)
-
-        // 벽 전체 외곽선만 따로 그려 셀별 사각 테두리가 생기지 않게 한다.
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = maxOf(1f, pixel * 1.5f)
-        paint.strokeCap = Paint.Cap.SQUARE
-        paint.color = WALL_MORTAR
-
-        walls.forEach { position ->
-            val rect = cellRect(
-                position = position,
-                cell = cell,
-                offsetX = offsetX,
-                offsetY = offsetY
-            )
-
-            if (Position(position.x, position.y - 1) !in walls) {
-                canvas.drawLine(
-                    rect.left,
-                    rect.top,
-                    rect.right,
-                    rect.top,
-                    paint
-                )
-            }
-
-            if (Position(position.x, position.y + 1) !in walls) {
-                canvas.drawLine(
-                    rect.left,
-                    rect.bottom,
-                    rect.right,
-                    rect.bottom,
-                    paint
-                )
-            }
-
-            if (Position(position.x - 1, position.y) !in walls) {
-                canvas.drawLine(
-                    rect.left,
-                    rect.top,
-                    rect.left,
-                    rect.bottom,
-                    paint
-                )
-            }
-
-            if (Position(position.x + 1, position.y) !in walls) {
-                canvas.drawLine(
-                    rect.right,
-                    rect.top,
-                    rect.right,
-                    rect.bottom,
-                    paint
-                )
-            }
-        }
+        paint.shader = previousShader
+        paint.style = previousStyle
+        paint.isFilterBitmap = previousFilterBitmap
     }
 
     private fun currentBoxBitmap(
@@ -873,13 +922,13 @@ class GameView(context: Context) : View(context) {
     }
 
     private fun integerFriendlyCell(rawCell: Float): Float =
-        if (rawCell >= ORIGINAL_TILE_PX) {
-            val integerScale = floor(rawCell / ORIGINAL_TILE_PX)
-                .coerceAtLeast(1f)
-            ORIGINAL_TILE_PX * integerScale
-        } else {
-            rawCell
-        }
+        /*
+         * 원본 14px 타일의 정수배만 강제하면 현대 화면에서 사용할 수 있는
+         * 폭을 크게 남기는 경우가 있다. Nearest-neighbor 픽셀아트는 유지하되
+         * 실제 셀 크기는 1px 단위로 맞춰 화면을 더 촘촘하게 채운다.
+         */
+        floor(rawCell)
+            .coerceAtLeast(1f)
 
     /**
      * Removes the opaque square background that exists around the original
@@ -1005,6 +1054,12 @@ class GameView(context: Context) : View(context) {
         bitmap: Bitmap,
         destination: RectF
     ) {
+        sourceRect.set(
+            0,
+            0,
+            bitmap.width,
+            bitmap.height
+        )
         canvas.drawBitmap(
             bitmap,
             sourceRect,
@@ -1113,18 +1168,17 @@ class GameView(context: Context) : View(context) {
         val OUTER_BACKGROUND: Int =
             Color.rgb(45, 132, 218)
 
-        // 피처폰 원작의 따뜻한 게임판 배경과 미세한 LCD 점무늬.
+        // 피처폰 원작의 따뜻한 게임판 배경.
+        // 바깥 영역은 한 게임 타일을 3x3 작은 정사각형으로 꽉 채워 그린다.
         val FLOOR_COLOR: Int =
             Color.rgb(255, 232, 188)
-        val FLOOR_DOT_COLOR: Int =
-            Color.rgb(244, 207, 157)
+        val FLOOR_TILE_LIGHT: Int =
+            Color.rgb(255, 232, 188)
+        val FLOOR_TILE_WARM: Int =
+            Color.rgb(249, 218, 171)
+        val FLOOR_TILE_GRID: Int =
+            Color.rgb(224, 177, 126)
 
-        // 벽으로 둘러싸인 실제 플레이 통로는 원본처럼 밝은 타일과
-        // 연한 적갈색 대각선 무늬로 바깥 배경과 구분한다.
-        val PLAYFIELD_FLOOR_COLOR: Int =
-            Color.rgb(246, 244, 237)
-        val PLAYFIELD_DIAGONAL_COLOR: Int =
-            Color.rgb(201, 162, 155)
 
         // 원본 벽 타일에서 추출한 색상에 맞춘 연결형 벽돌 팔레트.
         val WALL_RED: Int =
@@ -1132,9 +1186,9 @@ class GameView(context: Context) : View(context) {
         val WALL_HIGHLIGHT: Int =
             Color.rgb(222, 121, 0)
         val WALL_MORTAR: Int =
-            Color.rgb(0, 0, 0)
+            Color.rgb(112, 32, 18)
 
         val FRAME_COLOR: Int =
-            Color.rgb(24, 54, 82)
+            Color.rgb(42, 115, 196)
     }
 }
