@@ -5,7 +5,6 @@ import android.graphics.Color
 import android.graphics.ColorFilter
 import android.graphics.Paint
 import android.graphics.PixelFormat
-import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import kotlin.math.max
 
@@ -62,52 +61,6 @@ internal class RetroBrickFrameDrawable(
         paint.style = Paint.Style.FILL
     }
 
-    private fun drawHorizontalBrickBand(
-        canvas: Canvas,
-        left: Float,
-        top: Float,
-        right: Float,
-        bottom: Float,
-        bw: Float
-    ) {
-        paint.color = withAlpha(BRICK_RED)
-        canvas.drawRect(left, top, right, bottom, paint)
-
-        val rowHeight = bw / 2f
-        val brickWidth = bw * 1.75f
-        val mortar = max(1f, bw * 0.13f)
-
-        paint.color = withAlpha(MORTAR)
-        canvas.drawRect(left, top + rowHeight - mortar / 2f, right, top + rowHeight + mortar / 2f, paint)
-
-        repeat(2) { row ->
-            val rowTop = top + row * rowHeight
-            val offset = if (row == 0) 0f else brickWidth / 2f
-
-            // Orange top highlight in each brick row.
-            paint.color = withAlpha(BRICK_HIGHLIGHT)
-            canvas.drawRect(
-                left,
-                rowTop + mortar,
-                right,
-                (rowTop + mortar + max(1f, bw * 0.12f)).coerceAtMost(bottom),
-                paint
-            )
-
-            paint.color = withAlpha(MORTAR)
-            var x = left + offset
-            while (x < right) {
-                canvas.drawRect(
-                    x - mortar / 2f,
-                    rowTop,
-                    x + mortar / 2f,
-                    (rowTop + rowHeight).coerceAtMost(bottom),
-                    paint
-                )
-                x += brickWidth
-            }
-        }
-    }
 
     private fun drawVerticalBrickBand(
         canvas: Canvas,
