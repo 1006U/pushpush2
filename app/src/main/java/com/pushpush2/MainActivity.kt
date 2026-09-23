@@ -47,7 +47,7 @@ class MainActivity : Activity() {
     private var clearHandled = false
     private var pendingStageAdvance: Runnable? = null
     private var pendingHeaderReset: Runnable? = null
-    private var lastWallVibrationAt = 0L
+    private var lastBlockedVibrationAt = 0L
     private var heldGamepadDirection: Direction? = null
     private var showingGameClearScreen = false
 
@@ -479,16 +479,15 @@ class MainActivity : Activity() {
 
     private fun move(direction: Direction) {
         val before = engine.state
-        val next = before.player + direction
-
-        if (next in before.stage.walls) {
-            vibrateWallBlocked()
-            return
-        }
-
         val boxesBefore = before.boxes.toSet()
 
-        if (!engine.move(direction)) return
+        // Vibrate for every blocked movement:
+        // wall, map boundary, or a box that cannot be pushed because another
+        // wall/box/boundary is behind it.
+        if (!engine.move(direction)) {
+            vibrateMovementBlocked()
+            return
+        }
 
         val state = engine.state
         val boxMoved = state.boxes != boxesBefore
@@ -535,12 +534,12 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun vibrateWallBlocked() {
+    private fun vibrateMovementBlocked() {
         val now = SystemClock.uptimeMillis()
-        if (now - lastWallVibrationAt < WALL_VIBRATION_COOLDOWN_MS) {
+        if (now - lastBlockedVibrationAt < BLOCKED_VIBRATION_COOLDOWN_MS) {
             return
         }
-        lastWallVibrationAt = now
+        lastBlockedVibrationAt = now
 
         @Suppress("DEPRECATION")
         val vibrator =
@@ -550,7 +549,7 @@ class MainActivity : Activity() {
 
         // Legacy vibration API is available on Android 4.3 / API 18.
         @Suppress("DEPRECATION")
-        vibrator.vibrate(WALL_VIBRATION_MS)
+        vibrator.vibrate(BLOCKED_VIBRATION_MS)
     }
 
     private fun scheduleAutomaticStageAdvance(nextStage: Int) {
@@ -792,8 +791,8 @@ class MainActivity : Activity() {
         // 클리어 메시지와 캐릭터 반응이 눈에 보이는 시간까지 확보한다.
         const val STAGE_CLEAR_FADE_MS = 900L
         const val HEADER_REACTION_MS = 900L
-        const val WALL_VIBRATION_MS = 55L
-        const val WALL_VIBRATION_COOLDOWN_MS = 140L
+        const val BLOCKED_VIBRATION_MS = 55L
+        const val BLOCKED_VIBRATION_COOLDOWN_MS = 140L
         const val GAMEPAD_INITIAL_REPEAT_DELAY_MS = 280L
         const val GAMEPAD_REPEAT_INTERVAL_MS = 110L
         const val GAMEPAD_DEAD_ZONE = 0.55f
