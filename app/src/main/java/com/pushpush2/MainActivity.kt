@@ -334,7 +334,7 @@ class MainActivity : Activity() {
             controls,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(216)
+                dp(248)
             )
         )
 
