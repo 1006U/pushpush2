@@ -337,3 +337,6 @@ GitHub Release는 자동 공개하지 않습니다.
 - Windows 11에서 `git pull` 후 Android Studio로 검증합니다.
 
 - [x] 하단 Anycall 스타일 D-pad 세로 기준 84dp, 조작 영역 높이 248dp로 확대
+
+- [x] 헤더 캐릭터 외곽 흰 여백 자동 crop 및 패딩 제거로 패널 채움
+- [x] 상단 문구 26sp / textScaleX 1.04로 확대 및 패딩 축소
