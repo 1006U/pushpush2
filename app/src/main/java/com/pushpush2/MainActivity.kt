@@ -183,7 +183,10 @@ class MainActivity : Activity() {
         gameShell = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(RETRO_BLUE)
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+
+            // 원본처럼 상단 캐릭터/문구 UI가 게임 영역 좌우 끝까지
+            // 꽉 차도록 좌우 패딩을 두지 않는다. 아래쪽 여백만 유지한다.
+            setPadding(0, 0, 0, 0)
         }
 
         val headerBar = LinearLayout(this).apply {
@@ -194,7 +197,10 @@ class MainActivity : Activity() {
         }
 
         headerCharacter = ImageView(this).apply {
-            background = brickPanel(Color.WHITE)
+            background = brickPanel(
+                fillColor = Color.WHITE,
+                horizontalBands = false
+            )
             setPadding(dp(8), dp(8), dp(8), dp(8))
             scaleType = ImageView.ScaleType.FIT_CENTER
             setImageDrawable(playerPortraitDrawable(HeaderCharacterAsset.MOVE))
@@ -202,7 +208,10 @@ class MainActivity : Activity() {
         }
 
         headerMessage = TextView(this).apply {
-            background = brickPanel(Color.WHITE)
+            background = brickPanel(
+                fillColor = Color.WHITE,
+                horizontalBands = true
+            )
             setTextColor(Color.rgb(28, 46, 62))
             textSize = 18f
             gravity = Gravity.CENTER
@@ -211,11 +220,13 @@ class MainActivity : Activity() {
             includeFontPadding = false
         }
 
+        // 원본 상단 UI 비율: 캐릭터 절반 / 문구 절반.
         headerBar.addView(
             headerCharacter,
             LinearLayout.LayoutParams(
-                dp(132),
-                dp(92)
+                0,
+                dp(92),
+                1f
             )
         )
 
@@ -225,11 +236,7 @@ class MainActivity : Activity() {
                 0,
                 dp(92),
                 1f
-            ).apply {
-                // 원작처럼 캐릭터/대사 패널이 거의 하나의 프레임처럼
-                // 이어져 보이도록 가운데 파란 틈을 없앤다.
-                marginStart = -dp(6)
-            }
+            )
         )
 
         gameView = GameView(this)
@@ -280,8 +287,7 @@ class MainActivity : Activity() {
             gameView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
         )
 
@@ -356,20 +362,15 @@ class MainActivity : Activity() {
             gameShell,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            ).apply {
-                // 오리지널 피처폰 화면처럼 파란 게임 영역 양옆에
-                // 얇은 흰색 외곽 여백을 남긴다.
-                marginStart = dp(6)
-                marginEnd = dp(6)
-            }
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         )
         root.addView(
             controlsPanel,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                0,
+                1f
             )
         )
 
@@ -814,10 +815,14 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun brickPanel(fillColor: Int): RetroBrickFrameDrawable =
+    private fun brickPanel(
+        fillColor: Int,
+        horizontalBands: Boolean
+    ): RetroBrickFrameDrawable =
         RetroBrickFrameDrawable(
             fillColor = fillColor,
-            borderWidthPx = dp(8).toFloat()
+            borderWidthPx = dp(8).toFloat(),
+            horizontalBands = horizontalBands
         )
 
     private fun dp(value: Int): Int =

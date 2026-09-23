@@ -102,11 +102,18 @@ class GameView(context: Context) : View(context) {
     }
 
     fun render(state: GameState) {
-        if (gameState?.stage?.number != state.stage.number) {
+        val stageChanged =
+            gameState?.stage?.number != state.stage.number
+
+        if (stageChanged) {
             resetPlayerAnimation()
         }
 
         gameState = state
+
+        if (stageChanged) {
+            requestLayout()
+        }
 
         val completedBoxes = state.boxes
             .filterTo(mutableSetOf()) { it in state.stage.goals }
@@ -150,6 +157,37 @@ class GameView(context: Context) : View(context) {
         super.onDetachedFromWindow()
     }
 
+    override fun onMeasure(
+        widthMeasureSpec: Int,
+        heightMeasureSpec: Int
+    ) {
+        val measuredWidth =
+            MeasureSpec.getSize(widthMeasureSpec).coerceAtLeast(1)
+
+        val horizontalPadding = dp(4f)
+        val verticalPadding = dp(4f)
+        val stage = gameState?.stage
+
+        val desiredHeight =
+            if (stage != null && stage.width > 0 && stage.height > 0) {
+                val boardWidth =
+                    (measuredWidth - horizontalPadding * 2f)
+                        .coerceAtLeast(1f)
+                val cell = boardWidth / stage.width.toFloat()
+
+                kotlin.math.ceil(
+                    stage.height * cell + verticalPadding * 2f
+                ).toInt()
+            } else {
+                measuredWidth
+            }
+
+        setMeasuredDimension(
+            resolveSize(measuredWidth, widthMeasureSpec),
+            resolveSize(desiredHeight, heightMeasureSpec)
+        )
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         canvas.drawColor(OUTER_BACKGROUND)
@@ -178,8 +216,8 @@ class GameView(context: Context) : View(context) {
         now: Long
     ) {
         val stage = state.stage
-        val horizontalPadding = dp(12f)
-        val verticalPadding = dp(12f)
+        val horizontalPadding = dp(4f)
+        val verticalPadding = dp(4f)
 
         val availableWidth =
             (width.toFloat() - horizontalPadding * 2f).coerceAtLeast(1f)
@@ -506,26 +544,21 @@ class GameView(context: Context) : View(context) {
         cell: Float
     ) {
         /*
-         * 원본 피처폰 화면의 벽 바깥 베이지 영역은 단순한 점무늬보다
-         * 한 타일 안에 작은 사각형 3x3 묶음이 들어간 LCD 질감에 가깝다.
-         * 각 스테이지 타일마다 9개의 작은 사각형을 같은 위치에 반복해
-         * 확대/축소되어도 원본의 규칙적인 패턴이 유지되도록 한다.
+         * 원본 베이지 영역은 점 9개가 떠 있는 형태가 아니라,
+         * 게임 타일 하나 전체가 3x3 = 9개의 작은 정사각형으로 꽉 나뉜다.
+         * 각 작은 칸의 테두리를 보이게 해서 원본의 큐브 단면/LCD 타일 느낌을 낸다.
          */
         val stageColumns =
             (boardRect.width() / cell).toInt().coerceAtLeast(1)
         val stageRows =
             (boardRect.height() / cell).toInt().coerceAtLeast(1)
 
-        val pixel = (cell / ORIGINAL_TILE_PX).coerceAtLeast(0.75f)
-        val squareSize =
-            (pixel * 1.75f)
-                .coerceAtLeast(1f)
-                .coerceAtMost(cell * 0.14f)
+        val miniSize = cell / 3f
+        val gridWidth =
+            maxOf(1f, (cell / ORIGINAL_TILE_PX) * 0.72f)
 
-        val centers = floatArrayOf(0.22f, 0.50f, 0.78f)
-
-        paint.style = Paint.Style.FILL
         paint.shader = null
+        paint.strokeCap = Paint.Cap.BUTT
 
         for (tileY in 0 until stageRows) {
             val tileTop = boardRect.top + tileY * cell
@@ -533,30 +566,38 @@ class GameView(context: Context) : View(context) {
             for (tileX in 0 until stageColumns) {
                 val tileLeft = boardRect.left + tileX * cell
 
-                centers.forEachIndexed { miniY, fy ->
-                    centers.forEachIndexed { miniX, fx ->
-                        val centerX = tileLeft + cell * fx
-                        val centerY = tileTop + cell * fy
-                        val half = squareSize / 2f
+                for (miniY in 0 until 3) {
+                    for (miniX in 0 until 3) {
+                        val left = tileLeft + miniX * miniSize
+                        val top = tileTop + miniY * miniSize
+                        val right = left + miniSize
+                        val bottom = top + miniSize
 
+                        paint.style = Paint.Style.FILL
                         paint.color =
                             if ((tileX + tileY + miniX + miniY) % 2 == 0) {
-                                FLOOR_DOT_COLOR
+                                FLOOR_TILE_LIGHT
                             } else {
-                                FLOOR_DOT_ALT_COLOR
+                                FLOOR_TILE_WARM
                             }
+                        canvas.drawRect(left, top, right, bottom, paint)
 
+                        paint.style = Paint.Style.STROKE
+                        paint.strokeWidth = gridWidth
+                        paint.color = FLOOR_TILE_GRID
                         canvas.drawRect(
-                            centerX - half,
-                            centerY - half,
-                            centerX + half,
-                            centerY + half,
+                            left + gridWidth / 2f,
+                            top + gridWidth / 2f,
+                            right - gridWidth / 2f,
+                            bottom - gridWidth / 2f,
                             paint
                         )
                     }
                 }
             }
         }
+
+        paint.style = Paint.Style.FILL
     }
 
     private fun drawInteriorFloor(
@@ -855,13 +896,13 @@ class GameView(context: Context) : View(context) {
     }
 
     private fun integerFriendlyCell(rawCell: Float): Float =
-        if (rawCell >= ORIGINAL_TILE_PX) {
-            val integerScale = floor(rawCell / ORIGINAL_TILE_PX)
-                .coerceAtLeast(1f)
-            ORIGINAL_TILE_PX * integerScale
-        } else {
-            rawCell
-        }
+        /*
+         * 원본 14px 타일의 정수배만 강제하면 현대 화면에서 사용할 수 있는
+         * 폭을 크게 남기는 경우가 있다. Nearest-neighbor 픽셀아트는 유지하되
+         * 실제 셀 크기는 1px 단위로 맞춰 화면을 더 촘촘하게 채운다.
+         */
+        floor(rawCell)
+            .coerceAtLeast(1f)
 
     /**
      * Removes the opaque square background that exists around the original
@@ -1095,13 +1136,16 @@ class GameView(context: Context) : View(context) {
         val OUTER_BACKGROUND: Int =
             Color.rgb(45, 132, 218)
 
-        // 피처폰 원작의 따뜻한 게임판 배경과 미세한 LCD 점무늬.
+        // 피처폰 원작의 따뜻한 게임판 배경.
+        // 바깥 영역은 한 게임 타일을 3x3 작은 정사각형으로 꽉 채워 그린다.
         val FLOOR_COLOR: Int =
             Color.rgb(255, 232, 188)
-        val FLOOR_DOT_COLOR: Int =
-            Color.rgb(218, 170, 115)
-        val FLOOR_DOT_ALT_COLOR: Int =
-            Color.rgb(239, 200, 147)
+        val FLOOR_TILE_LIGHT: Int =
+            Color.rgb(255, 232, 188)
+        val FLOOR_TILE_WARM: Int =
+            Color.rgb(249, 218, 171)
+        val FLOOR_TILE_GRID: Int =
+            Color.rgb(224, 177, 126)
 
         // 벽으로 둘러싸인 실제 플레이 통로는 원본처럼 밝은 타일과
         // 연한 적갈색 대각선 무늬로 바깥 배경과 구분한다.
