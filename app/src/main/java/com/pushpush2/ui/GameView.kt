@@ -730,99 +730,34 @@ class GameView(context: Context) : View(context) {
         offsetX: Float,
         offsetY: Float
     ) {
-        val stage = state.stage
-        val walls = stage.walls
+        val walls = state.stage.walls
         if (walls.isEmpty()) return
 
-        val wallPath = Path().apply {
-            walls.forEach { position ->
-                addRect(
-                    cellRect(
-                        position = position,
-                        cell = cell,
-                        offsetX = offsetX,
-                        offsetY = offsetY
-                    ),
-                    Path.Direction.CW
+        /*
+         * 사용자 제공 벽돌 타일을 실제 게임 벽에도 그대로 사용한다.
+         * 56x56로 nearest-neighbor 업스케일된 PNG를 셀 크기에 맞춰
+         * 다시 그리되 bitmap filtering을 끄므로 픽셀 경계가 흐려지지 않는다.
+         *
+         * 기존의 벡터/색상 재구성 방식은 원본 벽돌 이미지와 색감 및 줄눈이
+         * 달라질 수 있으므로 사용하지 않는다.
+         */
+        val previousFilterBitmap = paint.isFilterBitmap
+        paint.isFilterBitmap = false
+
+        walls.forEach { position ->
+            drawTile(
+                canvas = canvas,
+                bitmap = brickBitmap,
+                destination = cellRect(
+                    position = position,
+                    cell = cell,
+                    offsetX = offsetX,
+                    offsetY = offsetY
                 )
-            }
+            )
         }
 
-        val boardRight = offsetX + stage.width * cell
-        val boardBottom = offsetY + stage.height * cell
-        val pixel = (cell / ORIGINAL_TILE_PX).coerceAtLeast(0.75f)
-        val brickRowHeight = cell / 2f
-
-        val saveCount = canvas.save()
-        canvas.clipPath(wallPath)
-
-        paint.style = Paint.Style.FILL
-        paint.shader = null
-        paint.color = WALL_RED
-        canvas.drawRect(
-            offsetX,
-            offsetY,
-            boardRight,
-            boardBottom,
-            paint
-        )
-
-        // 각 벽돌 줄의 짙은 적갈색 줄눈 + 주황색 하이라이트.
-        var row = 0
-        var mortarY = offsetY
-        while (mortarY <= boardBottom + 0.5f) {
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = maxOf(1f, pixel * 0.90f)
-            paint.strokeCap = Paint.Cap.BUTT
-            paint.color = WALL_MORTAR
-            canvas.drawLine(
-                offsetX,
-                mortarY,
-                boardRight,
-                mortarY,
-                paint
-            )
-
-            paint.strokeWidth = maxOf(1f, pixel)
-            paint.color = WALL_HIGHLIGHT
-            val highlightY = mortarY + pixel * 1.45f
-            canvas.drawLine(
-                offsetX,
-                highlightY,
-                boardRight,
-                highlightY,
-                paint
-            )
-
-            // 줄마다 반 칸씩 어긋나는 전형적인 벽돌 패턴.
-            val jointOffset =
-                if (row % 2 == 0) 0f else cell / 2f
-            var jointX = offsetX + jointOffset
-
-            paint.strokeWidth = maxOf(1f, pixel * 0.85f)
-            paint.color = WALL_MORTAR
-
-            while (jointX <= boardRight + 0.5f) {
-                canvas.drawLine(
-                    jointX,
-                    mortarY,
-                    jointX,
-                    (mortarY + brickRowHeight)
-                        .coerceAtMost(boardBottom),
-                    paint
-                )
-                jointX += cell
-            }
-
-            mortarY += brickRowHeight
-            row += 1
-        }
-
-        canvas.restoreToCount(saveCount)
-
-        // 원본에는 벽 덩어리를 감싸는 별도의 검은 외곽선이 없으므로
-        // clip 안의 벽돌 무늬만 남기고 여기서 추가 테두리는 그리지 않는다.
-        paint.style = Paint.Style.FILL
+        paint.isFilterBitmap = previousFilterBitmap
     }
 
     private fun currentBoxBitmap(
