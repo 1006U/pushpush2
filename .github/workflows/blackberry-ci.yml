@@ -24,7 +24,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Unit tests and APK build
-        run: ./gradlew testDebugUnitTest assembleDebug assembleRelease
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
 
       - name: Verify API 18 minSdk in APK
         run: |
