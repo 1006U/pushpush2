@@ -12,8 +12,9 @@ import kotlin.math.max
 /**
  * Feature-phone style brick frame used around the header portrait/message.
  *
- * The frame intentionally uses the same red/orange/black palette as the
- * connected game walls so the top HUD feels like part of the original game.
+ * The original header does not have brick rows across its top or bottom.
+ * Only vertical brick columns separate the portrait, message panel and the
+ * outer sides, so this drawable intentionally leaves the top/bottom open.
  */
 internal class RetroBrickFrameDrawable(
     private val fillColor: Int,
@@ -37,33 +38,27 @@ internal class RetroBrickFrameDrawable(
         val bottom = b.bottom.toFloat()
         val bw = borderWidthPx.coerceAtLeast(2f)
 
-        // White/content area first.
+        // White/content area reaches the open top and bottom edges.
         paint.color = withAlpha(fillColor)
         canvas.drawRect(
             left + bw,
-            top + bw,
+            top,
             right - bw,
-            bottom - bw,
+            bottom,
             paint
         )
 
-        drawHorizontalBrickBand(canvas, left, top, right, top + bw, bw)
-        drawHorizontalBrickBand(canvas, left, bottom - bw, right, bottom, bw)
+        // Original header: vertical brick columns only.
         drawVerticalBrickBand(canvas, left, top, left + bw, bottom, bw)
         drawVerticalBrickBand(canvas, right - bw, top, right, bottom, bw)
 
-        // Strong outer + inner black edges, matching the original LCD sprites.
+        // Keep only vertical dark edges. Horizontal lines would make the
+        // portrait/message look boxed in, unlike the original screen.
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = max(1f, bw * 0.13f)
         paint.color = withAlpha(MORTAR)
-        canvas.drawRect(
-            RectF(left, top, right, bottom),
-            paint
-        )
-        canvas.drawRect(
-            RectF(left + bw, top + bw, right - bw, bottom - bw),
-            paint
-        )
+        canvas.drawLine(left + bw, top, left + bw, bottom, paint)
+        canvas.drawLine(right - bw, top, right - bw, bottom, paint)
         paint.style = Paint.Style.FILL
     }
 
