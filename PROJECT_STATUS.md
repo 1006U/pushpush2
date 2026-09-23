@@ -342,3 +342,7 @@ GitHub Release는 자동 공개하지 않습니다.
 - [x] 상단 문구 26sp / textScaleX 1.04로 확대 및 패딩 축소
 
 - [x] 하단 조작 UI를 참고 사진형 하드웨어 클러스터로 변경: STAGE/RETRY 상단 좌우 배치 및 중앙 OK 라벨 표시
+
+- [x] 66개 모든 스테이지에서 하단 조작부 최소 높이 148dp를 우선 확보하는 StageLayoutPolicy 적용
+- [x] 남는 세로 공간에 맞춰 STAGE/RETRY/방향키/OK 전체와 터치 판정 영역을 비례 축소하도록 RetroControlsView 반응형화
+- [x] 320x568 compact 화면 조건에서 66개 전체 스테이지 레이아웃 회귀 테스트 추가
