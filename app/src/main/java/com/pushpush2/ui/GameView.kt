@@ -611,13 +611,12 @@ class GameView(context: Context) : View(context) {
         if (floorPositions.isEmpty()) return
 
         /*
-         * 원본 통로 타일은 따뜻한 크림/분홍 바탕 위에
-         * 서로 평행한 대각선 3줄이 보인다.
-         *
-         * 이전 구현은 세 무늬의 중심을 같은 '/' 대각선 위에 놓아서
-         * 화면에서 하나의 긴 선처럼 이어져 보였다. 원본처럼 세 줄을
-         * 분리해서 보이게 하려면 각 중심을 그 선의 수직 방향(\\)으로
-         * 이동시키고, 각 줄 자체는 작은 픽셀 블록을 '/' 방향으로 잇는다.
+         * 원본 통로 타일:
+         * - 따뜻한 크림/분홍색 바탕
+         * - '/' 방향의 평행한 대각선 3줄
+         * - 1→2 간격과 2→3 간격이 서로 다름
+         * - 짧은 점무늬가 아니라 각 선을 충분히 길게 연장한 뒤
+         *   타일 경계로 clip하여 타일 전체를 가로지르는 패턴으로 표현
          */
         paint.style = Paint.Style.FILL
         paint.shader = null
@@ -636,15 +635,28 @@ class GameView(context: Context) : View(context) {
             )
         }
 
-        val markBlock = (cell * 0.07f).coerceAtLeast(1f)
-        val markHalo = (cell * 0.105f).coerceAtLeast(markBlock)
-        val blockStep = cell * 0.052f
+        val previousAntiAlias = paint.isAntiAlias
+        val previousStrokeCap = paint.strokeCap
 
-        // Three distinct parallel slash centers: top-left, center, bottom-right.
-        val markCenters = arrayOf(
-            0.30f to 0.30f,
-            0.50f to 0.50f,
-            0.70f to 0.70f
+        paint.isAntiAlias = false
+        paint.style = Paint.Style.STROKE
+        paint.strokeCap = Paint.Cap.SQUARE
+
+        val haloWidth =
+            (cell * 0.115f).coerceAtLeast(1.5f)
+        val coreWidth =
+            (cell * 0.065f).coerceAtLeast(1f)
+
+        /*
+         * '/' 선의 중심을 그 선의 수직 방향으로 이동시킨다.
+         * 첫 번째→두 번째 간격은 0.23 cell,
+         * 두 번째→세 번째 간격은 0.36 cell로 다르게 두어
+         * 원본 타일의 비대칭 간격을 재현한다.
+         */
+        val lineOffsets = floatArrayOf(
+            -0.29f,
+            -0.06f,
+            0.30f
         )
 
         floorPositions.forEach { position ->
@@ -655,35 +667,49 @@ class GameView(context: Context) : View(context) {
                 offsetY = offsetY
             )
 
-            markCenters.forEach { (fx, fy) ->
-                val centerX = rect.left + cell * fx
-                val centerY = rect.top + cell * fy
+            canvas.save()
+            canvas.clipRect(rect)
 
-                // Build one short '/' line from five square LCD-style pixels.
-                for (segment in -2..2) {
-                    val cx = centerX + blockStep * segment
-                    val cy = centerY - blockStep * segment
+            lineOffsets.forEach { offsetRatio ->
+                val offset = cell * offsetRatio
 
-                    paint.color = PLAYFIELD_DIAGONAL_HALO
-                    canvas.drawRect(
-                        cx - markHalo / 2f,
-                        cy - markHalo / 2f,
-                        cx + markHalo / 2f,
-                        cy + markHalo / 2f,
-                        paint
-                    )
+                /*
+                 * 선을 타일 바깥까지 길게 그린 뒤 clip한다.
+                 * 그래서 세 선 모두 짧은 중앙 무늬가 아니라
+                 * 해당 위치에서 타일 경계까지 꽉 차는 긴 대각선이 된다.
+                 */
+                val x1 = rect.left - cell
+                val y1 = rect.bottom + cell + offset
+                val x2 = rect.right + cell
+                val y2 = rect.top - cell + offset
 
-                    paint.color = PLAYFIELD_DIAGONAL_COLOR
-                    canvas.drawRect(
-                        cx - markBlock / 2f,
-                        cy - markBlock / 2f,
-                        cx + markBlock / 2f,
-                        cy + markBlock / 2f,
-                        paint
-                    )
-                }
+                paint.strokeWidth = haloWidth
+                paint.color = PLAYFIELD_DIAGONAL_HALO
+                canvas.drawLine(
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    paint
+                )
+
+                paint.strokeWidth = coreWidth
+                paint.color = PLAYFIELD_DIAGONAL_COLOR
+                canvas.drawLine(
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    paint
+                )
             }
+
+            canvas.restore()
         }
+
+        paint.style = Paint.Style.FILL
+        paint.strokeCap = previousStrokeCap
+        paint.isAntiAlias = previousAntiAlias
     }
 
     /**
