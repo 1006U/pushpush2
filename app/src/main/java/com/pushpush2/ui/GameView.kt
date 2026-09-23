@@ -37,6 +37,18 @@ class GameView(context: Context) : View(context) {
         BitmapFactory.decodeResource(resources, R.drawable.tile_brick)
     private val goalBitmap: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.tile_goal)
+    private val interiorFloorBitmap: Bitmap =
+        BitmapFactory.decodeResource(
+            resources,
+            R.drawable.tile_interior_floor
+        )
+    private val interiorFloorSourceRect: Rect =
+        Rect(
+            0,
+            0,
+            interiorFloorBitmap.width,
+            interiorFloorBitmap.height
+        )
     private val boxBitmap: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.tile_box)
     private val legacyPlayerBitmap: Bitmap =
@@ -611,114 +623,31 @@ class GameView(context: Context) : View(context) {
         if (floorPositions.isEmpty()) return
 
         /*
-         * 원본 통로 타일:
-         * - 따뜻한 크림/분홍색 바탕
-         * - '/' 방향의 평행한 대각선 3줄
-         * - 1→2 간격과 2→3 간격이 서로 다름
-         * - 짧은 점무늬가 아니라 각 선을 충분히 길게 연장한 뒤
-         *   타일 경계로 clip하여 타일 전체를 가로지르는 패턴으로 표현
+         * 사용자 제공 원본 대각선 타일 이미지를 그대로 사용한다.
+         * 벡터 선을 재구성하지 않고 원본 픽셀을 nearest-neighbor로
+         * 각 게임 셀에 확대/축소해서 피처폰 원작 질감을 유지한다.
          */
-        paint.style = Paint.Style.FILL
-        paint.shader = null
+        val previousFilterBitmap = paint.isFilterBitmap
+        paint.isFilterBitmap = false
 
         floorPositions.forEach { position ->
-            canvas.drawRect(
+            val destination =
                 cellRect(
                     position = position,
                     cell = cell,
                     offsetX = offsetX,
                     offsetY = offsetY
-                ),
-                paint.apply {
-                    color = PLAYFIELD_FLOOR_COLOR
-                }
+                )
+
+            canvas.drawBitmap(
+                interiorFloorBitmap,
+                interiorFloorSourceRect,
+                destination,
+                paint
             )
         }
 
-        val previousAntiAlias = paint.isAntiAlias
-        val previousStrokeCap = paint.strokeCap
-
-        paint.isAntiAlias = false
-        paint.style = Paint.Style.STROKE
-        paint.strokeCap = Paint.Cap.SQUARE
-
-        val haloWidth =
-            (cell * 0.085f).coerceAtLeast(1.2f)
-        val coreWidth =
-            (cell * 0.045f).coerceAtLeast(0.8f)
-
-        /*
-         * 원본처럼 세 줄의 간격을 균일하게 두지 않는다.
-         * 1→2 간격은 약 0.22 cell, 2→3 간격은 약 0.38 cell.
-         * 세 번째 선은 이전보다 더 아래쪽으로 내려 배치한다.
-         */
-        val lineOffsets = floatArrayOf(
-            -0.24f,
-            -0.02f,
-            0.36f
-        )
-
-        floorPositions.forEach { position ->
-            val rect = cellRect(
-                position = position,
-                cell = cell,
-                offsetX = offsetX,
-                offsetY = offsetY
-            )
-
-            canvas.save()
-            canvas.clipRect(rect)
-
-            lineOffsets.forEachIndexed { index, offsetRatio ->
-                val offset = cell * offsetRatio
-
-                /*
-                 * 원본 확대본처럼 첫 번째/두 번째 선은 양끝이 타일 경계까지
-                 * 닿지 않는 짧은 사선이고, 세 번째 선은 더 아래쪽에서
-                 * 길게 이어져 타일 경계에 걸친다.
-                 */
-                val halfSpan =
-                    if (index < 2) {
-                        cell * 0.34f
-                    } else {
-                        cell * 0.82f
-                    }
-
-                val centerX = rect.centerX()
-                val centerY = rect.centerY() + offset
-
-                val x1 = centerX - halfSpan
-                val y1 = centerY + halfSpan
-                val x2 = centerX + halfSpan
-                val y2 = centerY - halfSpan
-
-                paint.strokeWidth = haloWidth
-                paint.color = PLAYFIELD_DIAGONAL_HALO
-                canvas.drawLine(
-                    x1,
-                    y1,
-                    x2,
-                    y2,
-                    paint
-                )
-
-                paint.strokeWidth = coreWidth
-                paint.color = PLAYFIELD_DIAGONAL_COLOR
-                canvas.drawLine(
-                    x1,
-                    y1,
-                    x2,
-                    y2,
-                    paint
-                )
-            }
-
-            canvas.restore()
-        }
-
-        paint.style = Paint.Style.FILL
-        paint.strokeCap = previousStrokeCap
-        paint.isAntiAlias = previousAntiAlias
+        paint.isFilterBitmap = previousFilterBitmap
     }
 
     /**
@@ -1206,14 +1135,6 @@ class GameView(context: Context) : View(context) {
         val FLOOR_TILE_GRID: Int =
             Color.rgb(224, 177, 126)
 
-        // 원본 내부 통로 타일의 따뜻한 크림/분홍 바탕과
-        // 굵은 픽셀 계단식 적갈색 대각선 무늬.
-        val PLAYFIELD_FLOOR_COLOR: Int =
-            Color.rgb(248, 232, 218)
-        val PLAYFIELD_DIAGONAL_HALO: Int =
-            Color.rgb(210, 165, 151)
-        val PLAYFIELD_DIAGONAL_COLOR: Int =
-            Color.rgb(108, 72, 64)
 
         // 원본 벽 타일에서 추출한 색상에 맞춘 연결형 벽돌 팔레트.
         val WALL_RED: Int =
