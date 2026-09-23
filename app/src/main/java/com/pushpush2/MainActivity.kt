@@ -217,7 +217,7 @@ class MainActivity : Activity() {
 
         stageLabel = TextView(this).apply {
             setTextColor(Color.WHITE)
-            textSize = 20f
+            textSize = 28f
             textScaleX = 1.10f
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
@@ -357,8 +357,8 @@ class MainActivity : Activity() {
             KeyEvent.KEYCODE_A,
             KeyEvent.KEYCODE_S,
             KeyEvent.KEYCODE_D,
-            KeyEvent.KEYCODE_R,
-            KeyEvent.KEYCODE_M,
+            KeyEvent.KEYCODE_P,
+            KeyEvent.KEYCODE_Q,
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER,
             KeyEvent.KEYCODE_BUTTON_B,
@@ -387,7 +387,7 @@ class MainActivity : Activity() {
             KeyEvent.KEYCODE_H,
             KeyEvent.KEYCODE_D -> move(Direction.RIGHT)
 
-            KeyEvent.KEYCODE_R,
+            KeyEvent.KEYCODE_P,
             KeyEvent.KEYCODE_BUTTON_B,
             KeyEvent.KEYCODE_BUTTON_Y -> {
                 if (event.repeatCount == 0) {
@@ -396,7 +396,7 @@ class MainActivity : Activity() {
                 }
             }
 
-            KeyEvent.KEYCODE_M,
+            KeyEvent.KEYCODE_Q,
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER,
             KeyEvent.KEYCODE_BUTTON_START,
