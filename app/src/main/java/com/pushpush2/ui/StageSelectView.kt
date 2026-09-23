@@ -81,21 +81,26 @@ class StageSelectView(
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         val nextStage = when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_T,
             KeyEvent.KEYCODE_W ->
                 keyboardStage - COLUMN_COUNT
 
             KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_V,
             KeyEvent.KEYCODE_S ->
                 keyboardStage + COLUMN_COUNT
 
             KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_F,
             KeyEvent.KEYCODE_A ->
                 keyboardStage - 1
 
             KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_H,
             KeyEvent.KEYCODE_D ->
                 keyboardStage + 1
 
+            KeyEvent.KEYCODE_G,
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER,
             KeyEvent.KEYCODE_SPACE,
