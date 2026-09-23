@@ -103,7 +103,11 @@ class RetroControlsView(context: Context) : View(context) {
         // Reference-style hardware cluster:
         // STAGE / RETRY sit at the upper-left / upper-right of the same
         // navigation assembly instead of floating as separate buttons.
-        dpadRadius = min(dpF(84), (w - dpF(48)) / 2f)
+        dpadRadius =
+            min(
+                scaledDp(84f),
+                (w - scaledDp(48f)) / 2f
+            )
         dpadRx = min(
             dpadRadius * 1.90f,
             (w - scaledDp(8f)) / 2f
