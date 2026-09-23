@@ -611,9 +611,10 @@ class GameView(context: Context) : View(context) {
         if (floorPositions.isEmpty()) return
 
         /*
-         * 원본 통로 타일은 차가운 회색 흰색이 아니라 살짝 분홍/베이지가
-         * 섞인 밝은 바탕이고, 타일마다 굵은 계단식 대각선 1개가 반복된다.
-         * 안티앨리어스 선 대신 작은 정사각형 블록을 이어서 픽셀 느낌을 낸다.
+         * 원본 통로 타일은 따뜻한 크림/분홍 바탕 위에
+         * 짧은 대각선 무늬 3개가 아래 왼쪽 → 위 오른쪽 방향으로
+         * 이어져 보인다. 각 대각선은 작은 정사각형 3개를 계단식으로
+         * 배치해서 원본 LCD 픽셀 느낌을 유지한다.
          */
         paint.style = Paint.Style.FILL
         paint.shader = null
@@ -632,9 +633,15 @@ class GameView(context: Context) : View(context) {
             )
         }
 
-        val block = (cell * 0.13f).coerceAtLeast(1f)
-        val halo = (cell * 0.18f).coerceAtLeast(block)
-        val step = cell * 0.105f
+        val markBlock = (cell * 0.075f).coerceAtLeast(1f)
+        val markHalo = (cell * 0.11f).coerceAtLeast(markBlock)
+        val blockStep = cell * 0.052f
+
+        val markCenters = arrayOf(
+            0.27f to 0.71f,
+            0.50f to 0.50f,
+            0.73f to 0.29f
+        )
 
         floorPositions.forEach { position ->
             val rect = cellRect(
@@ -644,33 +651,32 @@ class GameView(context: Context) : View(context) {
                 offsetY = offsetY
             )
 
-            val centerX = rect.centerX()
-            val centerY = rect.centerY()
-            val startX = centerX - step * 2f
-            val startY = centerY + step * 2f
+            markCenters.forEach { (fx, fy) ->
+                val centerX = rect.left + cell * fx
+                val centerY = rect.top + cell * fy
 
-            repeat(5) { index ->
-                val cx = startX + step * index
-                val cy = startY - step * index
+                for (segment in -1..1) {
+                    val cx = centerX + blockStep * segment
+                    val cy = centerY - blockStep * segment
 
-                // 원본 LCD 가장자리의 연한 분홍 번짐을 먼저 깐다.
-                paint.color = PLAYFIELD_DIAGONAL_HALO
-                canvas.drawRect(
-                    cx - halo / 2f,
-                    cy - halo / 2f,
-                    cx + halo / 2f,
-                    cy + halo / 2f,
-                    paint
-                )
+                    paint.color = PLAYFIELD_DIAGONAL_HALO
+                    canvas.drawRect(
+                        cx - markHalo / 2f,
+                        cy - markHalo / 2f,
+                        cx + markHalo / 2f,
+                        cy + markHalo / 2f,
+                        paint
+                    )
 
-                paint.color = PLAYFIELD_DIAGONAL_COLOR
-                canvas.drawRect(
-                    cx - block / 2f,
-                    cy - block / 2f,
-                    cx + block / 2f,
-                    cy + block / 2f,
-                    paint
-                )
+                    paint.color = PLAYFIELD_DIAGONAL_COLOR
+                    canvas.drawRect(
+                        cx - markBlock / 2f,
+                        cy - markBlock / 2f,
+                        cx + markBlock / 2f,
+                        cy + markBlock / 2f,
+                        paint
+                    )
+                }
             }
         }
     }
