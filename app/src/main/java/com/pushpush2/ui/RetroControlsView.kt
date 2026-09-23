@@ -44,6 +44,8 @@ class RetroControlsView(context: Context) : View(context) {
     private var centerRy = 0f
     private var ringInnerRx = 0f
     private var ringInnerRy = 0f
+    private var controlScale = 1f
+    private var controlOffsetY = 0f
 
     private var pressedDirection: Direction? = null
     private var pressedSoftKey: SoftKey? = null
@@ -59,7 +61,21 @@ class RetroControlsView(context: Context) : View(context) {
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
-        val height = resolveSize(dp(248), heightMeasureSpec)
+        val desiredHeight = dp(BASE_CONTROL_HEIGHT_DP)
+
+        val height = when (MeasureSpec.getMode(heightMeasureSpec)) {
+            MeasureSpec.EXACTLY ->
+                MeasureSpec.getSize(heightMeasureSpec)
+
+            MeasureSpec.AT_MOST ->
+                min(
+                    desiredHeight,
+                    MeasureSpec.getSize(heightMeasureSpec)
+                )
+
+            else -> desiredHeight
+        }.coerceAtLeast(1)
+
         setMeasuredDimension(width, height)
     }
 
@@ -67,17 +83,34 @@ class RetroControlsView(context: Context) : View(context) {
         super.onDraw(canvas)
 
         val w = width.toFloat()
-        val top = dpF(6)
-        val softHeight = dpF(40)
-        val softGap = dpF(16)
+        val h = height.toFloat()
+
+        controlScale =
+            min(
+                1f,
+                h / dpF(BASE_CONTROL_HEIGHT_DP.toFloat())
+            ).coerceAtLeast(MIN_CONTROL_SCALE)
+
+        val scaledClusterHeight =
+            dpF(BASE_CONTROL_HEIGHT_DP.toFloat()) * controlScale
+        controlOffsetY =
+            ((h - scaledClusterHeight) / 2f).coerceAtLeast(0f)
+
+        val top = controlOffsetY + scaledDp(6f)
+        val softHeight = scaledDp(40f)
+        val softGap = scaledDp(16f)
 
         // Reference-style hardware cluster:
         // STAGE / RETRY sit at the upper-left / upper-right of the same
         // navigation assembly instead of floating as separate buttons.
-        dpadRadius = min(dpF(84), (w - dpF(48)) / 2f)
+        dpadRadius =
+            min(
+                scaledDp(84f),
+                (w - scaledDp(48f)) / 2f
+            )
         dpadRx = min(
             dpadRadius * 1.90f,
-            (w - dpF(8)) / 2f
+            (w - scaledDp(8f)) / 2f
         )
         dpadRy = dpadRadius * 0.90f
         centerRx = dpadRx * 0.25f
@@ -86,13 +119,13 @@ class RetroControlsView(context: Context) : View(context) {
         ringInnerRy = dpadRy * 0.51f
 
         dpadCx = w / 2f
-        dpadCy = top + softHeight + dpF(4) + dpadRy
+        dpadCy = top + softHeight + scaledDp(4f) + dpadRy
 
         val clusterLeft = dpadCx - dpadRx
         val clusterRight = dpadCx + dpadRx
 
         stageRect.set(
-            clusterLeft + dpF(5),
+            clusterLeft + scaledDp(5f),
             top,
             dpadCx - softGap / 2f,
             top + softHeight
@@ -100,15 +133,15 @@ class RetroControlsView(context: Context) : View(context) {
         retryRect.set(
             dpadCx + softGap / 2f,
             top,
-            clusterRight - dpF(5),
+            clusterRight - scaledDp(5f),
             top + softHeight
         )
 
         controlBodyRect.set(
-            clusterLeft - dpF(3),
-            top - dpF(3),
-            clusterRight + dpF(3),
-            dpadCy + dpadRy + dpF(5)
+            clusterLeft - scaledDp(3f),
+            top - scaledDp(3f),
+            clusterRight + scaledDp(3f),
+            dpadCy + dpadRy + scaledDp(5f)
         )
 
         drawControlHousing(canvas)
@@ -319,32 +352,32 @@ class RetroControlsView(context: Context) : View(context) {
         paint.color = Color.rgb(151, 160, 171)
         canvas.drawRoundRect(
             controlBodyRect,
-            dpF(28),
-            dpF(28),
+            scaledDp(28f),
+            scaledDp(28f),
             paint
         )
 
         val inner = RectF(
-            controlBodyRect.left + dpF(3),
-            controlBodyRect.top + dpF(3),
-            controlBodyRect.right - dpF(3),
-            controlBodyRect.bottom - dpF(3)
+            controlBodyRect.left + scaledDp(3f),
+            controlBodyRect.top + scaledDp(3f),
+            controlBodyRect.right - scaledDp(3f),
+            controlBodyRect.bottom - scaledDp(3f)
         )
         paint.color = Color.rgb(184, 193, 202)
         canvas.drawRoundRect(
             inner,
-            dpF(25),
-            dpF(25),
+            scaledDp(25f),
+            scaledDp(25f),
             paint
         )
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = dpF(1.4f)
+        paint.strokeWidth = scaledDp(1.4f)
         paint.color = Color.rgb(77, 88, 101)
         canvas.drawRoundRect(
             controlBodyRect,
-            dpF(28),
-            dpF(28),
+            scaledDp(28f),
+            scaledDp(28f),
             paint
         )
     }
@@ -365,14 +398,14 @@ class RetroControlsView(context: Context) : View(context) {
         } else {
             SOFT_KEY_NORMAL
         }
-        canvas.drawRoundRect(rect, dpF(13), dpF(13), paint)
+        canvas.drawRoundRect(rect, scaledDp(13f), scaledDp(13f), paint)
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = if (pressed) dpF(2.2f) else dpF(1.2f)
+        paint.strokeWidth = if (pressed) scaledDp(2.2f) else scaledDp(1.2f)
         paint.color = if (pressed) LED_BLUE_BRIGHT else SOFT_KEY_BORDER
-        canvas.drawRoundRect(rect, dpF(13), dpF(13), paint)
+        canvas.drawRoundRect(rect, scaledDp(13f), scaledDp(13f), paint)
 
-        textPaint.textSize = dpF(12.5f)
+        textPaint.textSize = scaledDp(12.5f)
         textPaint.color = if (pressed) Color.WHITE else TEXT_NORMAL
 
         val baseline =
@@ -387,21 +420,21 @@ class RetroControlsView(context: Context) : View(context) {
     ) {
         paint.style = Paint.Style.STROKE
 
-        paint.strokeWidth = dpF(8)
+        paint.strokeWidth = scaledDp(8f)
         paint.color = Color.argb(42, 0, 126, 255)
         canvas.drawRoundRect(
             rect,
-            dpF(19),
-            dpF(19),
+            scaledDp(19f),
+            scaledDp(19f),
             paint
         )
 
-        paint.strokeWidth = dpF(4)
+        paint.strokeWidth = scaledDp(4f)
         paint.color = Color.argb(86, 0, 151, 255)
         canvas.drawRoundRect(
             rect,
-            dpF(19),
-            dpF(19),
+            scaledDp(19f),
+            scaledDp(19f),
             paint
         )
     }
@@ -409,10 +442,10 @@ class RetroControlsView(context: Context) : View(context) {
     private fun drawAnycallDpad(canvas: Canvas) {
         // 사진의 애니콜 네비게이션 키처럼 가로로 살짝 넓은 타원형 외곽.
         val shadowRect = RectF(
-            dpadCx - dpadRx - dpF(8),
-            dpadCy - dpadRy - dpF(4),
-            dpadCx + dpadRx + dpF(8),
-            dpadCy + dpadRy + dpF(8)
+            dpadCx - dpadRx - scaledDp(8f),
+            dpadCy - dpadRy - scaledDp(4f),
+            dpadCx + dpadRx + scaledDp(8f),
+            dpadCy + dpadRy + scaledDp(8f)
         )
 
         paint.style = Paint.Style.FILL
@@ -420,10 +453,10 @@ class RetroControlsView(context: Context) : View(context) {
         canvas.drawOval(shadowRect, paint)
 
         val bezelRect = RectF(
-            dpadCx - dpadRx - dpF(3),
-            dpadCy - dpadRy - dpF(2),
-            dpadCx + dpadRx + dpF(3),
-            dpadCy + dpadRy + dpF(3)
+            dpadCx - dpadRx - scaledDp(3f),
+            dpadCy - dpadRy - scaledDp(2f),
+            dpadCx + dpadRx + scaledDp(3f),
+            dpadCy + dpadRy + scaledDp(3f)
         )
 
         paint.color = Color.rgb(91, 103, 116)
@@ -447,7 +480,7 @@ class RetroControlsView(context: Context) : View(context) {
 
         if (pressedCenter) {
             paint.style = Paint.Style.STROKE
-            paint.strokeWidth = dpF(6f)
+            paint.strokeWidth = scaledDp(6f)
             paint.color = Color.argb(72, 0, 151, 255)
             canvas.drawOval(centerRect, paint)
         }
@@ -461,7 +494,7 @@ class RetroControlsView(context: Context) : View(context) {
         canvas.drawOval(centerRect, paint)
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = if (pressedCenter) dpF(2f) else dpF(1.6f)
+        paint.strokeWidth = if (pressedCenter) scaledDp(2f) else scaledDp(1.6f)
         paint.color = if (pressedCenter) {
             LED_BLUE_BRIGHT
         } else {
@@ -484,7 +517,7 @@ class RetroControlsView(context: Context) : View(context) {
         }
         canvas.drawOval(centerMarkRect, paint)
 
-        textPaint.textSize = dpF(11)
+        textPaint.textSize = scaledDp(11f)
         textPaint.color =
             if (pressedCenter) Color.WHITE else Color.rgb(36, 47, 60)
         val okBaseline =
@@ -500,7 +533,7 @@ class RetroControlsView(context: Context) : View(context) {
         }
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = dpF(1.6f)
+        paint.strokeWidth = scaledDp(1.6f)
         paint.color = Color.rgb(27, 35, 44)
         canvas.drawOval(
             RectF(
@@ -556,7 +589,7 @@ class RetroControlsView(context: Context) : View(context) {
         canvas.drawPath(path, paint)
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = if (pressed) dpF(2f) else dpF(1f)
+        paint.strokeWidth = if (pressed) scaledDp(2f) else scaledDp(1f)
         paint.color = if (pressed) {
             LED_BLUE_BRIGHT
         } else {
@@ -594,8 +627,8 @@ class RetroControlsView(context: Context) : View(context) {
             direction == Direction.LEFT ||
                 direction == Direction.RIGHT
 
-        val halfW = if (horizontal) dpF(5.5f) else dpF(10f)
-        val halfH = if (horizontal) dpF(10f) else dpF(5.5f)
+        val halfW = if (horizontal) scaledDp(5.5f) else scaledDp(10f)
+        val halfH = if (horizontal) scaledDp(10f) else scaledDp(5.5f)
 
         val rect = RectF(
             cx - halfW,
@@ -606,12 +639,12 @@ class RetroControlsView(context: Context) : View(context) {
 
         if (pressed) {
             paint.style = Paint.Style.STROKE
-            paint.strokeWidth = dpF(5f)
+            paint.strokeWidth = scaledDp(5f)
             paint.color = Color.argb(78, 0, 151, 255)
             canvas.drawRoundRect(
                 rect,
-                dpF(8),
-                dpF(8),
+                scaledDp(8f),
+                scaledDp(8f),
                 paint
             )
         }
@@ -624,13 +657,13 @@ class RetroControlsView(context: Context) : View(context) {
         }
         canvas.drawRoundRect(
             rect,
-            dpF(8),
-            dpF(8),
+            scaledDp(8f),
+            scaledDp(8f),
             paint
         )
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = dpF(1f)
+        paint.strokeWidth = scaledDp(1f)
         paint.color = if (pressed) {
             LED_BLUE_PALE
         } else {
@@ -638,12 +671,12 @@ class RetroControlsView(context: Context) : View(context) {
         }
         canvas.drawRoundRect(
             rect,
-            dpF(8),
-            dpF(8),
+            scaledDp(8f),
+            scaledDp(8f),
             paint
         )
 
-        val inset = dpF(2f)
+        val inset = scaledDp(2f)
         val inner = RectF(
             rect.left + inset,
             rect.top + inset,
@@ -659,8 +692,8 @@ class RetroControlsView(context: Context) : View(context) {
         }
         canvas.drawRoundRect(
             inner,
-            dpF(6),
-            dpF(6),
+            scaledDp(6f),
+            scaledDp(6f),
             paint
         )
     }
@@ -674,6 +707,9 @@ class RetroControlsView(context: Context) : View(context) {
     private fun dpF(value: Float): Float =
         value * resources.displayMetrics.density
 
+    private fun scaledDp(value: Float): Float =
+        dpF(value) * controlScale
+
     private enum class SoftKey {
         STAGE,
         RETRY
@@ -681,6 +717,8 @@ class RetroControlsView(context: Context) : View(context) {
 
     private companion object {
         const val INITIAL_REPEAT_DELAY_MS = 280L
+        const val BASE_CONTROL_HEIGHT_DP = 248
+        const val MIN_CONTROL_SCALE = 0.58f
         const val REPEAT_INTERVAL_MS = 110L
 
         val DIRECTION_NORMAL: Int =

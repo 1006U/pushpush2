@@ -346,3 +346,7 @@ app\build\outputs\apk\debug\app-debug.apk
 - 상단 문구를 26sp / textScaleX 1.04로 확대하고 내부 패딩 축소
 
 - 하단 조작 UI를 참고 사진형 하드웨어 클러스터로 재구성: STAGE/RETRY를 조작부 상단 좌우 소프트키로 통합, 중앙 OK 라벨 추가
+
+- 66개 모든 스테이지에서 하단 조작부 최소 높이 148dp를 우선 확보하도록 StageLayoutPolicy 추가
+- 스테이지 세로 비율이 큰 경우 게임판 높이를 자동 축소하고, RetroControlsView는 실제 남은 높이에 맞춰 전체 UI/터치 영역을 비례 축소
+- StageLayoutPolicyTest로 66개 스테이지를 320x568 compact 화면 조건에서 잘림 없이 검증
