@@ -7,6 +7,5 @@
     <style name="AppTheme" parent="android:style/Theme.Holo.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:colorAccent">@android:color/holo_green_light</item>
     </style>
 </resources>
