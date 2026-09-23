@@ -102,11 +102,18 @@ class GameView(context: Context) : View(context) {
     }
 
     fun render(state: GameState) {
-        if (gameState?.stage?.number != state.stage.number) {
+        val stageChanged =
+            gameState?.stage?.number != state.stage.number
+
+        if (stageChanged) {
             resetPlayerAnimation()
         }
 
         gameState = state
+
+        if (stageChanged) {
+            requestLayout()
+        }
 
         val completedBoxes = state.boxes
             .filterTo(mutableSetOf()) { it in state.stage.goals }
@@ -150,6 +157,37 @@ class GameView(context: Context) : View(context) {
         super.onDetachedFromWindow()
     }
 
+    override fun onMeasure(
+        widthMeasureSpec: Int,
+        heightMeasureSpec: Int
+    ) {
+        val measuredWidth =
+            MeasureSpec.getSize(widthMeasureSpec).coerceAtLeast(1)
+
+        val horizontalPadding = dp(4f)
+        val verticalPadding = dp(4f)
+        val stage = gameState?.stage
+
+        val desiredHeight =
+            if (stage != null && stage.width > 0 && stage.height > 0) {
+                val boardWidth =
+                    (measuredWidth - horizontalPadding * 2f)
+                        .coerceAtLeast(1f)
+                val cell = boardWidth / stage.width.toFloat()
+
+                kotlin.math.ceil(
+                    stage.height * cell + verticalPadding * 2f
+                ).toInt()
+            } else {
+                measuredWidth
+            }
+
+        setMeasuredDimension(
+            resolveSize(measuredWidth, widthMeasureSpec),
+            resolveSize(desiredHeight, heightMeasureSpec)
+        )
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         canvas.drawColor(OUTER_BACKGROUND)
@@ -178,8 +216,8 @@ class GameView(context: Context) : View(context) {
         now: Long
     ) {
         val stage = state.stage
-        val horizontalPadding = dp(12f)
-        val verticalPadding = dp(12f)
+        val horizontalPadding = dp(4f)
+        val verticalPadding = dp(4f)
 
         val availableWidth =
             (width.toFloat() - horizontalPadding * 2f).coerceAtLeast(1f)
@@ -858,13 +896,13 @@ class GameView(context: Context) : View(context) {
     }
 
     private fun integerFriendlyCell(rawCell: Float): Float =
-        if (rawCell >= ORIGINAL_TILE_PX) {
-            val integerScale = floor(rawCell / ORIGINAL_TILE_PX)
-                .coerceAtLeast(1f)
-            ORIGINAL_TILE_PX * integerScale
-        } else {
-            rawCell
-        }
+        /*
+         * 원본 14px 타일의 정수배만 강제하면 현대 화면에서 사용할 수 있는
+         * 폭을 크게 남기는 경우가 있다. Nearest-neighbor 픽셀아트는 유지하되
+         * 실제 셀 크기는 1px 단위로 맞춰 화면을 더 촘촘하게 채운다.
+         */
+        floor(rawCell)
+            .coerceAtLeast(1f)
 
     /**
      * Removes the opaque square background that exists around the original
