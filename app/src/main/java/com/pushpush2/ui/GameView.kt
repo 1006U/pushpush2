@@ -91,10 +91,11 @@ class GameView(context: Context) : View(context) {
     private var playerSuccessStartedAtMs: Long? = null
     private var endingStartedAtMs: Long? = null
     private val boxGoalAnimationStarts = mutableMapOf<Position, Long>()
+    private var attachedToWindow = false
 
     private val animationTick = object : Runnable {
         override fun run() {
-            if (!isAttachedToWindow) return
+            if (!attachedToWindow) return
 
             invalidate()
             postDelayed(this, ORIGINAL_FRAME_DURATION_MS)
@@ -141,11 +142,13 @@ class GameView(context: Context) : View(context) {
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        attachedToWindow = true
         removeCallbacks(animationTick)
         post(animationTick)
     }
 
     override fun onDetachedFromWindow() {
+        attachedToWindow = false
         removeCallbacks(animationTick)
         super.onDetachedFromWindow()
     }
