@@ -7,19 +7,15 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
-import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
-import android.os.VibrationEffect
 import android.os.Vibrator
-import android.os.VibratorManager
 import android.util.Base64
 import android.view.Gravity
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
-import android.view.WindowInsets
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -32,7 +28,6 @@ import com.pushpush2.game.StageRepository
 import com.pushpush2.ui.GameView
 import com.pushpush2.ui.HeaderCharacterAsset
 import com.pushpush2.ui.RetroBrickFrameDrawable
-import com.pushpush2.ui.RetroControlsView
 import com.pushpush2.ui.StageSelectView
 
 class MainActivity : Activity() {
@@ -43,7 +38,6 @@ class MainActivity : Activity() {
     private lateinit var headerCharacter: ImageView
     private lateinit var headerMessage: TextView
     private lateinit var gameShell: LinearLayout
-    private lateinit var controlsPanel: LinearLayout
     private lateinit var gameClearScreenView: ImageView
     private lateinit var progressStore: ProgressStore
     private lateinit var audioPlayer: AudioPlayer
@@ -156,28 +150,8 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.WHITE)
 
-            setOnApplyWindowInsetsListener { view, insets ->
-                val topInset =
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        insets.getInsets(
-                            WindowInsets.Type.statusBars()
-                        ).top
-                    } else {
-                        @Suppress("DEPRECATION")
-                        insets.systemWindowInsetTop
-                    }
-
-                view.setPadding(
-                    0,
-                    topInset,
-                    0,
-                    0
-                )
-
-                insets
-            }
-
-            post { requestApplyInsets() }
+            // BB10 provides its own system chrome around the Android runtime.
+            // Avoid API 20+ WindowInsets calls so this branch remains API 18 safe.
         }
 
         gameShell = LinearLayout(this).apply {
@@ -204,7 +178,7 @@ class MainActivity : Activity() {
         headerMessage = TextView(this).apply {
             background = brickPanel(Color.WHITE)
             setTextColor(Color.rgb(28, 46, 62))
-            textSize = 18f
+            textSize = 16f
             gravity = Gravity.CENTER
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             setPadding(dp(14), dp(10), dp(14), dp(10))
@@ -214,8 +188,8 @@ class MainActivity : Activity() {
         headerBar.addView(
             headerCharacter,
             LinearLayout.LayoutParams(
-                dp(132),
-                dp(92)
+                dp(88),
+                dp(64)
             )
         )
 
@@ -223,7 +197,7 @@ class MainActivity : Activity() {
             headerMessage,
             LinearLayout.LayoutParams(
                 0,
-                dp(92),
+                dp(64),
                 1f
             ).apply {
                 // 원작처럼 캐릭터/대사 패널이 거의 하나의 프레임처럼
@@ -243,7 +217,7 @@ class MainActivity : Activity() {
 
         stageLabel = TextView(this).apply {
             setTextColor(Color.WHITE)
-            textSize = 28f
+            textSize = 20f
             textScaleX = 1.10f
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
@@ -261,11 +235,11 @@ class MainActivity : Activity() {
 
         statusBar.addView(
             stageLabel,
-            LinearLayout.LayoutParams(0, dp(60), 0.56f)
+            LinearLayout.LayoutParams(0, dp(40), 0.56f)
         )
         statusBar.addView(
             moveLabel,
-            LinearLayout.LayoutParams(0, dp(60), 0.44f)
+            LinearLayout.LayoutParams(0, dp(40), 0.44f)
         )
 
         gameShell.addView(
@@ -293,44 +267,8 @@ class MainActivity : Activity() {
             )
         )
 
-        controlsPanel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(CONTROL_PANEL)
-            setPadding(dp(8), dp(2), dp(8), dp(8))
-        }
-
-        val controls = RetroControlsView(this).apply {
-            onDirection = { direction ->
-                if (!showingGameClearScreen) {
-                    move(direction)
-                }
-            }
-            onStageClick = {
-                if (!showingGameClearScreen) {
-                    audioPlayer.play("button")
-                    showStageSelector()
-                }
-            }
-            onRetryClick = {
-                if (!showingGameClearScreen) {
-                    audioPlayer.play("button")
-                    restartStage()
-                }
-            }
-            onCenterClick = {
-                if (showingGameClearScreen) {
-                    returnToStageOne()
-                }
-            }
-        }
-
-        controlsPanel.addView(
-            controls,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(216)
-            )
-        )
+        // BlackBerry Classic has a physical QWERTY keyboard.
+        // The smartphone touch D-pad/soft-key panel is intentionally omitted.
 
         gameClearScreenView = ImageView(this).apply {
             setBackgroundColor(Color.BLACK)
@@ -365,14 +303,6 @@ class MainActivity : Activity() {
                 marginEnd = dp(6)
             }
         )
-        root.addView(
-            controlsPanel,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
         return root
     }
 
@@ -385,7 +315,6 @@ class MainActivity : Activity() {
 
         gameShell.visibility = View.GONE
         gameClearScreenView.visibility = View.VISIBLE
-        controlsPanel.visibility = View.VISIBLE
     }
 
     private fun returnToStageOne() {
@@ -605,28 +534,15 @@ class MainActivity : Activity() {
         }
         lastWallVibrationAt = now
 
-        val vibrator: Vibrator? =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                getSystemService(VibratorManager::class.java)
-                    ?.defaultVibrator
-            } else {
-                @Suppress("DEPRECATION")
-                getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-            }
+        @Suppress("DEPRECATION")
+        val vibrator =
+            getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
 
         if (vibrator?.hasVibrator() != true) return
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(
-                VibrationEffect.createOneShot(
-                    WALL_VIBRATION_MS,
-                    VibrationEffect.DEFAULT_AMPLITUDE
-                )
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(WALL_VIBRATION_MS)
-        }
+        // Legacy vibration API is available on Android 4.3 / API 18.
+        @Suppress("DEPRECATION")
+        vibrator.vibrate(WALL_VIBRATION_MS)
     }
 
     private fun scheduleAutomaticStageAdvance(nextStage: Int) {
@@ -724,6 +640,8 @@ class MainActivity : Activity() {
             dialog?.dismiss()
         }.apply {
             setPadding(dp(8), dp(8), dp(8), dp(12))
+            isFocusable = true
+            isFocusableInTouchMode = true
         }
 
         val scrollView = ScrollView(this).apply {
@@ -745,6 +663,7 @@ class MainActivity : Activity() {
             .create()
 
         dialog.show()
+        stageGrid.requestFocus()
     }
 
     private fun updateUi() {
