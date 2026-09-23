@@ -194,7 +194,10 @@ class MainActivity : Activity() {
         }
 
         headerCharacter = ImageView(this).apply {
-            background = brickPanel(Color.WHITE)
+            background = brickPanel(
+                fillColor = Color.WHITE,
+                horizontalBands = false
+            )
             setPadding(dp(8), dp(8), dp(8), dp(8))
             scaleType = ImageView.ScaleType.FIT_CENTER
             setImageDrawable(playerPortraitDrawable(HeaderCharacterAsset.MOVE))
@@ -202,7 +205,10 @@ class MainActivity : Activity() {
         }
 
         headerMessage = TextView(this).apply {
-            background = brickPanel(Color.WHITE)
+            background = brickPanel(
+                fillColor = Color.WHITE,
+                horizontalBands = true
+            )
             setTextColor(Color.rgb(28, 46, 62))
             textSize = 18f
             gravity = Gravity.CENTER
@@ -211,11 +217,13 @@ class MainActivity : Activity() {
             includeFontPadding = false
         }
 
+        // 원본 상단 UI 비율: 캐릭터 절반 / 문구 절반.
         headerBar.addView(
             headerCharacter,
             LinearLayout.LayoutParams(
-                dp(132),
-                dp(92)
+                0,
+                dp(92),
+                1f
             )
         )
 
@@ -225,11 +233,7 @@ class MainActivity : Activity() {
                 0,
                 dp(92),
                 1f
-            ).apply {
-                // 원작처럼 캐릭터/대사 패널이 거의 하나의 프레임처럼
-                // 이어져 보이도록 가운데 파란 틈을 없앤다.
-                marginStart = -dp(6)
-            }
+            )
         )
 
         gameView = GameView(this)
@@ -814,10 +818,14 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun brickPanel(fillColor: Int): RetroBrickFrameDrawable =
+    private fun brickPanel(
+        fillColor: Int,
+        horizontalBands: Boolean
+    ): RetroBrickFrameDrawable =
         RetroBrickFrameDrawable(
             fillColor = fillColor,
-            borderWidthPx = dp(8).toFloat()
+            borderWidthPx = dp(8).toFloat(),
+            horizontalBands = horizontalBands
         )
 
     private fun dp(value: Int): Int =
