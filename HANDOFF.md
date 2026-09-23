@@ -367,3 +367,8 @@ app\build\outputs\apk\debug\app-debug.apk
 - 내부 통로 타일은 사용자 제공 원본 대각선 타일 이미지를 bitmap 리소스로 직접 사용하며 nearest-neighbor로 셀 크기에 맞춰 표시
 - 빈 목표 집은 사용자 제공 집 이미지에서 배경만 제거한 투명 14x14 PNG로 교체
 - 공이 들어간 뒤 box goal 애니메이션 프레임(OriginalAnimationFrames)은 변경하지 않음
+
+- 공 넣기 전/후 목표 이미지를 56x56 nearest-neighbor 업스케일 PNG 리소스로 적용
+- 공 넣기 후 BOX_2~BOX_11 애니메이션 순서는 유지하며 Base64 런타임 디코딩 대신 drawable 리소스 사용
+- 벽돌 타일을 사용자 제공 벽돌 이미지 기반 56x56 픽셀아트 리소스로 교체
+- drawTile()은 bitmap 실제 크기를 source rect로 사용해 14x14 외 리소스도 잘림 없이 렌더링
