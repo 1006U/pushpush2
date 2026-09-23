@@ -4,7 +4,7 @@ plugins {
 }
 
 val releaseVersionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
-val releaseVersionName = System.getenv("VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.1.0"
+val releaseVersionName = System.getenv("VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.1.0-bb10"
 
 val releaseKeystoreFile = System.getenv("ANDROID_KEYSTORE_FILE")
 val releaseKeystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
@@ -22,16 +22,14 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.pushpush2"
+        applicationId = "com.pushpush2.blackberry"
 
-        // Galaxy S8 shipped with Android 7.0 (API 24).
-        // Keep this baseline so the original target device remains supported.
-        minSdk = 24
+        // BlackBerry Classic (BB10 10.3.x) uses an Android 4.3-era runtime.
+        // Keep this branch installable on API 18.
+        minSdk = 18
 
-        // Target the current stable Android compatibility level while keeping
-        // minSdk independent. Newer Android releases remain installable unless
-        // a future platform explicitly introduces a compatibility issue.
-        targetSdk = 36
+        // Target the runtime generation used by BlackBerry Classic.
+        targetSdk = 18
 
         // Local builds use these defaults. GitHub Actions can override both
         // through VERSION_CODE / VERSION_NAME for friend-distribution builds.
@@ -72,7 +70,6 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.15.0")
 
     testImplementation("junit:junit:4.13.2")
 }
