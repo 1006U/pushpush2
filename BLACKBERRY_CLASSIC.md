@@ -29,8 +29,8 @@ F = Left
 H = Right
 G = OK / Confirm
 
-R = Retry current stage
-M = Open stage select
+P = Retry current stage
+Q = Open stage select
 ```
 
 DPAD and the older WASD mappings are retained as fallback mappings for emulator
