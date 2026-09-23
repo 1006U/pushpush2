@@ -201,7 +201,7 @@ class MainActivity : Activity() {
                 fillColor = Color.WHITE,
                 horizontalBands = false
             )
-            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setPadding(dp(3), dp(3), dp(3), dp(3))
             scaleType = ImageView.ScaleType.FIT_CENTER
             setImageDrawable(playerPortraitDrawable(HeaderCharacterAsset.MOVE))
             contentDescription = "PushPush character"
@@ -213,10 +213,10 @@ class MainActivity : Activity() {
                 horizontalBands = true
             )
             setTextColor(Color.rgb(28, 46, 62))
-            textSize = 18f
+            textSize = 22f
             gravity = Gravity.CENTER
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setPadding(dp(14), dp(10), dp(14), dp(10))
+            setPadding(dp(10), dp(6), dp(10), dp(6))
             includeFontPadding = false
         }
 
@@ -225,7 +225,7 @@ class MainActivity : Activity() {
             headerCharacter,
             LinearLayout.LayoutParams(
                 0,
-                dp(92),
+                dp(104),
                 1f
             )
         )
@@ -234,7 +234,7 @@ class MainActivity : Activity() {
             headerMessage,
             LinearLayout.LayoutParams(
                 0,
-                dp(92),
+                dp(104),
                 1f
             )
         )
