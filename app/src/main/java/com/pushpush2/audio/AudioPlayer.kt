@@ -8,13 +8,15 @@ import android.media.ToneGenerator
 class AudioPlayer(
     private val context: Context
 ) {
-    private val activePlayers = mutableSetOf<MediaPlayer>()
-
     /*
-     * The original WAV resources can be dropped into res/raw later without
-     * changing call sites. Until those files are present, a short feature-phone
-     * style tone is used so the game never becomes completely silent.
+     * Keep only one MediaPlayer alive at a time.
+     *
+     * Short game effects are triggered frequently and some older Android
+     * devices can run out of decoder resources when multiple MediaPlayers
+     * overlap. A new effect therefore replaces the previous one.
      */
+    private var currentPlayer: MediaPlayer? = null
+
     private val toneGenerator: ToneGenerator? = runCatching {
         ToneGenerator(
             AudioManager.STREAM_MUSIC,
@@ -23,6 +25,8 @@ class AudioPlayer(
     }.getOrNull()
 
     fun play(resourceName: String) {
+        stopCurrentPlayback()
+
         val resourceId = context.resources.getIdentifier(
             resourceName,
             "raw",
@@ -35,8 +39,8 @@ class AudioPlayer(
         }
 
         /*
-         * MediaPlayer codec support can differ by Android version/emulator image.
-         * Sound playback must never be able to terminate the game Activity.
+         * MediaPlayer codec support can differ by Android version/emulator
+         * image. Sound playback must never terminate the game Activity.
          */
         val player = runCatching {
             MediaPlayer.create(context, resourceId)
@@ -47,16 +51,20 @@ class AudioPlayer(
             return
         }
 
-        activePlayers += player
+        currentPlayer = player
 
-        player.setOnCompletionListener {
-            activePlayers -= it
-            runCatching { it.release() }
+        player.setOnCompletionListener { completed ->
+            if (currentPlayer === completed) {
+                currentPlayer = null
+            }
+            runCatching { completed.release() }
         }
 
-        player.setOnErrorListener { mediaPlayer, _, _ ->
-            activePlayers -= mediaPlayer
-            runCatching { mediaPlayer.release() }
+        player.setOnErrorListener { failed, _, _ ->
+            if (currentPlayer === failed) {
+                currentPlayer = null
+            }
+            runCatching { failed.release() }
             playFallbackTone(resourceName)
             true
         }
@@ -66,9 +74,33 @@ class AudioPlayer(
         }.isSuccess
 
         if (!started) {
-            activePlayers -= player
+            if (currentPlayer === player) {
+                currentPlayer = null
+            }
             runCatching { player.release() }
             playFallbackTone(resourceName)
+        }
+    }
+
+    private fun stopCurrentPlayback() {
+        runCatching {
+            toneGenerator?.stopTone()
+        }
+
+        val player = currentPlayer ?: return
+        currentPlayer = null
+
+        runCatching {
+            player.setOnCompletionListener(null)
+            player.setOnErrorListener(null)
+        }
+        runCatching {
+            if (player.isPlaying) {
+                player.stop()
+            }
+        }
+        runCatching {
+            player.release()
         }
     }
 
@@ -85,15 +117,13 @@ class AudioPlayer(
         }
 
         runCatching {
+            generator.stopTone()
             generator.startTone(tone, durationMs)
         }
     }
 
     fun release() {
-        activePlayers.toList().forEach {
-            runCatching { it.release() }
-        }
-        activePlayers.clear()
+        stopCurrentPlayback()
 
         runCatching {
             toneGenerator?.release()

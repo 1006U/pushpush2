@@ -588,8 +588,9 @@ class MainActivity : Activity() {
             (state.boxes - boxesBefore)
                 .firstOrNull { it in state.stage.goals }
 
-        audioPlayer.play("move")
-
+        // A goal push is one action. Do not start move.mp3 and success.mp3
+        // back-to-back: overlapping MediaPlayer decoders caused audio to stop
+        // on some devices immediately after a box entered a goal.
         if (boxEnteredGoal != null) {
             audioPlayer.play("success")
             gameView.playGoalSuccess(boxEnteredGoal)
@@ -598,11 +599,13 @@ class MainActivity : Activity() {
                 resetAfterMs = HEADER_REACTION_MS
             )
         } else if (boxMoved) {
+            audioPlayer.play("move")
             showHeaderState(
                 HeaderState.PUSH,
                 resetAfterMs = HEADER_REACTION_MS
             )
         } else {
+            audioPlayer.play("move")
             showHeaderState(HeaderState.MOVE)
         }
 
