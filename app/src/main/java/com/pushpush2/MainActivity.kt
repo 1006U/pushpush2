@@ -336,6 +336,7 @@ class MainActivity : Activity() {
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER,
             KeyEvent.KEYCODE_SPACE,
+            KeyEvent.KEYCODE_G,
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_BUTTON_A,
             KeyEvent.KEYCODE_BUTTON_START -> true
@@ -349,11 +350,17 @@ class MainActivity : Activity() {
             KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT,
             KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_T,
+            KeyEvent.KEYCODE_V,
+            KeyEvent.KEYCODE_F,
+            KeyEvent.KEYCODE_H,
+            KeyEvent.KEYCODE_G,
             KeyEvent.KEYCODE_W,
             KeyEvent.KEYCODE_A,
             KeyEvent.KEYCODE_S,
             KeyEvent.KEYCODE_D,
             KeyEvent.KEYCODE_R,
+            KeyEvent.KEYCODE_G,
             KeyEvent.KEYCODE_M,
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER,
@@ -368,15 +375,19 @@ class MainActivity : Activity() {
     private fun handleHardwareKeyDown(event: KeyEvent) {
         when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_T,
             KeyEvent.KEYCODE_W -> move(Direction.UP)
 
             KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_V,
             KeyEvent.KEYCODE_S -> move(Direction.DOWN)
 
             KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_F,
             KeyEvent.KEYCODE_A -> move(Direction.LEFT)
 
             KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_H,
             KeyEvent.KEYCODE_D -> move(Direction.RIGHT)
 
             KeyEvent.KEYCODE_R,
