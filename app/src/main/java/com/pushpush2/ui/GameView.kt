@@ -643,20 +643,19 @@ class GameView(context: Context) : View(context) {
         paint.strokeCap = Paint.Cap.SQUARE
 
         val haloWidth =
-            (cell * 0.115f).coerceAtLeast(1.5f)
+            (cell * 0.085f).coerceAtLeast(1.2f)
         val coreWidth =
-            (cell * 0.065f).coerceAtLeast(1f)
+            (cell * 0.045f).coerceAtLeast(0.8f)
 
         /*
-         * '/' 선의 중심을 그 선의 수직 방향으로 이동시킨다.
-         * 첫 번째→두 번째 간격은 0.23 cell,
-         * 두 번째→세 번째 간격은 0.36 cell로 다르게 두어
-         * 원본 타일의 비대칭 간격을 재현한다.
+         * 원본처럼 세 줄의 간격을 균일하게 두지 않는다.
+         * 1→2 간격은 약 0.22 cell, 2→3 간격은 약 0.38 cell.
+         * 세 번째 선은 이전보다 더 아래쪽으로 내려 배치한다.
          */
         val lineOffsets = floatArrayOf(
-            -0.29f,
-            -0.06f,
-            0.30f
+            -0.24f,
+            -0.02f,
+            0.36f
         )
 
         floorPositions.forEach { position ->
@@ -670,18 +669,28 @@ class GameView(context: Context) : View(context) {
             canvas.save()
             canvas.clipRect(rect)
 
-            lineOffsets.forEach { offsetRatio ->
+            lineOffsets.forEachIndexed { index, offsetRatio ->
                 val offset = cell * offsetRatio
 
                 /*
-                 * 선을 타일 바깥까지 길게 그린 뒤 clip한다.
-                 * 그래서 세 선 모두 짧은 중앙 무늬가 아니라
-                 * 해당 위치에서 타일 경계까지 꽉 차는 긴 대각선이 된다.
+                 * 원본 확대본처럼 첫 번째/두 번째 선은 양끝이 타일 경계까지
+                 * 닿지 않는 짧은 사선이고, 세 번째 선은 더 아래쪽에서
+                 * 길게 이어져 타일 경계에 걸친다.
                  */
-                val x1 = rect.left - cell
-                val y1 = rect.bottom + cell + offset
-                val x2 = rect.right + cell
-                val y2 = rect.top - cell + offset
+                val halfSpan =
+                    if (index < 2) {
+                        cell * 0.34f
+                    } else {
+                        cell * 0.82f
+                    }
+
+                val centerX = rect.centerX()
+                val centerY = rect.centerY() + offset
+
+                val x1 = centerX - halfSpan
+                val y1 = centerY + halfSpan
+                val x2 = centerX + halfSpan
+                val y2 = centerY - halfSpan
 
                 paint.strokeWidth = haloWidth
                 paint.color = PLAYFIELD_DIAGONAL_HALO
