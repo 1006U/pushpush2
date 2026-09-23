@@ -229,8 +229,13 @@ class GameView(context: Context) : View(context) {
             offsetY = offsetY
         )
 
+        /*
+         * 원본 게임판 외곽선은 검은/남색 박스처럼 강하게 보이지 않고
+         * 바깥 파란 영역과 자연스럽게 이어지는 얇은 파란 선에 가깝다.
+         */
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = maxOf(1f, cell / ORIGINAL_TILE_PX)
+        paint.strokeWidth =
+            maxOf(1f, (cell / ORIGINAL_TILE_PX) * 0.55f)
         paint.color = FRAME_COLOR
         canvas.drawRect(boardRect, paint)
 
@@ -501,46 +506,56 @@ class GameView(context: Context) : View(context) {
         cell: Float
     ) {
         /*
-         * 원본 피처폰 화면의 벽 바깥 바닥은 단색이 아니라 아주 촘촘한
-         * 2톤 LCD/도트 질감이 보인다. 큰 점 하나를 띄엄띄엄 반복하기보다
-         * 작은 점을 엇갈리게 배치해서 같은 느낌을 만든다.
+         * 원본 피처폰 화면의 벽 바깥 베이지 영역은 단순한 점무늬보다
+         * 한 타일 안에 작은 사각형 3x3 묶음이 들어간 LCD 질감에 가깝다.
+         * 각 스테이지 타일마다 9개의 작은 사각형을 같은 위치에 반복해
+         * 확대/축소되어도 원본의 규칙적인 패턴이 유지되도록 한다.
          */
-        val pixel = (cell / ORIGINAL_TILE_PX).coerceAtLeast(1f)
-        val spacing = pixel * 2f
-        val dotSize = pixel.coerceAtMost(1.8f)
+        val stageColumns =
+            (boardRect.width() / cell).toInt().coerceAtLeast(1)
+        val stageRows =
+            (boardRect.height() / cell).toInt().coerceAtLeast(1)
+
+        val pixel = (cell / ORIGINAL_TILE_PX).coerceAtLeast(0.75f)
+        val squareSize =
+            (pixel * 1.75f)
+                .coerceAtLeast(1f)
+                .coerceAtMost(cell * 0.14f)
+
+        val centers = floatArrayOf(0.22f, 0.50f, 0.78f)
 
         paint.style = Paint.Style.FILL
         paint.shader = null
 
-        var row = 0
-        var y = boardRect.top + pixel * 0.65f
-        while (y < boardRect.bottom) {
-            val rowOffset = if (row % 2 == 0) 0f else pixel
-            var column = 0
-            var x = boardRect.left + pixel * 0.65f + rowOffset
+        for (tileY in 0 until stageRows) {
+            val tileTop = boardRect.top + tileY * cell
 
-            while (x < boardRect.right) {
-                paint.color =
-                    if ((row + column) % 2 == 0) {
-                        FLOOR_DOT_COLOR
-                    } else {
-                        FLOOR_DOT_ALT_COLOR
+            for (tileX in 0 until stageColumns) {
+                val tileLeft = boardRect.left + tileX * cell
+
+                centers.forEachIndexed { miniY, fy ->
+                    centers.forEachIndexed { miniX, fx ->
+                        val centerX = tileLeft + cell * fx
+                        val centerY = tileTop + cell * fy
+                        val half = squareSize / 2f
+
+                        paint.color =
+                            if ((tileX + tileY + miniX + miniY) % 2 == 0) {
+                                FLOOR_DOT_COLOR
+                            } else {
+                                FLOOR_DOT_ALT_COLOR
+                            }
+
+                        canvas.drawRect(
+                            centerX - half,
+                            centerY - half,
+                            centerX + half,
+                            centerY + half,
+                            paint
+                        )
                     }
-
-                canvas.drawRect(
-                    x,
-                    y,
-                    x + dotSize,
-                    y + dotSize,
-                    paint
-                )
-
-                x += spacing
-                column += 1
+                }
             }
-
-            y += spacing
-            row += 1
         }
     }
 
@@ -1084,9 +1099,9 @@ class GameView(context: Context) : View(context) {
         val FLOOR_COLOR: Int =
             Color.rgb(255, 232, 188)
         val FLOOR_DOT_COLOR: Int =
-            Color.rgb(246, 211, 164)
+            Color.rgb(218, 170, 115)
         val FLOOR_DOT_ALT_COLOR: Int =
-            Color.rgb(255, 239, 204)
+            Color.rgb(239, 200, 147)
 
         // 벽으로 둘러싸인 실제 플레이 통로는 원본처럼 밝은 타일과
         // 연한 적갈색 대각선 무늬로 바깥 배경과 구분한다.
@@ -1104,6 +1119,6 @@ class GameView(context: Context) : View(context) {
             Color.rgb(112, 32, 18)
 
         val FRAME_COLOR: Int =
-            Color.rgb(24, 54, 82)
+            Color.rgb(42, 115, 196)
     }
 }

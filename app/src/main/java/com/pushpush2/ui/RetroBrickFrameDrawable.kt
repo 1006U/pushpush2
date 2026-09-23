@@ -5,15 +5,15 @@ import android.graphics.Color
 import android.graphics.ColorFilter
 import android.graphics.Paint
 import android.graphics.PixelFormat
-import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import kotlin.math.max
 
 /**
  * Feature-phone style brick frame used around the header portrait/message.
  *
- * The frame intentionally uses the same red/orange/black palette as the
- * connected game walls so the top HUD feels like part of the original game.
+ * The original header does not have brick rows across its top or bottom.
+ * Only vertical brick columns separate the portrait, message panel and the
+ * outer sides, so this drawable intentionally leaves the top/bottom open.
  */
 internal class RetroBrickFrameDrawable(
     private val fillColor: Int,
@@ -37,82 +37,30 @@ internal class RetroBrickFrameDrawable(
         val bottom = b.bottom.toFloat()
         val bw = borderWidthPx.coerceAtLeast(2f)
 
-        // White/content area first.
+        // White/content area reaches the open top and bottom edges.
         paint.color = withAlpha(fillColor)
         canvas.drawRect(
             left + bw,
-            top + bw,
+            top,
             right - bw,
-            bottom - bw,
+            bottom,
             paint
         )
 
-        drawHorizontalBrickBand(canvas, left, top, right, top + bw, bw)
-        drawHorizontalBrickBand(canvas, left, bottom - bw, right, bottom, bw)
+        // Original header: vertical brick columns only.
         drawVerticalBrickBand(canvas, left, top, left + bw, bottom, bw)
         drawVerticalBrickBand(canvas, right - bw, top, right, bottom, bw)
 
-        // Strong outer + inner black edges, matching the original LCD sprites.
+        // Keep only vertical dark edges. Horizontal lines would make the
+        // portrait/message look boxed in, unlike the original screen.
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = max(1f, bw * 0.13f)
         paint.color = withAlpha(MORTAR)
-        canvas.drawRect(
-            RectF(left, top, right, bottom),
-            paint
-        )
-        canvas.drawRect(
-            RectF(left + bw, top + bw, right - bw, bottom - bw),
-            paint
-        )
+        canvas.drawLine(left + bw, top, left + bw, bottom, paint)
+        canvas.drawLine(right - bw, top, right - bw, bottom, paint)
         paint.style = Paint.Style.FILL
     }
 
-    private fun drawHorizontalBrickBand(
-        canvas: Canvas,
-        left: Float,
-        top: Float,
-        right: Float,
-        bottom: Float,
-        bw: Float
-    ) {
-        paint.color = withAlpha(BRICK_RED)
-        canvas.drawRect(left, top, right, bottom, paint)
-
-        val rowHeight = bw / 2f
-        val brickWidth = bw * 1.75f
-        val mortar = max(1f, bw * 0.13f)
-
-        paint.color = withAlpha(MORTAR)
-        canvas.drawRect(left, top + rowHeight - mortar / 2f, right, top + rowHeight + mortar / 2f, paint)
-
-        repeat(2) { row ->
-            val rowTop = top + row * rowHeight
-            val offset = if (row == 0) 0f else brickWidth / 2f
-
-            // Orange top highlight in each brick row.
-            paint.color = withAlpha(BRICK_HIGHLIGHT)
-            canvas.drawRect(
-                left,
-                rowTop + mortar,
-                right,
-                (rowTop + mortar + max(1f, bw * 0.12f)).coerceAtMost(bottom),
-                paint
-            )
-
-            paint.color = withAlpha(MORTAR)
-            var x = left + offset
-            while (x < right) {
-                canvas.drawRect(
-                    x - mortar / 2f,
-                    rowTop,
-                    x + mortar / 2f,
-                    (rowTop + rowHeight).coerceAtMost(bottom),
-                    paint
-                )
-                x += brickWidth
-            }
-        }
-    }
 
     private fun drawVerticalBrickBand(
         canvas: Canvas,
