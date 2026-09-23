@@ -363,3 +363,7 @@ app\build\outputs\apk\debug\app-debug.apk
 - 하단 키패드 오른쪽 아래 빨간 전화키에 앱 종료 기능 할당 (`finishAndRemoveTask()`)
 
 - 하단 키패드 상단 중앙 작은 버튼과 하단 중앙 버튼은 모양만 유지하고 내부 기호/CANCEL 글자는 제거
+
+- 내부 통로 타일은 사용자 제공 원본 대각선 타일 이미지를 bitmap 리소스로 직접 사용하며 nearest-neighbor로 셀 크기에 맞춰 표시
+- 빈 목표 집은 사용자 제공 집 이미지에서 배경만 제거한 투명 14x14 PNG로 교체
+- 공이 들어간 뒤 box goal 애니메이션 프레임(OriginalAnimationFrames)은 변경하지 않음
