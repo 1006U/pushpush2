@@ -186,7 +186,7 @@ class MainActivity : Activity() {
 
             // 원본처럼 상단 캐릭터/문구 UI가 게임 영역 좌우 끝까지
             // 꽉 차도록 좌우 패딩을 두지 않는다. 아래쪽 여백만 유지한다.
-            setPadding(0, 0, 0, dp(4))
+            setPadding(0, 0, 0, 0)
         }
 
         val headerBar = LinearLayout(this).apply {
@@ -287,8 +287,7 @@ class MainActivity : Activity() {
             gameView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
         )
 
@@ -363,20 +362,15 @@ class MainActivity : Activity() {
             gameShell,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            ).apply {
-                // 오리지널 피처폰 화면처럼 파란 게임 영역 양옆에
-                // 얇은 흰색 외곽 여백을 남긴다.
-                marginStart = dp(6)
-                marginEnd = dp(6)
-            }
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         )
         root.addView(
             controlsPanel,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                0,
+                1f
             )
         )
 
