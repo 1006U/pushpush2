@@ -675,7 +675,10 @@ class MainActivity : Activity() {
             gameView.alpha = 1f
 
             audioPlayer.play("clear")
-            loadStage(nextStage)
+            loadStage(
+                number = nextStage,
+                preserveHeaderState = true
+            )
         }
 
         pendingStageAdvance = advance
@@ -729,14 +732,29 @@ class MainActivity : Activity() {
         showHeaderState(HeaderState.PLAYING)
     }
 
-    private fun loadStage(number: Int) {
+    private fun loadStage(
+        number: Int,
+        preserveHeaderState: Boolean = false
+    ) {
         cancelPendingStageAdvance()
         currentStageNumber = number
         clearHandled = false
         engine.load(StageRepository.get(number))
         gameView.resetPlayerAnimation()
         updateUi()
-        showHeaderState(HeaderState.PLAYING)
+
+        /*
+         * After an automatic stage clear transition, keep the previous
+         * "오~예~~ / 앗싸~~!!" message and clear-reaction portrait visible
+         * over the beginning of the next stage. The first successful move
+         * naturally replaces it with MOVE / PUSH / GOAL_SUCCESS.
+         *
+         * Manual stage selection, retry and returning to stage 1 still reset
+         * the header immediately.
+         */
+        if (!preserveHeaderState) {
+            showHeaderState(HeaderState.PLAYING)
+        }
     }
 
     private fun showStageSelector() {
