@@ -336,7 +336,7 @@ class MainActivity : Activity() {
             }
             onExitClick = {
                 audioPlayer.play("button")
-                finishAndRemoveTask()
+                showExitConfirmation()
             }
         }
 
@@ -755,6 +755,17 @@ class MainActivity : Activity() {
         if (!preserveHeaderState) {
             showHeaderState(HeaderState.PLAYING)
         }
+    }
+
+    private fun showExitConfirmation() {
+        AlertDialog.Builder(this)
+            .setTitle("게임 종료")
+            .setMessage("게임을 종료하시겠습니까?")
+            .setNegativeButton("취소", null)
+            .setPositiveButton("종료") { _, _ ->
+                finishAndRemoveTask()
+            }
+            .show()
     }
 
     private fun showStageSelector() {
