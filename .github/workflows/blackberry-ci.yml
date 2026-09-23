@@ -1,0 +1,40 @@
+name: BlackBerry Classic CI
+
+on:
+  push:
+    branches: [ "blackberry-classic" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout BlackBerry branch
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Unit tests and APK build
+        run: ./gradlew testDebugUnitTest assembleDebug assembleRelease
+
+      - name: Verify API 18 minSdk in APK
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -f "$APK"
+          ${ANDROID_HOME}/build-tools/36.0.0/aapt dump badging "$APK" | tee /tmp/badging.txt
+          grep -q "sdkVersion:'18'" /tmp/badging.txt
+
+      - name: Upload BlackBerry debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: pushpush2-blackberry-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
