@@ -201,7 +201,7 @@ class MainActivity : Activity() {
                 fillColor = Color.WHITE,
                 horizontalBands = false
             )
-            setPadding(dp(3), dp(3), dp(3), dp(3))
+            setPadding(0, 0, 0, 0)
             scaleType = ImageView.ScaleType.FIT_CENTER
             setImageDrawable(playerPortraitDrawable(HeaderCharacterAsset.MOVE))
             contentDescription = "PushPush character"
@@ -213,10 +213,11 @@ class MainActivity : Activity() {
                 horizontalBands = true
             )
             setTextColor(Color.rgb(28, 46, 62))
-            textSize = 22f
+            textSize = 26f
+            textScaleX = 1.04f
             gravity = Gravity.CENTER
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setPadding(dp(10), dp(6), dp(10), dp(6))
+            setPadding(dp(4), dp(2), dp(4), dp(2))
             includeFontPadding = false
         }
 
@@ -807,12 +808,83 @@ class MainActivity : Activity() {
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
         }.getOrNull() ?: fallback
 
-        return BitmapDrawable(resources, bitmap).apply {
+        val portraitBitmap =
+            cropPortraitOuterWhitespace(bitmap)
+
+        return BitmapDrawable(resources, portraitBitmap).apply {
             // Header art is a separate remastered asset and is intentionally
             // filtered when scaled into the larger feature-phone style panel.
             isFilterBitmap = true
             setAntiAlias(true)
         }
+    }
+
+    private fun cropPortraitOuterWhitespace(
+        bitmap: android.graphics.Bitmap
+    ): android.graphics.Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
+        if (width <= 1 || height <= 1) return bitmap
+
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(
+            pixels,
+            0,
+            width,
+            0,
+            0,
+            width,
+            height
+        )
+
+        var minX = width
+        var minY = height
+        var maxX = -1
+        var maxY = -1
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val color = pixels[y * width + x]
+                val alpha = Color.alpha(color)
+                val red = Color.red(color)
+                val green = Color.green(color)
+                val blue = Color.blue(color)
+
+                val outerBackground =
+                    alpha < 24 ||
+                    (red >= 242 && green >= 242 && blue >= 242)
+
+                if (!outerBackground) {
+                    minX = minOf(minX, x)
+                    minY = minOf(minY, y)
+                    maxX = maxOf(maxX, x)
+                    maxY = maxOf(maxY, y)
+                }
+            }
+        }
+
+        if (maxX < minX || maxY < minY) return bitmap
+
+        val padding = 2
+        minX = (minX - padding).coerceAtLeast(0)
+        minY = (minY - padding).coerceAtLeast(0)
+        maxX = (maxX + padding).coerceAtMost(width - 1)
+        maxY = (maxY + padding).coerceAtMost(height - 1)
+
+        val cropWidth = maxX - minX + 1
+        val cropHeight = maxY - minY + 1
+
+        if (cropWidth >= width && cropHeight >= height) {
+            return bitmap
+        }
+
+        return android.graphics.Bitmap.createBitmap(
+            bitmap,
+            minX,
+            minY,
+            cropWidth,
+            cropHeight
+        )
     }
 
     private fun brickPanel(
