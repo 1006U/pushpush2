@@ -157,7 +157,7 @@ class MainActivity : Activity() {
         gameShell = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(RETRO_BLUE)
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+            setPadding(0, 0, 0, 0)
         }
 
         val headerBar = LinearLayout(this).apply {
@@ -168,28 +168,36 @@ class MainActivity : Activity() {
         }
 
         headerCharacter = ImageView(this).apply {
-            background = brickPanel(Color.WHITE)
-            setPadding(dp(8), dp(8), dp(8), dp(8))
+            background = brickPanel(
+                fillColor = Color.WHITE,
+                horizontalBands = false
+            )
+            setPadding(0, 0, 0, 0)
             scaleType = ImageView.ScaleType.FIT_CENTER
             setImageDrawable(playerPortraitDrawable(HeaderCharacterAsset.MOVE))
             contentDescription = "PushPush character"
         }
 
         headerMessage = TextView(this).apply {
-            background = brickPanel(Color.WHITE)
+            background = brickPanel(
+                fillColor = Color.WHITE,
+                horizontalBands = true
+            )
             setTextColor(Color.rgb(28, 46, 62))
-            textSize = 16f
+            textSize = 26f
+            textScaleX = 1.04f
             gravity = Gravity.CENTER
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setPadding(dp(14), dp(10), dp(14), dp(10))
+            setPadding(dp(4), dp(2), dp(4), dp(2))
             includeFontPadding = false
         }
 
         headerBar.addView(
             headerCharacter,
             LinearLayout.LayoutParams(
-                dp(88),
-                dp(64)
+                0,
+                dp(104),
+                1f
             )
         )
 
@@ -197,13 +205,9 @@ class MainActivity : Activity() {
             headerMessage,
             LinearLayout.LayoutParams(
                 0,
-                dp(64),
+                dp(104),
                 1f
-            ).apply {
-                // 원작처럼 캐릭터/대사 패널이 거의 하나의 프레임처럼
-                // 이어져 보이도록 가운데 파란 틈을 없앤다.
-                marginStart = -dp(6)
-            }
+            )
         )
 
         gameView = GameView(this)
@@ -235,11 +239,11 @@ class MainActivity : Activity() {
 
         statusBar.addView(
             stageLabel,
-            LinearLayout.LayoutParams(0, dp(40), 0.56f)
+            LinearLayout.LayoutParams(0, dp(60), 0.56f)
         )
         statusBar.addView(
             moveLabel,
-            LinearLayout.LayoutParams(0, dp(40), 0.44f)
+            LinearLayout.LayoutParams(0, dp(60), 0.44f)
         )
 
         gameShell.addView(
@@ -495,8 +499,7 @@ class MainActivity : Activity() {
             (state.boxes - boxesBefore)
                 .firstOrNull { it in state.stage.goals }
 
-        audioPlayer.play("move")
-
+        // A goal push is one action. Avoid overlapping move/success decoders.
         if (boxEnteredGoal != null) {
             audioPlayer.play("success")
             gameView.playGoalSuccess(boxEnteredGoal)
@@ -505,11 +508,13 @@ class MainActivity : Activity() {
                 resetAfterMs = HEADER_REACTION_MS
             )
         } else if (boxMoved) {
+            audioPlayer.play("move")
             showHeaderState(
                 HeaderState.PUSH,
                 resetAfterMs = HEADER_REACTION_MS
             )
         } else {
+            audioPlayer.play("move")
             showHeaderState(HeaderState.MOVE)
         }
 
@@ -566,7 +571,10 @@ class MainActivity : Activity() {
             gameView.alpha = 1f
 
             audioPlayer.play("clear")
-            loadStage(nextStage)
+            loadStage(
+                number = nextStage,
+                preserveHeaderState = true
+            )
         }
 
         pendingStageAdvance = advance
@@ -620,14 +628,22 @@ class MainActivity : Activity() {
         showHeaderState(HeaderState.PLAYING)
     }
 
-    private fun loadStage(number: Int) {
+    private fun loadStage(
+        number: Int,
+        preserveHeaderState: Boolean = false
+    ) {
         cancelPendingStageAdvance()
         currentStageNumber = number
         clearHandled = false
         engine.load(StageRepository.get(number))
         gameView.resetPlayerAnimation()
         updateUi()
-        showHeaderState(HeaderState.PLAYING)
+
+        // Automatic clear transition keeps the clear reaction until
+        // the first successful move on the next stage.
+        if (!preserveHeaderState) {
+            showHeaderState(HeaderState.PLAYING)
+        }
     }
 
     private fun showStageSelector() {
@@ -740,10 +756,14 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun brickPanel(fillColor: Int): RetroBrickFrameDrawable =
+    private fun brickPanel(
+        fillColor: Int,
+        horizontalBands: Boolean
+    ): RetroBrickFrameDrawable =
         RetroBrickFrameDrawable(
             fillColor = fillColor,
-            borderWidthPx = dp(8).toFloat()
+            borderWidthPx = dp(8).toFloat(),
+            horizontalBands = horizontalBands
         )
 
     private fun dp(value: Int): Int =
