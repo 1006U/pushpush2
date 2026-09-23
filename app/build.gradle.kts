@@ -67,6 +67,12 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    // This branch is intentionally built for the legacy Android runtime in
+    // BlackBerry 10 and is not intended for Google Play publication.
+    lint {
+        disable += "ExpiredTargetSdkVersion"
+    }
 }
 
 dependencies {
