@@ -344,3 +344,5 @@ app\build\outputs\apk\debug\app-debug.apk
 
 - 헤더 캐릭터 외곽 흰 여백을 자동 crop해 패널 안에서 더 크게 표시, 이미지 패딩 0 적용
 - 상단 문구를 26sp / textScaleX 1.04로 확대하고 내부 패딩 축소
+
+- 하단 조작 UI를 참고 사진형 하드웨어 클러스터로 재구성: STAGE/RETRY를 조작부 상단 좌우 소프트키로 통합, 중앙 OK 라벨 추가

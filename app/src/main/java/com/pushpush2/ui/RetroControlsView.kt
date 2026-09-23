@@ -33,6 +33,7 @@ class RetroControlsView(context: Context) : View(context) {
 
     private val stageRect = RectF()
     private val retryRect = RectF()
+    private val controlBodyRect = RectF()
 
     private var dpadCx = 0f
     private var dpadCy = 0f
@@ -66,27 +67,51 @@ class RetroControlsView(context: Context) : View(context) {
         super.onDraw(canvas)
 
         val w = width.toFloat()
-        val sidePadding = dpF(24)
-        val top = dpF(8)
-        val softHeight = dpF(38)
-        val softGap = dpF(18)
-        val softWidth = min(
-            dpF(112),
-            (w - sidePadding * 2f - softGap) / 2f
+        val top = dpF(6)
+        val softHeight = dpF(40)
+        val softGap = dpF(16)
+
+        // Reference-style hardware cluster:
+        // STAGE / RETRY sit at the upper-left / upper-right of the same
+        // navigation assembly instead of floating as separate buttons.
+        dpadRadius = min(dpF(84), (w - dpF(48)) / 2f)
+        dpadRx = min(
+            dpadRadius * 1.90f,
+            (w - dpF(8)) / 2f
         )
+        dpadRy = dpadRadius * 0.90f
+        centerRx = dpadRx * 0.25f
+        centerRy = dpadRy * 0.23f
+        ringInnerRx = dpadRx * 0.51f
+        ringInnerRy = dpadRy * 0.51f
+
+        dpadCx = w / 2f
+        dpadCy = top + softHeight + dpF(4) + dpadRy
+
+        val clusterLeft = dpadCx - dpadRx
+        val clusterRight = dpadCx + dpadRx
 
         stageRect.set(
-            w / 2f - softGap / 2f - softWidth,
+            clusterLeft + dpF(5),
             top,
-            w / 2f - softGap / 2f,
+            dpadCx - softGap / 2f,
             top + softHeight
         )
         retryRect.set(
-            w / 2f + softGap / 2f,
+            dpadCx + softGap / 2f,
             top,
-            w / 2f + softGap / 2f + softWidth,
+            clusterRight - dpF(5),
             top + softHeight
         )
+
+        controlBodyRect.set(
+            clusterLeft - dpF(3),
+            top - dpF(3),
+            clusterRight + dpF(3),
+            dpadCy + dpadRy + dpF(5)
+        )
+
+        drawControlHousing(canvas)
 
         drawSoftKey(
             canvas = canvas,
@@ -100,23 +125,6 @@ class RetroControlsView(context: Context) : View(context) {
             label = "RETRY",
             pressed = pressedSoftKey == SoftKey.RETRY
         )
-
-        // Use more of the available lower screen area while keeping the
-        // Anycall-style horizontal shape. Width is always capped to the view.
-        dpadRadius = min(dpF(84), (w - dpF(48)) / 2f)
-
-        dpadRx = min(
-            dpadRadius * 1.90f,
-            (w - dpF(8)) / 2f
-        )
-        dpadRy = dpadRadius * 0.90f
-        centerRx = dpadRx * 0.25f
-        centerRy = dpadRy * 0.23f
-        ringInnerRx = dpadRx * 0.51f
-        ringInnerRy = dpadRy * 0.51f
-
-        dpadCx = w / 2f
-        dpadCy = top + softHeight + dpF(18) + dpadRy
 
         drawAnycallDpad(canvas)
     }
@@ -306,6 +314,41 @@ class RetroControlsView(context: Context) : View(context) {
         }
     }
 
+    private fun drawControlHousing(canvas: Canvas) {
+        paint.style = Paint.Style.FILL
+        paint.color = Color.rgb(151, 160, 171)
+        canvas.drawRoundRect(
+            controlBodyRect,
+            dpF(28),
+            dpF(28),
+            paint
+        )
+
+        val inner = RectF(
+            controlBodyRect.left + dpF(3),
+            controlBodyRect.top + dpF(3),
+            controlBodyRect.right - dpF(3),
+            controlBodyRect.bottom - dpF(3)
+        )
+        paint.color = Color.rgb(184, 193, 202)
+        canvas.drawRoundRect(
+            inner,
+            dpF(25),
+            dpF(25),
+            paint
+        )
+
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = dpF(1.4f)
+        paint.color = Color.rgb(77, 88, 101)
+        canvas.drawRoundRect(
+            controlBodyRect,
+            dpF(28),
+            dpF(28),
+            paint
+        )
+    }
+
     private fun drawSoftKey(
         canvas: Canvas,
         rect: RectF,
@@ -322,14 +365,14 @@ class RetroControlsView(context: Context) : View(context) {
         } else {
             SOFT_KEY_NORMAL
         }
-        canvas.drawRoundRect(rect, dpF(19), dpF(19), paint)
+        canvas.drawRoundRect(rect, dpF(13), dpF(13), paint)
 
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = if (pressed) dpF(2.2f) else dpF(1.2f)
         paint.color = if (pressed) LED_BLUE_BRIGHT else SOFT_KEY_BORDER
-        canvas.drawRoundRect(rect, dpF(19), dpF(19), paint)
+        canvas.drawRoundRect(rect, dpF(13), dpF(13), paint)
 
-        textPaint.textSize = dpF(12)
+        textPaint.textSize = dpF(12.5f)
         textPaint.color = if (pressed) Color.WHITE else TEXT_NORMAL
 
         val baseline =
@@ -440,6 +483,13 @@ class RetroControlsView(context: Context) : View(context) {
             Color.rgb(93, 107, 122)
         }
         canvas.drawOval(centerMarkRect, paint)
+
+        textPaint.textSize = dpF(11)
+        textPaint.color =
+            if (pressedCenter) Color.WHITE else Color.rgb(36, 47, 60)
+        val okBaseline =
+            dpadCy - (textPaint.descent() + textPaint.ascent()) / 2f
+        canvas.drawText("OK", dpadCx, okBaseline, textPaint)
 
         Direction.entries.forEach { direction ->
             drawRoundedIndicator(
