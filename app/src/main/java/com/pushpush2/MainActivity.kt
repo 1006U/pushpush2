@@ -33,6 +33,7 @@ import com.pushpush2.ui.GameView
 import com.pushpush2.ui.HeaderCharacterAsset
 import com.pushpush2.ui.RetroBrickFrameDrawable
 import com.pushpush2.ui.RetroControlsView
+import com.pushpush2.ui.StageLayoutPolicy
 import com.pushpush2.ui.StageSelectView
 
 class MainActivity : Activity() {
@@ -42,8 +43,12 @@ class MainActivity : Activity() {
     private lateinit var moveLabel: TextView
     private lateinit var headerCharacter: ImageView
     private lateinit var headerMessage: TextView
+    private lateinit var rootView: LinearLayout
     private lateinit var gameShell: LinearLayout
     private lateinit var controlsPanel: LinearLayout
+    private lateinit var controlsView: RetroControlsView
+    private lateinit var headerBar: LinearLayout
+    private lateinit var statusBar: LinearLayout
     private lateinit var gameClearScreenView: ImageView
     private lateinit var progressStore: ProgressStore
     private lateinit var audioPlayer: AudioPlayer
@@ -152,7 +157,7 @@ class MainActivity : Activity() {
     }
 
     private fun buildContentView(): View {
-        val root = LinearLayout(this).apply {
+        rootView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.WHITE)
 
@@ -189,7 +194,7 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, 0)
         }
 
-        val headerBar = LinearLayout(this).apply {
+        headerBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(RETRO_BLUE)
@@ -242,7 +247,7 @@ class MainActivity : Activity() {
 
         gameView = GameView(this)
 
-        val statusBar = LinearLayout(this).apply {
+        statusBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(RETRO_STATUS_BLUE)
@@ -306,7 +311,7 @@ class MainActivity : Activity() {
             setPadding(dp(8), dp(2), dp(8), dp(8))
         }
 
-        val controls = RetroControlsView(this).apply {
+        controlsView = RetroControlsView(this).apply {
             onDirection = { direction ->
                 if (!showingGameClearScreen) {
                     move(direction)
@@ -332,10 +337,10 @@ class MainActivity : Activity() {
         }
 
         controlsPanel.addView(
-            controls,
+            controlsView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(248)
+                LinearLayout.LayoutParams.MATCH_PARENT
             )
         )
 
@@ -350,7 +355,7 @@ class MainActivity : Activity() {
             contentDescription = "Push Push 2 game clear screen"
         }
 
-        root.addView(
+        rootView.addView(
             gameClearScreenView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -359,14 +364,14 @@ class MainActivity : Activity() {
             )
         )
 
-        root.addView(
+        rootView.addView(
             gameShell,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         )
-        root.addView(
+        rootView.addView(
             controlsPanel,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -375,7 +380,25 @@ class MainActivity : Activity() {
             )
         )
 
-        return root
+        controlsPanel.minimumHeight =
+            dp(MIN_CONTROLS_VIEW_HEIGHT_DP) +
+                controlsPanel.paddingTop +
+                controlsPanel.paddingBottom
+
+        rootView.addOnLayoutChangeListener {
+                _,
+                _,
+                _,
+                _,
+                _,
+                _,
+                _,
+                _,
+                _ ->
+            applyStageResponsiveLayout()
+        }
+
+        return rootView
     }
 
     private fun showGameClearScreen() {
@@ -756,6 +779,66 @@ class MainActivity : Activity() {
         moveLabel.text = "STEP ${state.moves}"
 
         gameView.render(state)
+
+        if (::rootView.isInitialized) {
+            rootView.post {
+                applyStageResponsiveLayout()
+            }
+        }
+    }
+
+    private fun applyStageResponsiveLayout() {
+        if (
+            !::rootView.isInitialized ||
+            !::gameView.isInitialized ||
+            !::controlsPanel.isInitialized ||
+            !::controlsView.isInitialized ||
+            !::headerBar.isInitialized ||
+            !::statusBar.isInitialized
+        ) {
+            return
+        }
+
+        val width = rootView.width
+        val contentHeight =
+            rootView.height -
+                rootView.paddingTop -
+                rootView.paddingBottom
+
+        if (width <= 0 || contentHeight <= 0) return
+        if (headerBar.measuredHeight <= 0 || statusBar.measuredHeight <= 0) return
+
+        val stage = engine.state.stage
+        val controlsPanelPadding =
+            controlsPanel.paddingTop + controlsPanel.paddingBottom
+
+        val allocation = StageLayoutPolicy.allocate(
+            contentWidthPx = width,
+            contentHeightPx = contentHeight,
+            stageWidth = stage.width,
+            stageHeight = stage.height,
+            fixedChromeHeightPx =
+                headerBar.measuredHeight +
+                    statusBar.measuredHeight +
+                    gameShell.paddingTop +
+                    gameShell.paddingBottom,
+            boardHorizontalInsetPx = dp(4),
+            boardVerticalInsetPx = dp(4),
+            controlsPanelVerticalPaddingPx = controlsPanelPadding,
+            minControlsHeightPx = dp(MIN_CONTROLS_VIEW_HEIGHT_DP)
+        )
+
+        val gameParams = gameView.layoutParams
+        if (gameParams.height != allocation.boardHeightPx) {
+            gameParams.height = allocation.boardHeightPx
+            gameView.layoutParams = gameParams
+        }
+
+        controlsPanel.minimumHeight =
+            dp(MIN_CONTROLS_VIEW_HEIGHT_DP) +
+                controlsPanelPadding
+
+        controlsView.requestLayout()
     }
 
     private fun showHeaderState(
@@ -947,6 +1030,7 @@ class MainActivity : Activity() {
         const val GAMEPAD_INITIAL_REPEAT_DELAY_MS = 280L
         const val GAMEPAD_REPEAT_INTERVAL_MS = 110L
         const val GAMEPAD_DEAD_ZONE = 0.55f
+        const val MIN_CONTROLS_VIEW_HEIGHT_DP = 148
 
         val RETRO_BLUE: Int =
             Color.rgb(45, 132, 218)
