@@ -725,6 +725,66 @@ class GameView(context: Context) : View(context) {
      * 줄눈만 이어서 그리고, 원본처럼 벽 전체를 감싸는 별도 검은 외곽선은
      * 그리지 않는다.
      */
+    /**
+     * The original SWF draws decorative brick cells on the outside of convex
+     * floor corners. Those cells are not collision walls; they only close the
+     * visible gap where two perpendicular collision walls meet.
+     *
+     * Keep Stage.walls untouched so Sokoban movement remains identical to the
+     * extracted original collision data, and add the corner bricks only while
+     * rendering.
+     */
+    private fun visualWallPositions(
+        state: GameState
+    ): Set<Position> {
+        val stage = state.stage
+        val collisionWalls = stage.walls
+        val floor = playableFloorPositions(state)
+
+        if (collisionWalls.isEmpty() || floor.isEmpty()) {
+            return collisionWalls
+        }
+
+        val visualWalls = collisionWalls.toMutableSet()
+
+        val corners = arrayOf(
+            intArrayOf(-1, -1),
+            intArrayOf(1, -1),
+            intArrayOf(-1, 1),
+            intArrayOf(1, 1)
+        )
+
+        floor.forEach { cell ->
+            corners.forEach { corner ->
+                val dx = corner[0]
+                val dy = corner[1]
+
+                val horizontalWall =
+                    Position(cell.x + dx, cell.y)
+                val verticalWall =
+                    Position(cell.x, cell.y + dy)
+                val outerCorner =
+                    Position(cell.x + dx, cell.y + dy)
+
+                val cornerInBounds =
+                    outerCorner.x in 0 until stage.width &&
+                        outerCorner.y in 0 until stage.height
+
+                if (
+                    cornerInBounds &&
+                    horizontalWall in collisionWalls &&
+                    verticalWall in collisionWalls &&
+                    outerCorner !in floor &&
+                    outerCorner !in collisionWalls
+                ) {
+                    visualWalls += outerCorner
+                }
+            }
+        }
+
+        return visualWalls
+    }
+
     private fun drawConnectedWalls(
         canvas: Canvas,
         state: GameState,
@@ -732,7 +792,7 @@ class GameView(context: Context) : View(context) {
         offsetX: Float,
         offsetY: Float
     ) {
-        val walls = state.stage.walls
+        val walls = visualWallPositions(state)
         if (walls.isEmpty()) return
 
         /*
