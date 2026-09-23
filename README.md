@@ -1,79 +1,66 @@
 # PushPush 2 Android Port
 
-기존 Flash(SWF) 기반 **푸시푸시**를 Android 스마트폰에서 플레이할 수 있도록 네이티브 Android 앱으로 재구현하는 프로젝트입니다.
+Flash(SWF) 기반 **푸시푸시(PUSH II)** 를 Flash 런타임 없이 Android/Kotlin으로 재구현하는 프로젝트입니다.
+
+저장소:
+
+```text
+https://github.com/1006U/pushpush2
+branch: main
+```
 
 ## 개발 환경
 
-현재 개발 기준 환경:
+현재 기준 환경:
 
-- **Windows 11**
-- **Android Studio**
-- **GitHub**
-- **웹 ChatGPT + GitHub MCP**
+- Windows 11
+- Android Studio
+- GitHub
+- 웹 ChatGPT + GitHub 연동
+- JDK 17
+- AGP 8.13.2
+- Gradle 8.13
+- minSdk 24 (Android 7.0 / Galaxy S8)
+- compileSdk 36
+- targetSdk 36
 
-WSL2, Docker, 로컬 MCP 서버는 사용하지 않습니다.
-
-작업 흐름:
+로컬 작업 경로 예시:
 
 ```text
-웹 ChatGPT
-→ GitHub MCP
-→ 1006U/pushpush2 코드 수정
-→ Windows 11에서 git pull
-→ Android Studio 실행/테스트
+C:\Dev\Android\pushpush2
 ```
 
 ## 현재 구현 상태
 
-- Android 앱 기본 프로젝트
+### 게임
+
 - Kotlin 기반 Sokoban 게임 엔진
 - 벽 충돌 / 박스 밀기 / 목표 판정
-- 원본 SWF에서 **실제 스테이지 66개 추출 및 이식**
-- 터치 방향패드
-- 스테이지 재시작
-- 스테이지 선택
-- 클리어 후 다음 스테이지 해금
-- SharedPreferences 기반 진행상황 저장
-- 원본 벽 / 목표 / 박스 / 플레이어 기본 그래픽 추출
-- 원본 14×14 픽셀 그래픽 적용
-- 원본 사운드 추출 스크립트 추가
-- 이동 / 클리어 / 버튼 사운드 연결 코드 추가
-- GitHub Actions Android 빌드 CI 추가
-- GameEngine JVM 회귀 테스트 + 66개 스테이지 구조 무결성 테스트
-- Galaxy S8(Android 7.0/API 24)부터 지원
-- Android 16(API 36) compileSdk/targetSdk 대응
-- CI에서 API 24 / API 36 에뮬레이터 실제 실행 및 화면 캡처
+- 원본 SWF의 실제 퍼즐 스테이지 **66개** 이식
+- SharedPreferences 기반 진행 상황 저장
+- 스테이지 클리어 시 다음 스테이지 해금
+- 클리어 팝업 없이 자동으로 다음 스테이지 진행
+- 66 스테이지 클리어 후 Game Clear 화면 표시
+- STAGE 선택 / RESET / 하드웨어 키 입력 지원
 
-플레이어는 원본 Sprite 370의 1~70프레임 대기/눈 깜빡임과 71~76프레임 성공 반응 타이밍을 재현합니다.
-현재 인게임 캐릭터 그래픽은 사용자 제공 캐릭터를 14×14 픽셀 타일에 맞춰 사용합니다.
+### 원본 SWF 분석
 
-## 원본 SWF 분석 결과
+원본 분석 결과:
 
-- Flash/SWF 버전: **6**
-- 원본 화면 크기: **240 × 250 px**
-- 프레임 속도: **10 fps**
-- 실제 퍼즐 스테이지: **66개**
-- 원본 퍼즐 격자 간격: **14 px**
-- `stage_map` 프레임 1~66: 퍼즐 스테이지
-- 프레임 67: 엔딩
-- 프레임 68: 빈 프레임
+- SWF 버전: 6
+- 원본 화면: 240 × 250 px
+- 프레임 속도: 10 fps
+- 퍼즐 타일: 14 × 14 px
+- `stage_map` frame 1~66: 퍼즐 스테이지
+- frame 67: 엔딩
+- frame 68: 빈 프레임
 
-주요 심볼:
+원본 주요 심볼:
 
 - `brick` → 벽
 - `house` → 목표
 - `ball` → 박스
 - `charater` → 플레이어
-
-원본 사운드:
-
-- `success.wav`
-- `start.wav`
-- `move.wav`
-- `clear.wav`
-- `button.wav`
-
-실제 DefineSound 데이터는 MP3 형식입니다.
 
 자세한 분석:
 
@@ -81,124 +68,123 @@ WSL2, Docker, 로컬 MCP 서버는 사용하지 않습니다.
 docs/ORIGINAL_SWF_NOTES.md
 ```
 
-## Windows 11에서 프로젝트 받기
+## 현재 그래픽
 
-PowerShell:
+현재 `main`은 원작 피처폰 화면을 기준으로 픽셀아트 UI를 재구성하고 있습니다.
 
-```powershell
-cd C:\Users\kim\Documents
-git clone https://github.com/1006U/pushpush2.git
-cd pushpush2
-```
-
-이미 clone했다면:
-
-```powershell
-cd C:\Users\kim\Documents\pushpush2
-git pull
-```
-
-## 원본 SWF 넣기
-
-첨부한 원본 파일을 Windows 프로젝트에:
+### 게임 타일
 
 ```text
-C:\Users\kim\Documents\pushpush2\original\game.swf
+app/src/main/res/drawable-nodpi/
+├── tile_brick.png
+├── tile_goal.png
+├── tile_goal_after_02.png
+├── tile_goal_after_03.png
+├── ...
+├── tile_goal_after_11.png
+├── tile_box.png
+├── tile_player.png
+└── game_clear_screen.webp
 ```
 
-로 넣습니다.
+현재 적용 상태:
 
-`original/*`는 `.gitignore` 처리되어 GitHub에 올라가지 않습니다.
+- 벽돌: 사용자 제공 원본 벽돌을 기반으로 한 56×56 픽셀아트 리소스
+- 실제 게임 벽도 `tile_brick.png`를 직접 렌더링
+- 내부 통로: 원본 대각선 타일 bitmap을 nearest-neighbor로 확대
+- 공을 넣기 전 목표 집: 노란 집 픽셀아트
+- 목표 성공 애니메이션: `tile_goal_after_02 ~ 11`
+- 이미지 확대 시 bitmap filtering을 끄고 픽셀 경계를 유지
+- Game Clear 화면은 별도 `game_clear_screen.webp` 리소스로 표시
 
-## 원본 사운드 추출
+### 플레이어
 
-원본 SWF를 위 경로에 넣은 뒤 PowerShell에서:
+플레이어는 원본 Sprite 370의 타이밍을 기준으로 동작합니다.
 
-```powershell
-cd C:\Users\kim\Documents\pushpush2
-py tools\extract_original_audio.py
-```
+- frame 1~70: 대기 / 눈 깜빡임
+- frame 71~76: 목표 성공 반응
+- 10 fps 기준
+- 현재 인게임 캐릭터는 사용자 지정 픽셀 캐릭터 사용
+- 상단 UI에는 별도의 리마스터 캐릭터 이미지 사용
 
-실행합니다.
+## UI
 
-성공하면 자동으로:
+현재 Android UI는 원본 240×250 화면을 그대로 레터박스로 복제하지 않고 스마트폰 화면에 맞게 확장합니다.
+
+- 상단: 캐릭터 + 대사 패널
+- 중앙: 반응형 퍼즐 보드
+- 하단: `STAGE` / `STEP` 상태바
+- 최하단: 피처폰 키패드형 터치 조작부
+- 보드는 스테이지 크기에 따라 자동 확대/축소
+- 작은 화면에서도 전체 스테이지가 잘리지 않도록 조정
+- Galaxy S8 / S10 실기기 기준을 포함
+
+## 사운드
+
+현재 `res/raw`에 포함된 사운드:
 
 ```text
-app\src\main\res\raw\
-├── success.mp3
-├── start.mp3
-├── move.mp3
+app/src/main/res/raw/
+├── button.mp3
 ├── clear.mp3
-└── button.mp3
+├── move.mp3
+└── success.mp3
 ```
 
-가 생성됩니다.
+현재 연결:
 
-앱 코드는 해당 파일이 존재할 경우 자동으로 재생합니다.
-
-현재 연결된 동작:
-
-- 이동 성공 → `move.mp3`
-- 박스를 목표에 넣음 → `success.mp3`
+- 일반 이동 → `move.mp3`
+- 공을 목표에 넣음 → `success.mp3`
 - 스테이지 클리어 → `clear.mp3`
-- 스테이지 선택 / 재시작 / 다음 스테이지 → `button.mp3`
-- 인트로 제거에 따라 `start` 사운드는 현재 자동 재생하지 않음
+- UI 버튼 → `button.mp3`
 
-## Android Studio에서 실행
+`start.mp3`는 이전 작업에서 제거되어 현재 자동 재생하지 않습니다.
 
-Android Studio:
+### 현재 확인 중인 사운드 문제
 
-```text
-File
-→ Open
-→ C:\Users\kim\Documents\pushpush2
-```
+일부 실행 환경에서 **공을 목표에 넣는 순간까지 사운드가 정상 재생되다가 이후 사운드가 멈추는 현상**이 보고되었습니다.
 
-Gradle Sync 완료 후 에뮬레이터 또는 실제 스마트폰에서 **Run ▶** 을 실행합니다.
+현재 코드에서는 목표 진입 시 짧은 시간 안에 `move`와 `success` 재생이 연속으로 발생할 수 있어 `MediaPlayer` 디코더 충돌 가능성을 점검 중입니다.
 
-## PowerShell에서 Debug APK 빌드
+다음 수정 우선순위:
 
-```powershell
-.\gradlew.bat assembleDebug
-```
+1. 목표 진입 시 `move`와 `success` 중복 재생 제거
+2. 효과음 재생 전에 이전 `MediaPlayer` 안전 정리
+3. API 24 / 최신 Android에서 사운드 회귀 테스트
+4. 필요하면 짧은 효과음을 `SoundPool` 기반으로 전환
 
-성공 시:
+## GitHub Actions
+
+Workflow:
 
 ```text
-app\build\outputs\apk\debug\app-debug.apk
+.github/workflows/android-ci.yml
 ```
 
-## GitHub Actions 자동 빌드
-
-`main` 브랜치에 코드가 올라가면 GitHub Actions가:
+주요 검증:
 
 ```text
 ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
 ```
 
-를 자동 실행합니다.
+추가로:
 
-성공하면 Actions 실행 결과에 Debug APK와 API별 smoke screenshot Artifact가 생성됩니다.
+- Android 7.0 / API 24 emulator smoke test
+- Android 16 / API 36 emulator smoke test
+- Debug APK Artifact
+- API별 화면 캡처 Artifact
 
-```text
-pushpush2-debug-apk
-pushpush2-smoke-api-24
-pushpush2-smoke-api-36
-```
+최근 `main`의 Android CI #140은 성공했습니다.
 
-따라서 로컬 Android Studio를 열기 전에도 GitHub에서 컴파일 오류를 확인할 수 있습니다.
+## 친구 배포용 APK
 
-## 친구 배포용 Signed Release APK
-
-Google Play 공개 없이 친구에게 직접 전달하는 배포 workflow가 있습니다.
+Workflow:
 
 ```text
 .github/workflows/friend-release.yml
 ```
 
-서명키는 저장소에 올리지 않고 GitHub Actions Secrets로만 주입합니다.
-
-필요한 Secret:
+GitHub Secrets:
 
 ```text
 ANDROID_KEYSTORE_BASE64
@@ -207,79 +193,64 @@ ANDROID_KEY_ALIAS
 ANDROID_KEY_PASSWORD
 ```
 
-Actions의 **Friend Release APK**를 수동 실행하면서 `version_name`을 지정하거나,
-`v0.1.0`처럼 `v`로 시작하는 태그를 push하면 서명된 APK Artifact를 생성합니다.
-
-예:
+자세한 배포 방법:
 
 ```text
-PushPush2-v0.1.0.apk
+RELEASING.md
 ```
 
-GitHub Release를 자동 공개하지 않으므로, 생성된 APK를 직접 내려받아
-카카오톡 / Google Drive / NAS 등으로 친구에게 전달합니다.
-
-최초 keystore 생성과 GitHub Secrets 등록 방법은 `RELEASING.md`를 참고하세요.
-
-## 현재 프로젝트 구조
+## 프로젝트 구조
 
 ```text
 pushpush2/
-├── .github/
-│   └── workflows/
-│       └── android-ci.yml
-├── app/
-│   └── src/main/
-│       ├── java/com/pushpush2/
-│       │   ├── MainActivity.kt
-│       │   ├── audio/
-│       │   │   └── AudioPlayer.kt
-│       │   ├── data/
-│       │   │   └── ProgressStore.kt
-│       │   ├── game/
-│       │   │   ├── Direction.kt
-│       │   │   ├── GameEngine.kt
-│       │   │   ├── GameState.kt
-│       │   │   ├── Position.kt
-│       │   │   ├── Stage.kt
-│       │   │   └── StageRepository.kt
-│       │   └── ui/
-│       │       └── GameView.kt
-│       └── res/
-│           ├── drawable-nodpi/
-│           │   ├── tile_brick.png
-│           │   ├── tile_goal.png
-│           │   ├── tile_box.png
-│           │   └── tile_player.png
-│           └── values/
-├── docs/
-│   └── ORIGINAL_SWF_NOTES.md
-├── original/
-│   └── README.md
+├── .github/workflows/
+│   ├── android-ci.yml
+│   └── friend-release.yml
+├── app/src/main/
+│   ├── java/com/pushpush2/
+│   │   ├── MainActivity.kt
+│   │   ├── audio/AudioPlayer.kt
+│   │   ├── data/ProgressStore.kt
+│   │   ├── game/
+│   │   │   ├── Direction.kt
+│   │   │   ├── GameEngine.kt
+│   │   │   ├── GameState.kt
+│   │   │   ├── Position.kt
+│   │   │   ├── Stage.kt
+│   │   │   └── StageRepository.kt
+│   │   └── ui/
+│   │       ├── GameView.kt
+│   │       ├── HeaderCharacterAsset.kt
+│   │       ├── OriginalAnimationFrames.kt
+│   │       ├── RetroControlsView.kt
+│   │       ├── StageLayoutPolicy.kt
+│   │       └── StageSelectView.kt
+│   └── res/
+│       ├── drawable-nodpi/
+│       └── raw/
+├── docs/ORIGINAL_SWF_NOTES.md
+├── original/README.md
 ├── tools/
-│   └── extract_original_audio.py
+├── HANDOFF.md
 ├── PROJECT_STATUS.md
 ├── README.md
-├── build.gradle.kts
-├── settings.gradle.kts
-├── gradlew
-└── gradlew.bat
+└── RELEASING.md
 ```
 
-## 다음 작업
+## 현재 남은 주요 작업
 
-1. Galaxy S8 / S10 실기기에서 게임 영역과 D-pad 크기 미세 조정
-2. 66개 스테이지 실제 플레이 검증
-3. Android Studio 실기기 테스트
-4. Debug APK 안정화
-5. 릴리즈 APK 생성
-
-현재 진행상황은 `PROJECT_STATUS.md`에 기록합니다.
-
+- [ ] 목표 진입 후 사운드 정지 문제 수정 및 실기기 검증
+- [ ] 새 목표 집 이미지 최종 반영/검증
+- [ ] 원본 기준으로 1~66 스테이지 벽돌 배치 시각 검증
+- [ ] 벽돌이 끊겨 보이는 스테이지 수정
+- [ ] Galaxy S8 실제 화면 테스트
+- [ ] Galaxy S10 실제 화면 테스트
+- [ ] 66개 스테이지 실제 플레이 검증
+- [ ] 첫 Signed Friend Release APK 생성/업데이트 설치 확인
 
 ## 새 ChatGPT 대화에서 이어서 개발
 
-웹 ChatGPT 대화가 길어졌다면 새 채팅에서 다음 파일을 먼저 읽도록 요청하세요.
+새 대화에서는 아래 파일을 먼저 확인합니다.
 
 ```text
 HANDOFF.md
@@ -288,11 +259,11 @@ README.md
 docs/ORIGINAL_SWF_NOTES.md
 ```
 
-가장 간단한 시작 문장:
+시작 문장 예시:
 
 ```text
-GitHub MCP로 1006U/pushpush2의 HANDOFF.md를 읽고
+GitHub 연동으로 1006U/pushpush2의 HANDOFF.md와 PROJECT_STATUS.md를 읽고
 main 최신 상태와 GitHub Actions 결과를 확인한 뒤 이어서 개발해줘.
 ```
 
-원본 SWF를 추가 분석해야 하는 작업에서는 `game.swf`를 새 채팅에 다시 첨부해야 합니다.
+원본 `game.swf` 자체를 추가 분석해야 하는 작업에서는 원본 파일을 다시 제공해야 합니다.
