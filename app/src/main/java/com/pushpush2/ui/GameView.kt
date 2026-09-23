@@ -73,15 +73,26 @@ class GameView(context: Context) : View(context) {
         )
 
     /*
-     * 성공 애니메이션 프레임은 앱 시작 시 한꺼번에 디코딩하지 않는다.
-     * 일부 기기/Android 버전에서 BitmapFactory가 특정 프레임을 읽지 못해도
-     * Activity 전체가 종료되지 않도록 필요 시점에 lazy 로딩하고 fallback한다.
+     * 목표에 공이 들어갔을 때의 원본 애니메이션 프레임.
+     * 14x14 원본 프레임을 nearest-neighbor로 56x56 업스케일한 PNG를
+     * 리소스로 직접 사용해 런타임 Base64 디코딩 없이 픽셀 형태를 보존한다.
      */
     private val boxGoalBitmaps: List<Bitmap> by lazy(LazyThreadSafetyMode.NONE) {
-        OriginalAnimationFrames.boxGoalPngBase64.map { encoded ->
-            makeTileBackgroundTransparent(
-                decodeEmbeddedBitmapOrFallback(encoded, boxBitmap)
-            )
+        listOf(
+            R.drawable.tile_goal_after_02,
+            R.drawable.tile_goal_after_03,
+            R.drawable.tile_goal_after_04,
+            R.drawable.tile_goal_after_05,
+            R.drawable.tile_goal_after_06,
+            R.drawable.tile_goal_after_07,
+            R.drawable.tile_goal_after_08,
+            R.drawable.tile_goal_after_09,
+            R.drawable.tile_goal_after_10,
+            R.drawable.tile_goal_after_11,
+            R.drawable.tile_goal_after_02,
+            R.drawable.tile_goal_after_02
+        ).map { resourceId ->
+            BitmapFactory.decodeResource(resources, resourceId)
         }
     }
 
@@ -96,7 +107,7 @@ class GameView(context: Context) : View(context) {
         )
     }
 
-    private val sourceRect = Rect(0, 0, ORIGINAL_TILE_PX, ORIGINAL_TILE_PX)
+    private val sourceRect = Rect()
 
     private var gameState: GameState? = null
     private var playerAnimationStartedAtMs = SystemClock.uptimeMillis()
@@ -1016,6 +1027,12 @@ class GameView(context: Context) : View(context) {
         bitmap: Bitmap,
         destination: RectF
     ) {
+        sourceRect.set(
+            0,
+            0,
+            bitmap.width,
+            bitmap.height
+        )
         canvas.drawBitmap(
             bitmap,
             sourceRect,
