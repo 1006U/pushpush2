@@ -12,12 +12,14 @@ import kotlin.math.max
 /**
  * Feature-phone style brick frame used around the header portrait/message.
  *
- * The frame intentionally uses the same red/orange/black palette as the
- * connected game walls so the top HUD feels like part of the original game.
+ * The original portrait has brick columns only on the left/right, while the
+ * message panel has brick bands on all four sides. The drawable supports both
+ * layouts so the two halves can match the original screen independently.
  */
 internal class RetroBrickFrameDrawable(
     private val fillColor: Int,
-    private val borderWidthPx: Float
+    private val borderWidthPx: Float,
+    private val horizontalBands: Boolean = false
 ) : Drawable() {
 
     private val paint = Paint().apply {
@@ -37,33 +39,64 @@ internal class RetroBrickFrameDrawable(
         val bottom = b.bottom.toFloat()
         val bw = borderWidthPx.coerceAtLeast(2f)
 
-        // White/content area first.
+        val contentTop = if (horizontalBands) top + bw else top
+        val contentBottom = if (horizontalBands) bottom - bw else bottom
+
+        paint.style = Paint.Style.FILL
         paint.color = withAlpha(fillColor)
         canvas.drawRect(
             left + bw,
-            top + bw,
+            contentTop,
             right - bw,
-            bottom - bw,
+            contentBottom,
             paint
         )
 
-        drawHorizontalBrickBand(canvas, left, top, right, top + bw, bw)
-        drawHorizontalBrickBand(canvas, left, bottom - bw, right, bottom, bw)
+        if (horizontalBands) {
+            drawHorizontalBrickBand(
+                canvas = canvas,
+                left = left,
+                top = top,
+                right = right,
+                bottom = top + bw,
+                bw = bw
+            )
+            drawHorizontalBrickBand(
+                canvas = canvas,
+                left = left,
+                top = bottom - bw,
+                right = right,
+                bottom = bottom,
+                bw = bw
+            )
+        }
+
         drawVerticalBrickBand(canvas, left, top, left + bw, bottom, bw)
         drawVerticalBrickBand(canvas, right - bw, top, right, bottom, bw)
 
-        // Strong outer + inner black edges, matching the original LCD sprites.
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = max(1f, bw * 0.13f)
         paint.color = withAlpha(MORTAR)
-        canvas.drawRect(
-            RectF(left, top, right, bottom),
-            paint
-        )
-        canvas.drawRect(
-            RectF(left + bw, top + bw, right - bw, bottom - bw),
-            paint
-        )
+
+        if (horizontalBands) {
+            canvas.drawRect(
+                RectF(left, top, right, bottom),
+                paint
+            )
+            canvas.drawRect(
+                RectF(
+                    left + bw,
+                    top + bw,
+                    right - bw,
+                    bottom - bw
+                ),
+                paint
+            )
+        } else {
+            canvas.drawLine(left + bw, top, left + bw, bottom, paint)
+            canvas.drawLine(right - bw, top, right - bw, bottom, paint)
+        }
+
         paint.style = Paint.Style.FILL
     }
 
@@ -83,19 +116,26 @@ internal class RetroBrickFrameDrawable(
         val mortar = max(1f, bw * 0.13f)
 
         paint.color = withAlpha(MORTAR)
-        canvas.drawRect(left, top + rowHeight - mortar / 2f, right, top + rowHeight + mortar / 2f, paint)
+        canvas.drawRect(
+            left,
+            top + rowHeight - mortar / 2f,
+            right,
+            top + rowHeight + mortar / 2f,
+            paint
+        )
 
         repeat(2) { row ->
             val rowTop = top + row * rowHeight
+            val rowBottom = (rowTop + rowHeight).coerceAtMost(bottom)
             val offset = if (row == 0) 0f else brickWidth / 2f
 
-            // Orange top highlight in each brick row.
             paint.color = withAlpha(BRICK_HIGHLIGHT)
             canvas.drawRect(
                 left,
                 rowTop + mortar,
                 right,
-                (rowTop + mortar + max(1f, bw * 0.12f)).coerceAtMost(bottom),
+                (rowTop + mortar + max(1f, bw * 0.12f))
+                    .coerceAtMost(rowBottom),
                 paint
             )
 
@@ -106,7 +146,7 @@ internal class RetroBrickFrameDrawable(
                     x - mortar / 2f,
                     rowTop,
                     x + mortar / 2f,
-                    (rowTop + rowHeight).coerceAtMost(bottom),
+                    rowBottom,
                     paint
                 )
                 x += brickWidth
@@ -146,7 +186,8 @@ internal class RetroBrickFrameDrawable(
             canvas.drawRect(
                 columnLeft + mortar,
                 top,
-                (columnLeft + mortar + max(1f, bw * 0.12f)).coerceAtMost(right),
+                (columnLeft + mortar + max(1f, bw * 0.12f))
+                    .coerceAtMost(right),
                 bottom,
                 paint
             )
