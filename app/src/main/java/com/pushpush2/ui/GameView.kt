@@ -3,9 +3,11 @@ package com.pushpush2.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
@@ -734,29 +736,56 @@ class GameView(context: Context) : View(context) {
         if (walls.isEmpty()) return
 
         /*
-         * 사용자 제공 벽돌 타일을 실제 게임 벽에도 그대로 사용한다.
-         * 56x56로 nearest-neighbor 업스케일된 PNG를 셀 크기에 맞춰
-         * 다시 그리되 bitmap filtering을 끄므로 픽셀 경계가 흐려지지 않는다.
+         * Draw every wall cell as one continuous textured shape instead of
+         * scaling the brick bitmap independently for each cell.
          *
-         * 기존의 벡터/색상 재구성 방식은 원본 벽돌 이미지와 색감 및 줄눈이
-         * 달라질 수 있으므로 사용하지 않는다.
+         * Stage coordinates stay exactly as extracted from the original SWF.
+         * Using a single path prevents sub-pixel gaps between neighbouring
+         * cells when the responsive board produces a fractional cell size.
+         * The current tile_brick.png remains the texture source, with nearest-
+         * neighbour sampling so the pixel-art edges stay crisp.
          */
-        val previousFilterBitmap = paint.isFilterBitmap
-        paint.isFilterBitmap = false
-
-        walls.forEach { position ->
-            drawTile(
-                canvas = canvas,
-                bitmap = brickBitmap,
-                destination = cellRect(
-                    position = position,
-                    cell = cell,
-                    offsetX = offsetX,
-                    offsetY = offsetY
+        val wallPath = Path().apply {
+            walls.forEach { position ->
+                addRect(
+                    cellRect(
+                        position = position,
+                        cell = cell,
+                        offsetX = offsetX,
+                        offsetY = offsetY
+                    ),
+                    Path.Direction.CW
                 )
-            )
+            }
         }
 
+        val textureMatrix = Matrix().apply {
+            setScale(
+                cell / brickBitmap.width.toFloat(),
+                cell / brickBitmap.height.toFloat()
+            )
+            postTranslate(offsetX, offsetY)
+        }
+
+        val brickShader = BitmapShader(
+            brickBitmap,
+            Shader.TileMode.REPEAT,
+            Shader.TileMode.REPEAT
+        ).apply {
+            setLocalMatrix(textureMatrix)
+        }
+
+        val previousShader = paint.shader
+        val previousStyle = paint.style
+        val previousFilterBitmap = paint.isFilterBitmap
+
+        paint.shader = brickShader
+        paint.style = Paint.Style.FILL
+        paint.isFilterBitmap = false
+        canvas.drawPath(wallPath, paint)
+
+        paint.shader = previousShader
+        paint.style = previousStyle
         paint.isFilterBitmap = previousFilterBitmap
     }
 
