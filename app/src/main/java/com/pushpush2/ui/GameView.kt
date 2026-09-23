@@ -612,9 +612,12 @@ class GameView(context: Context) : View(context) {
 
         /*
          * 원본 통로 타일은 따뜻한 크림/분홍 바탕 위에
-         * 짧은 대각선 무늬 3개가 아래 왼쪽 → 위 오른쪽 방향으로
-         * 이어져 보인다. 각 대각선은 작은 정사각형 3개를 계단식으로
-         * 배치해서 원본 LCD 픽셀 느낌을 유지한다.
+         * 서로 평행한 대각선 3줄이 보인다.
+         *
+         * 이전 구현은 세 무늬의 중심을 같은 '/' 대각선 위에 놓아서
+         * 화면에서 하나의 긴 선처럼 이어져 보였다. 원본처럼 세 줄을
+         * 분리해서 보이게 하려면 각 중심을 그 선의 수직 방향(\\)으로
+         * 이동시키고, 각 줄 자체는 작은 픽셀 블록을 '/' 방향으로 잇는다.
          */
         paint.style = Paint.Style.FILL
         paint.shader = null
@@ -633,14 +636,15 @@ class GameView(context: Context) : View(context) {
             )
         }
 
-        val markBlock = (cell * 0.075f).coerceAtLeast(1f)
-        val markHalo = (cell * 0.11f).coerceAtLeast(markBlock)
+        val markBlock = (cell * 0.07f).coerceAtLeast(1f)
+        val markHalo = (cell * 0.105f).coerceAtLeast(markBlock)
         val blockStep = cell * 0.052f
 
+        // Three distinct parallel slash centers: top-left, center, bottom-right.
         val markCenters = arrayOf(
-            0.27f to 0.71f,
+            0.30f to 0.30f,
             0.50f to 0.50f,
-            0.73f to 0.29f
+            0.70f to 0.70f
         )
 
         floorPositions.forEach { position ->
@@ -655,7 +659,8 @@ class GameView(context: Context) : View(context) {
                 val centerX = rect.left + cell * fx
                 val centerY = rect.top + cell * fy
 
-                for (segment in -1..1) {
+                // Build one short '/' line from five square LCD-style pixels.
+                for (segment in -2..2) {
                     val cx = centerX + blockStep * segment
                     val cy = centerY - blockStep * segment
 
