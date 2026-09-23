@@ -4,7 +4,9 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import kotlin.math.ceil
@@ -30,6 +32,13 @@ class StageSelectView(
     private var cellWidth = 0f
     private var cellHeight = 0f
     private var pressedStage: Int? = null
+    private var keyboardStage =
+        currentStage.coerceIn(1, max(1, unlockedStages))
+
+    init {
+        isFocusable = true
+        isFocusableInTouchMode = true
+    }
 
     override fun onMeasure(
         widthMeasureSpec: Int,
@@ -69,6 +78,44 @@ class StageSelectView(
         }
     }
 
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        val nextStage = when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_W ->
+                keyboardStage - COLUMN_COUNT
+
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_S ->
+                keyboardStage + COLUMN_COUNT
+
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_A ->
+                keyboardStage - 1
+
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_D ->
+                keyboardStage + 1
+
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+            KeyEvent.KEYCODE_SPACE,
+            KeyEvent.KEYCODE_DPAD_CENTER -> {
+                if (keyboardStage <= unlockedStages) {
+                    onStageSelected(keyboardStage)
+                }
+                return true
+            }
+
+            else -> return super.onKeyDown(keyCode, event)
+        }
+
+        keyboardStage =
+            nextStage.coerceIn(1, max(1, unlockedStages))
+        invalidate()
+        post { revealKeyboardSelection() }
+        return true
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN,
@@ -91,6 +138,7 @@ class StageSelectView(
                     stage == pressed &&
                     stage <= unlockedStages
                 ) {
+                    keyboardStage = stage
                     onStageSelected(stage)
                 }
 
@@ -110,6 +158,21 @@ class StageSelectView(
     override fun performClick(): Boolean {
         super.performClick()
         return true
+    }
+
+    private fun revealKeyboardSelection() {
+        if (cellHeight <= 0f) return
+
+        val row = (keyboardStage - 1) / COLUMN_COUNT
+        val top =
+            paddingTop + (row * cellHeight).toInt()
+        val bottom =
+            top + cellHeight.toInt() + paddingBottom
+
+        requestRectangleOnScreen(
+            Rect(0, top, width, bottom),
+            true
+        )
     }
 
     private fun drawStageCell(
@@ -135,10 +198,12 @@ class StageSelectView(
         val unlocked = stage <= unlockedStages
         val current = stage == currentStage
         val pressed = stage == pressedStage
+        val keyboardSelected = stage == keyboardStage
 
         paint.style = Paint.Style.FILL
         paint.color = when {
             pressed && unlocked -> Color.rgb(91, 111, 132)
+            keyboardSelected -> Color.rgb(75, 126, 91)
             current -> Color.rgb(109, 131, 154)
             unlocked -> Color.rgb(211, 217, 224)
             else -> Color.rgb(154, 162, 171)
@@ -152,11 +217,12 @@ class StageSelectView(
         )
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = if (current) dpF(2) else dpF(1)
-        paint.color = if (current) {
-            Color.rgb(236, 242, 248)
-        } else {
-            Color.rgb(74, 86, 101)
+        paint.strokeWidth =
+            if (keyboardSelected || current) dpF(2) else dpF(1)
+        paint.color = when {
+            keyboardSelected -> Color.WHITE
+            current -> Color.rgb(236, 242, 248)
+            else -> Color.rgb(74, 86, 101)
         }
 
         canvas.drawRoundRect(
@@ -168,13 +234,18 @@ class StageSelectView(
 
         textPaint.textSize = dpF(14)
         textPaint.color = if (unlocked) {
-            if (current) Color.WHITE else Color.rgb(42, 52, 64)
+            if (keyboardSelected || current) {
+                Color.WHITE
+            } else {
+                Color.rgb(42, 52, 64)
+            }
         } else {
             Color.rgb(91, 98, 106)
         }
 
         val baseline =
-            rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2f
+            rect.centerY() -
+                (textPaint.descent() + textPaint.ascent()) / 2f
 
         val label = if (unlocked) {
             "%02d".format(stage)
