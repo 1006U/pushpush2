@@ -229,8 +229,13 @@ class GameView(context: Context) : View(context) {
             offsetY = offsetY
         )
 
+        /*
+         * 원본 게임판 외곽선은 검은/남색 박스처럼 강하게 보이지 않고
+         * 바깥 파란 영역과 자연스럽게 이어지는 얇은 파란 선에 가깝다.
+         */
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = maxOf(1f, cell / ORIGINAL_TILE_PX)
+        paint.strokeWidth =
+            maxOf(1f, (cell / ORIGINAL_TILE_PX) * 0.55f)
         paint.color = FRAME_COLOR
         canvas.drawRect(boardRect, paint)
 
@@ -1114,6 +1119,6 @@ class GameView(context: Context) : View(context) {
             Color.rgb(112, 32, 18)
 
         val FRAME_COLOR: Int =
-            Color.rgb(24, 54, 82)
+            Color.rgb(42, 115, 196)
     }
 }
