@@ -50,8 +50,6 @@ class RetroControlsView(context: Context) : View(context) {
     private val resetRect = RectF()
     private val navRect = RectF()
     private val okRect = RectF()
-    private val topDecorRect = RectF()
-    private val bottomCancelRect = RectF()
     private val exitRect = RectF()
 
     private var controlScale = 1f
@@ -110,7 +108,6 @@ class RetroControlsView(context: Context) : View(context) {
         calculateGeometry(w, scaledHeight)
 
         drawPhoneHousing(canvas)
-        drawTopDecorativeKey(canvas)
         drawSoftKey(
             canvas = canvas,
             rect = stageRect,
@@ -306,13 +303,6 @@ class RetroControlsView(context: Context) : View(context) {
         val sw = shellRect.width()
         val sh = shellRect.height()
 
-        topDecorRect.set(
-            shellRect.left + sw * 0.35f,
-            shellRect.top + sh * 0.025f,
-            shellRect.right - sw * 0.35f,
-            shellRect.top + sh * 0.17f
-        )
-
         stageRect.set(
             shellRect.left + sw * 0.035f,
             shellRect.top + sh * 0.10f,
@@ -339,13 +329,6 @@ class RetroControlsView(context: Context) : View(context) {
             navRect.top + navRect.height() * 0.29f,
             navRect.right - navRect.width() * 0.255f,
             navRect.bottom - navRect.height() * 0.29f
-        )
-
-        bottomCancelRect.set(
-            shellRect.left + sw * 0.35f,
-            shellRect.top + sh * 0.78f,
-            shellRect.right - sw * 0.35f,
-            shellRect.bottom - sh * 0.035f
         )
 
         exitRect.set(
@@ -465,43 +448,6 @@ class RetroControlsView(context: Context) : View(context) {
             shellRect,
             scaledDp(32f),
             scaledDp(32f),
-            paint
-        )
-    }
-
-    private fun drawTopDecorativeKey(canvas: Canvas) {
-        paint.style = Paint.Style.FILL
-        paint.color = KEY_NORMAL
-        canvas.drawRoundRect(
-            topDecorRect,
-            scaledDp(12f),
-            scaledDp(12f),
-            paint
-        )
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.2f)
-        paint.color = KEY_BORDER
-        canvas.drawRoundRect(
-            topDecorRect,
-            scaledDp(12f),
-            scaledDp(12f),
-            paint
-        )
-
-        // Small neutral handset/menu mark from the reference phone keypad.
-        val cx = topDecorRect.centerX()
-        val cy = topDecorRect.centerY()
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.8f)
-        paint.color = TEXT_DARK
-
-        canvas.drawRect(
-            cx - scaledDp(4f),
-            cy - scaledDp(4f),
-            cx + scaledDp(4f),
-            cy + scaledDp(4f),
             paint
         )
     }
@@ -801,7 +747,6 @@ class RetroControlsView(context: Context) : View(context) {
             rect = exitRect,
             pressed = pressedSoftKey == SoftKey.EXIT
         )
-        drawDecorativeKey(canvas, bottomCancelRect)
 
         // Green call-like arc.
         paint.style = Paint.Style.STROKE
@@ -836,19 +781,7 @@ class RetroControlsView(context: Context) : View(context) {
             paint
         )
 
-        textPaint.textSize = scaledDp(11f)
-        textPaint.color = TEXT_MUTED
 
-        val cancelBaseline =
-            bottomCancelRect.centerY() -
-                (textPaint.descent() + textPaint.ascent()) / 2f
-
-        canvas.drawText(
-            "CANCEL",
-            bottomCancelRect.centerX(),
-            cancelBaseline,
-            textPaint
-        )
     }
 
     private fun drawDecorativeKey(
