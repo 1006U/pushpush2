@@ -183,7 +183,10 @@ class MainActivity : Activity() {
         gameShell = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(RETRO_BLUE)
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+
+            // 원본처럼 상단 캐릭터/문구 UI가 게임 영역 좌우 끝까지
+            // 꽉 차도록 좌우 패딩을 두지 않는다. 아래쪽 여백만 유지한다.
+            setPadding(0, 0, 0, dp(4))
         }
 
         val headerBar = LinearLayout(this).apply {
