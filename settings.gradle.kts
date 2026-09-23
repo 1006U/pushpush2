@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "PushPush2"
+rootProject.name = "PushPush2BlackBerry"
 include(":app")
