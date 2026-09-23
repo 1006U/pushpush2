@@ -33,6 +33,7 @@ class RetroControlsView(context: Context) : View(context) {
     var onStageClick: (() -> Unit)? = null
     var onRetryClick: (() -> Unit)? = null
     var onCenterClick: (() -> Unit)? = null
+    var onExitClick: (() -> Unit)? = null
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         strokeCap = Paint.Cap.ROUND
@@ -51,6 +52,7 @@ class RetroControlsView(context: Context) : View(context) {
     private val okRect = RectF()
     private val topDecorRect = RectF()
     private val bottomCancelRect = RectF()
+    private val exitRect = RectF()
 
     private var controlScale = 1f
     private var controlOffsetY = 0f
@@ -141,6 +143,14 @@ class RetroControlsView(context: Context) : View(context) {
                         invalidate()
                     }
 
+                    exitRect.contains(event.x, event.y) -> {
+                        pressedSoftKey = SoftKey.EXIT
+                        performHapticFeedback(
+                            HapticFeedbackConstants.KEYBOARD_TAP
+                        )
+                        invalidate()
+                    }
+
                     centerAt(event.x, event.y) -> {
                         pressedCenter = true
                         performHapticFeedback(
@@ -172,6 +182,9 @@ class RetroControlsView(context: Context) : View(context) {
 
                         SoftKey.RESET ->
                             resetRect.contains(event.x, event.y)
+
+                        SoftKey.EXIT ->
+                            exitRect.contains(event.x, event.y)
 
                         null -> false
                     }
@@ -226,6 +239,15 @@ class RetroControlsView(context: Context) : View(context) {
                                 HapticFeedbackConstants.KEYBOARD_TAP
                             )
                             onRetryClick?.invoke()
+                        }
+                    }
+
+                    SoftKey.EXIT -> {
+                        if (exitRect.contains(event.x, event.y)) {
+                            performHapticFeedback(
+                                HapticFeedbackConstants.KEYBOARD_TAP
+                            )
+                            onExitClick?.invoke()
                         }
                     }
 
@@ -323,6 +345,13 @@ class RetroControlsView(context: Context) : View(context) {
             shellRect.left + sw * 0.35f,
             shellRect.top + sh * 0.78f,
             shellRect.right - sw * 0.35f,
+            shellRect.bottom - sh * 0.035f
+        )
+
+        exitRect.set(
+            shellRect.right - sw * 0.30f,
+            shellRect.top + sh * 0.68f,
+            shellRect.right - sw * 0.04f,
             shellRect.bottom - sh * 0.035f
         )
     }
@@ -766,15 +795,12 @@ class RetroControlsView(context: Context) : View(context) {
             shellRect.bottom - sh * 0.035f
         )
 
-        val rightPhone = RectF(
-            shellRect.right - sw * 0.30f,
-            shellRect.top + sh * 0.68f,
-            shellRect.right - sw * 0.04f,
-            shellRect.bottom - sh * 0.035f
-        )
-
         drawDecorativeKey(canvas, leftPhone)
-        drawDecorativeKey(canvas, rightPhone)
+        drawDecorativeKey(
+            canvas = canvas,
+            rect = exitRect,
+            pressed = pressedSoftKey == SoftKey.EXIT
+        )
         drawDecorativeKey(canvas, bottomCancelRect)
 
         // Green call-like arc.
@@ -799,10 +825,10 @@ class RetroControlsView(context: Context) : View(context) {
         paint.color = END_RED
         canvas.drawArc(
             RectF(
-                rightPhone.centerX() - scaledDp(18f),
-                rightPhone.centerY() - scaledDp(8f),
-                rightPhone.centerX() + scaledDp(18f),
-                rightPhone.centerY() + scaledDp(16f)
+                exitRect.centerX() - scaledDp(18f),
+                exitRect.centerY() - scaledDp(8f),
+                exitRect.centerX() + scaledDp(18f),
+                exitRect.centerY() + scaledDp(16f)
             ),
             205f,
             130f,
@@ -827,10 +853,28 @@ class RetroControlsView(context: Context) : View(context) {
 
     private fun drawDecorativeKey(
         canvas: Canvas,
-        rect: RectF
+        rect: RectF,
+        pressed: Boolean = false
     ) {
+        if (pressed) {
+            paint.style = Paint.Style.FILL
+            paint.color = Color.argb(92, 215, 45, 40)
+            canvas.drawRoundRect(
+                RectF(
+                    rect.left - scaledDp(3f),
+                    rect.top - scaledDp(3f),
+                    rect.right + scaledDp(3f),
+                    rect.bottom + scaledDp(3f)
+                ),
+                scaledDp(19f),
+                scaledDp(19f),
+                paint
+            )
+        }
+
         paint.style = Paint.Style.FILL
-        paint.color = KEY_NORMAL
+        paint.color =
+            if (pressed) Color.rgb(232, 194, 181) else KEY_NORMAL
 
         canvas.drawRoundRect(
             rect,
@@ -841,7 +885,8 @@ class RetroControlsView(context: Context) : View(context) {
 
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = scaledDp(1.1f)
-        paint.color = KEY_BORDER
+        paint.color =
+            if (pressed) END_RED else KEY_BORDER
 
         canvas.drawRoundRect(
             rect,
@@ -862,7 +907,8 @@ class RetroControlsView(context: Context) : View(context) {
 
     private enum class SoftKey {
         STAGE,
-        RESET
+        RESET,
+        EXIT
     }
 
     private companion object {
