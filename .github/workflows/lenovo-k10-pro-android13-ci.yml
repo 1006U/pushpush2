@@ -1,0 +1,69 @@
+name: Lenovo K10 Pro Android 13 CI
+
+on:
+  push:
+    branches: [ "lenovo-k10-pro-android13" ]
+  pull_request:
+    branches: [ "lenovo-k10-pro-android13" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-tablet-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Test and build Android 13 tablet APK
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
+
+      - name: Upload Lenovo debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: pushpush2-lenovo-k10-pro-android13-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install and launch on Android 13 tablet emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_c
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell am force-stop com.pushpush2.lenovok10pro
+            adb shell am start -W -n com.pushpush2.lenovok10pro/com.pushpush2.MainActivity
+            sleep 3
+            test -n "$(adb shell pidof com.pushpush2.lenovok10pro | tr -d '\r')" || (echo "Lenovo K10 Pro build process died after launch"; adb logcat -d -t 500; exit 1)
+            mkdir -p app/build/reports/lenovo-smoke
+            adb exec-out screencap -p > app/build/reports/lenovo-smoke/android13-tablet.png
+            adb shell pidof com.pushpush2.lenovok10pro
+
+      - name: Upload Android 13 tablet screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pushpush2-lenovo-k10-pro-android13-smoke
+          path: app/build/reports/lenovo-smoke/android13-tablet.png
+          if-no-files-found: warn
