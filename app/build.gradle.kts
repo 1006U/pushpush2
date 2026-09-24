@@ -4,7 +4,7 @@ plugins {
 }
 
 val releaseVersionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 2
-val releaseVersionName = System.getenv("VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.1.1"
+val releaseVersionName = System.getenv("VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.1.1-k10pro"
 
 val releaseKeystoreFile = System.getenv("ANDROID_KEYSTORE_FILE")
 val releaseKeystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
@@ -22,16 +22,13 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.pushpush2"
+        applicationId = "com.pushpush2.lenovok10pro"
 
-        // Galaxy S8 shipped with Android 7.0 (API 24).
-        // Keep this baseline so the original target device remains supported.
+        // Lenovo K10 Pro Android 13 dedicated branch.
+        // Keep the historical minSdk so the game engine stays reusable, while
+        // targeting API 33 to match the tablet's Android 13 runtime behavior.
         minSdk = 24
-
-        // Target the current stable Android compatibility level while keeping
-        // minSdk independent. Newer Android releases remain installable unless
-        // a future platform explicitly introduces a compatibility issue.
-        targetSdk = 36
+        targetSdk = 33
 
         // Local builds use these defaults. GitHub Actions can override both
         // through VERSION_CODE / VERSION_NAME for friend-distribution builds.
