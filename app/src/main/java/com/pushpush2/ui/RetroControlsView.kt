@@ -410,13 +410,15 @@ class RetroControlsView(context: Context) : View(context) {
          * - directions: keep the arrows exactly where/size they are, but expand
          *   the real touch zones outward to the larger marked boxes.
          */
-        val okHitSize = keySize * 0.72f
-        val okHitHalf = okHitSize / 2f
+        // Match the confirm touch target to the utility-button hit size.
+        // Visual size, text size and position remain unchanged.
+        val okHitWidth = stageRect.width()
+        val okHitHeight = stageRect.height()
         okHitRect.set(
-            navCx - okHitHalf,
-            navCy - okHitHalf,
-            navCx + okHitHalf,
-            navCy + okHitHalf
+            navCx - okHitWidth / 2f,
+            navCy - okHitHeight / 2f,
+            navCx + okHitWidth / 2f,
+            navCy + okHitHeight / 2f
         )
 
         val directionHitExpansion = scaledDp(8f)
