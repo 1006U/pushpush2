@@ -508,79 +508,70 @@ class RetroControlsView(context: Context) : View(context) {
 
     private fun drawSectionDividers(canvas: Canvas) {
         /*
-         * Thick black separators copied from the supplied reference:
-         * - short upper separators beside the D-pad
-         * - diagonal separators between upper soft keys and call/end keys
-         * - lower vertical separators around the 돌아가기 region
+         * The supplied photo is only a layout reference. Use thin, uniform
+         * separators so the keypad reads as one clean control surface rather
+         * than a set of heavy hand-drawn partitions.
          *
-         * They are visual only. Touch handling still uses the non-overlapping
-         * rectangles calculated in calculateGeometry().
+         * These lines are visual only; touch rectangles stay unchanged.
          */
         paint.shader = null
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(7f)
+        paint.strokeWidth = scaledDp(2.4f)
         paint.strokeCap = Paint.Cap.ROUND
         paint.strokeJoin = Paint.Join.ROUND
-        paint.color = Color.BLACK
+        paint.color = Color.rgb(36, 36, 36)
 
         val sw = shellRect.width()
         val sh = shellRect.height()
+        val edgeGap = scaledDp(1.5f)
 
-        // Upper-left short divider.
+        // Upper separators meet the top edge of the navigation pad cleanly.
         canvas.drawLine(
-            shellRect.left + sw * 0.215f,
-            shellRect.top + sh * 0.01f,
-            shellRect.left + sw * 0.215f,
-            shellRect.top + sh * 0.13f,
+            navRect.left,
+            shellRect.top + sh * 0.012f,
+            navRect.left,
+            navRect.top + edgeGap,
+            paint
+        )
+        canvas.drawLine(
+            navRect.right,
+            shellRect.top + sh * 0.012f,
+            navRect.right,
+            navRect.top + edgeGap,
             paint
         )
 
-        // Upper-right short divider.
+        // Side separators split the upper utility keys from the call/end row.
         canvas.drawLine(
-            shellRect.right - sw * 0.215f,
-            shellRect.top + sh * 0.01f,
-            shellRect.right - sw * 0.215f,
-            shellRect.top + sh * 0.13f,
-            paint
-        )
-
-        // Left diagonal separator: 스테이지 / call.
-        canvas.drawLine(
-            shellRect.left + sw * 0.005f,
+            shellRect.left + edgeGap,
             shellRect.top + sh * 0.46f,
-            navRect.left - scaledDp(6f),
+            navRect.left - edgeGap,
             shellRect.top + sh * 0.57f,
             paint
         )
-
-        // Right diagonal separator: 리셋 / end-call.
         canvas.drawLine(
-            navRect.right + scaledDp(6f),
+            navRect.right + edgeGap,
             shellRect.top + sh * 0.58f,
-            shellRect.right - sw * 0.005f,
+            shellRect.right - edgeGap,
             shellRect.top + sh * 0.48f,
             paint
         )
 
-        // Lower-left separator beside 돌아가기.
+        // Lower separators frame the 돌아가기 area without touching the edge.
         canvas.drawLine(
-            navRect.left + scaledDp(5f),
-            navRect.bottom - scaledDp(4f),
+            navRect.left + edgeGap,
+            navRect.bottom - edgeGap,
             shellRect.left + sw * 0.245f,
-            shellRect.bottom + scaledDp(2f),
+            shellRect.bottom - edgeGap,
             paint
         )
-
-        // Lower-right separator beside 돌아가기.
         canvas.drawLine(
-            navRect.right - scaledDp(5f),
-            navRect.bottom - scaledDp(4f),
+            navRect.right - edgeGap,
+            navRect.bottom - edgeGap,
             shellRect.right - sw * 0.245f,
-            shellRect.bottom + scaledDp(2f),
+            shellRect.bottom - edgeGap,
             paint
         )
-
-        paint.strokeCap = Paint.Cap.ROUND
     }
 
     private fun drawTopDecorativeKey(canvas: Canvas) {
@@ -613,7 +604,7 @@ class RetroControlsView(context: Context) : View(context) {
         /*
          * The reference layout does not need a separate outline around these
          * utility keys. Their region is defined by the heavy black section
-         * dividers. Keep only a subtle pressed fill for touch feedback.
+         * separators. Keep only a subtle pressed fill for touch feedback.
          */
         if (pressed) {
             paint.style = Paint.Style.FILL
