@@ -508,9 +508,12 @@ class RetroControlsView(context: Context) : View(context) {
 
     private fun drawSectionDividers(canvas: Canvas) {
         /*
-         * Match the subtle panel seams in the supplied feature-phone photo.
-         * These are deliberately thin grey dividers, not heavy black strokes.
-         * Touch geometry is independent and remains unchanged.
+         * Keep the subtle seam weight, but deliberately extend every divider
+         * past the neighbouring panel boundary. drawNavigationPad() is rendered
+         * afterwards, so the small overlaps disappear underneath its rim and
+         * the seams read as continuous instead of stopping short.
+         *
+         * These lines are visual only; touch geometry remains unchanged.
          */
         paint.shader = null
         paint.style = Paint.Style.STROKE
@@ -521,62 +524,53 @@ class RetroControlsView(context: Context) : View(context) {
 
         val sw = shellRect.width()
         val sh = shellRect.height()
-        val gap = scaledDp(1f)
+        val overlap = scaledDp(5f)
 
-        /*
-         * Top seams: almost vertical, with a slight outward flare toward the
-         * D-pad just like the original keypad.
-         */
+        // Upper seams: extend from the housing top and slightly into the D-pad.
         canvas.drawLine(
             navRect.left + scaledDp(1.5f),
-            shellRect.top + sh * 0.015f,
-            navRect.left - gap,
-            navRect.top + scaledDp(2f),
+            shellRect.top + scaledDp(1f),
+            navRect.left - scaledDp(0.5f),
+            navRect.top + overlap,
             paint
         )
         canvas.drawLine(
             navRect.right - scaledDp(1.5f),
-            shellRect.top + sh * 0.015f,
-            navRect.right + gap,
-            navRect.top + scaledDp(2f),
+            shellRect.top + scaledDp(1f),
+            navRect.right + scaledDp(0.5f),
+            navRect.top + overlap,
             paint
         )
 
-        /*
-         * Middle seams: shallow diagonals separating the upper soft-key area
-         * from the green/red phone-key row.
-         */
+        // Middle seams: run fully from the outer housing into the D-pad edge.
         canvas.drawLine(
-            shellRect.left + scaledDp(1f),
-            shellRect.top + sh * 0.435f,
-            navRect.left - gap,
-            shellRect.top + sh * 0.555f,
+            shellRect.left,
+            shellRect.top + sh * 0.425f,
+            navRect.left + overlap,
+            shellRect.top + sh * 0.565f,
             paint
         )
         canvas.drawLine(
-            navRect.right + gap,
-            shellRect.top + sh * 0.555f,
-            shellRect.right - scaledDp(1f),
-            shellRect.top + sh * 0.435f,
+            navRect.right - overlap,
+            shellRect.top + sh * 0.565f,
+            shellRect.right,
+            shellRect.top + sh * 0.425f,
             paint
         )
 
-        /*
-         * Bottom seams: nearly vertical, leaning gently inward around the
-         * 돌아가기 key.
-         */
+        // Lower seams: begin inside the D-pad rim and continue to the bottom.
         canvas.drawLine(
-            navRect.left + gap,
-            navRect.bottom - scaledDp(1.5f),
+            navRect.left + overlap,
+            navRect.bottom - overlap,
             shellRect.left + sw * 0.255f,
-            shellRect.bottom - scaledDp(1f),
+            shellRect.bottom,
             paint
         )
         canvas.drawLine(
-            navRect.right - gap,
-            navRect.bottom - scaledDp(1.5f),
+            navRect.right - overlap,
+            navRect.bottom - overlap,
             shellRect.right - sw * 0.255f,
-            shellRect.bottom - scaledDp(1f),
+            shellRect.bottom,
             paint
         )
     }
