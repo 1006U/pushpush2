@@ -674,34 +674,14 @@ class RetroControlsView(context: Context) : View(context) {
     }
 
     private fun drawSquareCenterKey(canvas: Canvas) {
-        if (pressedCenter) {
-            paint.style = Paint.Style.FILL
-            paint.color = CENTER_GLOW
-            canvas.drawRoundRect(
-                RectF(
-                    okRect.left - scaledDp(2.5f),
-                    okRect.top - scaledDp(2.5f),
-                    okRect.right + scaledDp(2.5f),
-                    okRect.bottom + scaledDp(2.5f)
-                ),
-                scaledDp(9f),
-                scaledDp(9f),
-                paint
-            )
-        }
-
-        paint.style = Paint.Style.FILL
-        paint.color =
-            if (pressedCenter) CENTER_PRESSED else CENTER_FILL
-        canvas.drawRoundRect(
-            okRect,
-            scaledDp(8f),
-            scaledDp(8f),
-            paint
-        )
-
+        /*
+         * Keep the OK touch target, but draw no inner button box at all.
+         * The larger CENTER_FILL area behind it already provides the visual
+         * grouping, so only the 확인 label is rendered here.
+         */
         textPaint.textSize = scaledDp(12f)
-        textPaint.color = REFERENCE_TEXT
+        textPaint.color =
+            if (pressedCenter) CENTER_PRESSED_TEXT else REFERENCE_TEXT
 
         val baseline =
             okRect.centerY() -
