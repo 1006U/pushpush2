@@ -15,20 +15,15 @@ import kotlin.math.abs
 import kotlin.math.min
 
 /**
- * Bottom touch controls rebuilt around the user's Motorola-style keypad
- * reference.
+ * Bottom controls rebuilt from the user's silver feature-phone keypad reference.
  *
  * Functional mapping:
- * - upper-left soft key: 스테이지
- * - upper-right soft key: 리셋
- * - circular ring: UP / DOWN / LEFT / RIGHT
- * - NATE center position: 확인
- * - lower-center key: 돌아가기 (one-step undo)
- * - lower-left key: decorative only
- * - lower-right key: exit
- *
- * Touch areas remain independent from the visual styling so controls can stay
- * generous without creating accidental neighbouring presses.
+ * - upper-left key: 스테이지
+ * - upper-right key: 리셋
+ * - center NATE position: 확인
+ * - four areas around center: UP / DOWN / LEFT / RIGHT
+ * - lower-left alarm position: 돌아가기 (one-step undo)
+ * - lower-right end key: exit
  */
 class RetroControlsView(context: Context) : View(context) {
 
@@ -55,7 +50,6 @@ class RetroControlsView(context: Context) : View(context) {
     private val navRect = RectF()
     private val okRect = RectF()
     private val undoRect = RectF()
-    private val leftDecorRect = RectF()
     private val exitRect = RectF()
 
     private var controlScale = 1f
@@ -114,20 +108,10 @@ class RetroControlsView(context: Context) : View(context) {
         calculateGeometry(w, scaledHeight)
 
         drawHousing(canvas)
-        drawTopSoftKey(
-            canvas = canvas,
-            rect = stageRect,
-            label = "스테이지",
-            pressed = pressedSoftKey == SoftKey.STAGE
-        )
-        drawTopSoftKey(
-            canvas = canvas,
-            rect = resetRect,
-            label = "리셋",
-            pressed = pressedSoftKey == SoftKey.RESET
-        )
-        drawCircularNavigation(canvas)
-        drawBottomKeys(canvas)
+        drawStageResetKeys(canvas)
+        drawNavigationCluster(canvas)
+        drawUndoKey(canvas)
+        drawExitKey(canvas)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -138,11 +122,17 @@ class RetroControlsView(context: Context) : View(context) {
                 when {
                     stageRect.contains(event.x, event.y) -> {
                         pressedSoftKey = SoftKey.STAGE
+                        performHapticFeedback(
+                            HapticFeedbackConstants.KEYBOARD_TAP
+                        )
                         invalidate()
                     }
 
                     resetRect.contains(event.x, event.y) -> {
                         pressedSoftKey = SoftKey.RESET
+                        performHapticFeedback(
+                            HapticFeedbackConstants.KEYBOARD_TAP
+                        )
                         invalidate()
                     }
 
@@ -240,36 +230,24 @@ class RetroControlsView(context: Context) : View(context) {
                 when (pressedSoftKey) {
                     SoftKey.STAGE -> {
                         if (stageRect.contains(event.x, event.y)) {
-                            performHapticFeedback(
-                                HapticFeedbackConstants.KEYBOARD_TAP
-                            )
                             onStageClick?.invoke()
                         }
                     }
 
                     SoftKey.RESET -> {
                         if (resetRect.contains(event.x, event.y)) {
-                            performHapticFeedback(
-                                HapticFeedbackConstants.KEYBOARD_TAP
-                            )
                             onRetryClick?.invoke()
                         }
                     }
 
                     SoftKey.UNDO -> {
                         if (undoRect.contains(event.x, event.y)) {
-                            performHapticFeedback(
-                                HapticFeedbackConstants.KEYBOARD_TAP
-                            )
                             onUndoClick?.invoke()
                         }
                     }
 
                     SoftKey.EXIT -> {
                         if (exitRect.contains(event.x, event.y)) {
-                            performHapticFeedback(
-                                HapticFeedbackConstants.KEYBOARD_TAP
-                            )
                             onExitClick?.invoke()
                         }
                     }
@@ -329,44 +307,37 @@ class RetroControlsView(context: Context) : View(context) {
         val sw = shellRect.width()
         val sh = shellRect.height()
 
-        /*
-         * Layout reset from the supplied Motorola keypad reference:
-         *
-         * [ 스테이지 ─ ]      [ ─ 리셋 ]
-         *
-         *              ○
-         *        ←    확인    →
-         *              ↓
-         *
-         * [ decorative ]  [ 돌아가기 ]  [ 종료 ]
-         */
+        // Top soft keys replace the original left/right dash keys.
         stageRect.set(
             shellRect.left + sw * 0.055f,
-            shellRect.top + sh * 0.055f,
+            shellRect.top + sh * 0.07f,
             shellRect.left + sw * 0.31f,
-            shellRect.top + sh * 0.225f
+            shellRect.top + sh * 0.245f
         )
 
         resetRect.set(
             shellRect.right - sw * 0.31f,
-            shellRect.top + sh * 0.055f,
+            shellRect.top + sh * 0.07f,
             shellRect.right - sw * 0.055f,
-            shellRect.top + sh * 0.225f
+            shellRect.top + sh * 0.245f
         )
 
-        val navSize = min(sw * 0.50f, sh * 0.58f)
+        // Central four-way cluster based on the NATE keypad area.
+        val navWidth = sw * 0.46f
+        val navHeight = sh * 0.49f
         val navCx = shellRect.centerX()
-        val navCy = shellRect.top + sh * 0.45f
+        val navCy = shellRect.top + sh * 0.46f
 
         navRect.set(
-            navCx - navSize / 2f,
-            navCy - navSize / 2f,
-            navCx + navSize / 2f,
-            navCy + navSize / 2f
+            navCx - navWidth / 2f,
+            navCy - navHeight / 2f,
+            navCx + navWidth / 2f,
+            navCy + navHeight / 2f
         )
 
         val okWidth = navRect.width() * 0.42f
-        val okHeight = navRect.height() * 0.28f
+        val okHeight = navRect.height() * 0.31f
+
         okRect.set(
             navRect.centerX() - okWidth / 2f,
             navRect.centerY() - okHeight / 2f,
@@ -374,26 +345,49 @@ class RetroControlsView(context: Context) : View(context) {
             navRect.centerY() + okHeight / 2f
         )
 
-        leftDecorRect.set(
-            shellRect.left + sw * 0.055f,
-            shellRect.top + sh * 0.73f,
-            shellRect.left + sw * 0.23f,
-            shellRect.bottom - sh * 0.055f
-        )
-
+        // Original alarm position -> one-step undo.
         undoRect.set(
-            shellRect.left + sw * 0.35f,
-            shellRect.top + sh * 0.76f,
-            shellRect.right - sw * 0.35f,
+            shellRect.left + sw * 0.055f,
+            shellRect.top + sh * 0.74f,
+            shellRect.left + sw * 0.31f,
             shellRect.bottom - sh * 0.055f
         )
 
+        // Original end key keeps the current exit behaviour.
         exitRect.set(
-            shellRect.right - sw * 0.23f,
-            shellRect.top + sh * 0.73f,
+            shellRect.right - sw * 0.31f,
+            shellRect.top + sh * 0.74f,
             shellRect.right - sw * 0.055f,
             shellRect.bottom - sh * 0.055f
         )
+    }
+
+    private fun centerAt(
+        x: Float,
+        y: Float
+    ): Boolean =
+        okRect.contains(x, y)
+
+    private fun directionAt(
+        x: Float,
+        y: Float
+    ): Direction? {
+        if (!navRect.contains(x, y)) return null
+        if (okRect.contains(x, y)) return null
+
+        val dx =
+            (x - navRect.centerX()) /
+                (navRect.width() / 2f)
+
+        val dy =
+            (y - navRect.centerY()) /
+                (navRect.height() / 2f)
+
+        return if (abs(dx) > abs(dy)) {
+            if (dx < 0f) Direction.LEFT else Direction.RIGHT
+        } else {
+            if (dy < 0f) Direction.UP else Direction.DOWN
+        }
     }
 
     private fun pressDirection(direction: Direction) {
@@ -401,7 +395,9 @@ class RetroControlsView(context: Context) : View(context) {
 
         pressedDirection = direction
 
-        performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        performHapticFeedback(
+            HapticFeedbackConstants.KEYBOARD_TAP
+        )
         onDirection?.invoke(direction)
 
         removeCallbacks(repeatRunnable)
@@ -422,38 +418,6 @@ class RetroControlsView(context: Context) : View(context) {
         removeCallbacks(repeatRunnable)
     }
 
-    private fun centerAt(
-        x: Float,
-        y: Float
-    ): Boolean =
-        okRect.contains(x, y)
-
-    private fun directionAt(
-        x: Float,
-        y: Float
-    ): Direction? {
-        val radius = navRect.width() / 2f
-        val dx = x - navRect.centerX()
-        val dy = y - navRect.centerY()
-
-        if (dx * dx + dy * dy > radius * radius) return null
-        if (okRect.contains(x, y)) return null
-
-        return if (abs(dx) > abs(dy)) {
-            if (dx < 0f) {
-                Direction.LEFT
-            } else {
-                Direction.RIGHT
-            }
-        } else {
-            if (dy < 0f) {
-                Direction.UP
-            } else {
-                Direction.DOWN
-            }
-        }
-    }
-
     private fun drawHousing(canvas: Canvas) {
         paint.style = Paint.Style.FILL
         paint.color = HOUSING_SHADOW
@@ -467,16 +431,16 @@ class RetroControlsView(context: Context) : View(context) {
 
         canvas.drawRoundRect(
             shadow,
-            scaledDp(26f),
-            scaledDp(26f),
+            scaledDp(24f),
+            scaledDp(24f),
             paint
         )
 
         paint.color = HOUSING_BASE
         canvas.drawRoundRect(
             shellRect,
-            scaledDp(26f),
-            scaledDp(26f),
+            scaledDp(24f),
+            scaledDp(24f),
             paint
         )
 
@@ -490,8 +454,8 @@ class RetroControlsView(context: Context) : View(context) {
         paint.color = HOUSING_INNER
         canvas.drawRoundRect(
             inner,
-            scaledDp(23f),
-            scaledDp(23f),
+            scaledDp(21f),
+            scaledDp(21f),
             paint
         )
 
@@ -500,13 +464,29 @@ class RetroControlsView(context: Context) : View(context) {
         paint.color = HOUSING_BORDER
         canvas.drawRoundRect(
             shellRect,
-            scaledDp(26f),
-            scaledDp(26f),
+            scaledDp(24f),
+            scaledDp(24f),
             paint
         )
     }
 
-    private fun drawTopSoftKey(
+    private fun drawStageResetKeys(canvas: Canvas) {
+        drawTopKey(
+            canvas = canvas,
+            rect = stageRect,
+            label = "스테이지",
+            pressed = pressedSoftKey == SoftKey.STAGE
+        )
+
+        drawTopKey(
+            canvas = canvas,
+            rect = resetRect,
+            label = "리셋",
+            pressed = pressedSoftKey == SoftKey.RESET
+        )
+    }
+
+    private fun drawTopKey(
         canvas: Canvas,
         rect: RectF,
         label: String,
@@ -514,7 +494,7 @@ class RetroControlsView(context: Context) : View(context) {
     ) {
         if (pressed) {
             paint.style = Paint.Style.FILL
-            paint.color = Color.argb(38, 94, 123, 148)
+            paint.color = KEY_PRESSED
             canvas.drawRoundRect(
                 rect,
                 scaledDp(8f),
@@ -523,40 +503,12 @@ class RetroControlsView(context: Context) : View(context) {
             )
         }
 
-        val leftSide = rect.centerX() < shellRect.centerX()
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.4f)
-        paint.strokeCap = Paint.Cap.ROUND
-        paint.color = if (pressed) ACCENT_LIGHT else SOFTKEY_MARK
-
-        val barY = rect.top + rect.height() * 0.25f
-        val barStart: Float
-        val barEnd: Float
-
-        if (leftSide) {
-            barStart = rect.left + rect.width() * 0.05f
-            barEnd = rect.left + rect.width() * 0.48f
-        } else {
-            barStart = rect.right - rect.width() * 0.48f
-            barEnd = rect.right - rect.width() * 0.05f
-        }
-
-        canvas.drawLine(
-            barStart,
-            barY,
-            barEnd,
-            barY,
-            paint
-        )
-
-        textPaint.textSize = scaledDp(10f)
+        textPaint.textSize = scaledDp(10.5f)
         textPaint.color =
             if (pressed) Color.WHITE else TEXT_PRIMARY
 
-        val textY = rect.top + rect.height() * 0.70f
         val baseline =
-            textY -
+            rect.centerY() -
                 (textPaint.descent() + textPaint.ascent()) / 2f
 
         canvas.drawText(
@@ -567,84 +519,84 @@ class RetroControlsView(context: Context) : View(context) {
         )
     }
 
-    private fun drawCircularNavigation(canvas: Canvas) {
-        val cx = navRect.centerX()
-        val cy = navRect.centerY()
-        val radius = navRect.width() / 2f
-
+    private fun drawNavigationCluster(canvas: Canvas) {
         paint.style = Paint.Style.FILL
         paint.color = NAV_SHADOW
-        canvas.drawCircle(
-            cx,
-            cy + scaledDp(2f),
-            radius + scaledDp(2f),
+
+        val shadow = RectF(
+            navRect.left,
+            navRect.top + scaledDp(2f),
+            navRect.right,
+            navRect.bottom + scaledDp(2f)
+        )
+
+        canvas.drawRoundRect(
+            shadow,
+            scaledDp(23f),
+            scaledDp(23f),
             paint
         )
 
-        paint.color = NAV_RING
-        canvas.drawCircle(
-            cx,
-            cy,
-            radius,
+        paint.color = NAV_FACE
+        canvas.drawRoundRect(
+            navRect,
+            scaledDp(23f),
+            scaledDp(23f),
             paint
         )
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(2.2f)
+        paint.strokeWidth = scaledDp(1.5f)
         paint.color = NAV_BORDER
-        canvas.drawCircle(
-            cx,
-            cy,
-            radius,
-            paint
-        )
-
-        paint.strokeWidth = scaledDp(1f)
-        paint.color = NAV_INNER_RIM
-        canvas.drawCircle(
-            cx,
-            cy,
-            radius * 0.82f,
+        canvas.drawRoundRect(
+            navRect,
+            scaledDp(23f),
+            scaledDp(23f),
             paint
         )
 
         drawDirectionHighlight(canvas)
 
+        val xOffset = navRect.width() * 0.35f
+        val yOffset = navRect.height() * 0.34f
+
         drawDirectionIcon(
             canvas,
             Direction.UP,
-            cx,
-            cy - radius * 0.62f
+            navRect.centerX(),
+            navRect.centerY() - yOffset
         )
         drawDirectionIcon(
             canvas,
             Direction.DOWN,
-            cx,
-            cy + radius * 0.62f
+            navRect.centerX(),
+            navRect.centerY() + yOffset
         )
         drawDirectionIcon(
             canvas,
             Direction.LEFT,
-            cx - radius * 0.62f,
-            cy
+            navRect.centerX() - xOffset,
+            navRect.centerY()
         )
         drawDirectionIcon(
             canvas,
             Direction.RIGHT,
-            cx + radius * 0.62f,
-            cy
+            navRect.centerX() + xOffset,
+            navRect.centerY()
         )
 
         if (pressedCenter) {
             paint.style = Paint.Style.FILL
             paint.color = CENTER_GLOW
-            canvas.drawOval(
+            canvas.drawRoundRect(
                 RectF(
                     okRect.left - scaledDp(3f),
                     okRect.top - scaledDp(3f),
                     okRect.right + scaledDp(3f),
                     okRect.bottom + scaledDp(3f)
                 ),
+                scaledDp(9f),
+                scaledDp(9f),
                 paint
             )
         }
@@ -652,14 +604,24 @@ class RetroControlsView(context: Context) : View(context) {
         paint.style = Paint.Style.FILL
         paint.color =
             if (pressedCenter) CENTER_PRESSED else CENTER_FILL
-        canvas.drawOval(okRect, paint)
+        canvas.drawRoundRect(
+            okRect,
+            scaledDp(8f),
+            scaledDp(8f),
+            paint
+        )
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.2f)
+        paint.strokeWidth = scaledDp(1.1f)
         paint.color = CENTER_BORDER
-        canvas.drawOval(okRect, paint)
+        canvas.drawRoundRect(
+            okRect,
+            scaledDp(8f),
+            scaledDp(8f),
+            paint
+        )
 
-        textPaint.textSize = scaledDp(12.5f)
+        textPaint.textSize = scaledDp(12f)
         textPaint.color = Color.WHITE
 
         val baseline =
@@ -676,41 +638,42 @@ class RetroControlsView(context: Context) : View(context) {
 
     private fun drawDirectionHighlight(canvas: Canvas) {
         val direction = pressedDirection ?: return
-        val cx = navRect.centerX()
-        val cy = navRect.centerY()
-        val radius = navRect.width() / 2f
 
-        val hx: Float
-        val hy: Float
+        val xOffset = navRect.width() * 0.35f
+        val yOffset = navRect.height() * 0.34f
+
+        val cx: Float
+        val cy: Float
 
         when (direction) {
             Direction.UP -> {
-                hx = cx
-                hy = cy - radius * 0.62f
+                cx = navRect.centerX()
+                cy = navRect.centerY() - yOffset
             }
 
             Direction.DOWN -> {
-                hx = cx
-                hy = cy + radius * 0.62f
+                cx = navRect.centerX()
+                cy = navRect.centerY() + yOffset
             }
 
             Direction.LEFT -> {
-                hx = cx - radius * 0.62f
-                hy = cy
+                cx = navRect.centerX() - xOffset
+                cy = navRect.centerY()
             }
 
             Direction.RIGHT -> {
-                hx = cx + radius * 0.62f
-                hy = cy
+                cx = navRect.centerX() + xOffset
+                cy = navRect.centerY()
             }
         }
 
         paint.style = Paint.Style.FILL
         paint.color = NAV_PRESSED
+
         canvas.drawCircle(
-            hx,
-            hy,
-            radius * 0.18f,
+            cx,
+            cy,
+            min(navRect.width(), navRect.height()) * 0.095f,
             paint
         )
     }
@@ -728,26 +691,26 @@ class RetroControlsView(context: Context) : View(context) {
             when (direction) {
                 Direction.UP -> {
                     moveTo(cx, cy - size)
-                    lineTo(cx - size, cy + size * 0.65f)
-                    lineTo(cx + size, cy + size * 0.65f)
+                    lineTo(cx - size, cy + size * 0.62f)
+                    lineTo(cx + size, cy + size * 0.62f)
                 }
 
                 Direction.DOWN -> {
                     moveTo(cx, cy + size)
-                    lineTo(cx - size, cy - size * 0.65f)
-                    lineTo(cx + size, cy - size * 0.65f)
+                    lineTo(cx - size, cy - size * 0.62f)
+                    lineTo(cx + size, cy - size * 0.62f)
                 }
 
                 Direction.LEFT -> {
                     moveTo(cx - size, cy)
-                    lineTo(cx + size * 0.65f, cy - size)
-                    lineTo(cx + size * 0.65f, cy + size)
+                    lineTo(cx + size * 0.62f, cy - size)
+                    lineTo(cx + size * 0.62f, cy + size)
                 }
 
                 Direction.RIGHT -> {
                     moveTo(cx + size, cy)
-                    lineTo(cx - size * 0.65f, cy - size)
-                    lineTo(cx - size * 0.65f, cy + size)
+                    lineTo(cx - size * 0.62f, cy - size)
+                    lineTo(cx - size * 0.62f, cy + size)
                 }
             }
             close()
@@ -760,79 +723,26 @@ class RetroControlsView(context: Context) : View(context) {
         canvas.drawPath(path, paint)
     }
 
-    private fun drawBottomKeys(canvas: Canvas) {
-        drawDecorativeLeftKey(canvas)
-        drawUndoKey(canvas)
-        drawExitKey(canvas)
-    }
-
-    private fun drawDecorativeLeftKey(canvas: Canvas) {
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.4f)
-        paint.color = DECOR_ICON
-
-        val cx = leftDecorRect.centerX()
-        val cy = leftDecorRect.centerY()
-        val w = leftDecorRect.width() * 0.32f
-        val h = leftDecorRect.height() * 0.22f
-
-        val iconRect = RectF(
-            cx - w,
-            cy - h,
-            cx + w,
-            cy + h
-        )
-
-        canvas.drawRoundRect(
-            iconRect,
-            scaledDp(2f),
-            scaledDp(2f),
-            paint
-        )
-
-        canvas.drawLine(
-            iconRect.left - scaledDp(5f),
-            cy,
-            iconRect.left,
-            cy,
-            paint
-        )
-    }
-
     private fun drawUndoKey(canvas: Canvas) {
         val pressed = pressedSoftKey == SoftKey.UNDO
 
         if (pressed) {
             paint.style = Paint.Style.FILL
-            paint.color = Color.argb(42, 94, 123, 148)
+            paint.color = KEY_PRESSED
             canvas.drawRoundRect(
                 undoRect,
-                scaledDp(7f),
-                scaledDp(7f),
+                scaledDp(8f),
+                scaledDp(8f),
                 paint
             )
         }
 
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.2f)
-        paint.color =
-            if (pressed) ACCENT_LIGHT else SOFTKEY_MARK
-
-        val y = undoRect.top + undoRect.height() * 0.22f
-        canvas.drawLine(
-            undoRect.left + undoRect.width() * 0.28f,
-            y,
-            undoRect.right - undoRect.width() * 0.28f,
-            y,
-            paint
-        )
-
-        textPaint.textSize = scaledDp(9.5f)
+        textPaint.textSize = scaledDp(10.5f)
         textPaint.color =
             if (pressed) Color.WHITE else TEXT_PRIMARY
 
         val baseline =
-            undoRect.centerY() + undoRect.height() * 0.16f -
+            undoRect.centerY() -
                 (textPaint.descent() + textPaint.ascent()) / 2f
 
         canvas.drawText(
@@ -851,8 +761,8 @@ class RetroControlsView(context: Context) : View(context) {
             paint.color = Color.argb(50, 184, 63, 63)
             canvas.drawRoundRect(
                 exitRect,
-                scaledDp(7f),
-                scaledDp(7f),
+                scaledDp(8f),
+                scaledDp(8f),
                 paint
             )
         }
@@ -898,28 +808,25 @@ class RetroControlsView(context: Context) : View(context) {
         const val BASE_CONTROL_HEIGHT_DP = 248
         const val MIN_CONTROL_SCALE = 0.58f
 
-        val HOUSING_BASE: Int = Color.rgb(74, 94, 111)
-        val HOUSING_INNER: Int = Color.rgb(84, 104, 121)
-        val HOUSING_SHADOW: Int = Color.rgb(42, 55, 67)
-        val HOUSING_BORDER: Int = Color.rgb(128, 145, 157)
+        val HOUSING_BASE: Int = Color.rgb(215, 213, 218)
+        val HOUSING_INNER: Int = Color.rgb(229, 227, 231)
+        val HOUSING_SHADOW: Int = Color.rgb(166, 163, 169)
+        val HOUSING_BORDER: Int = Color.rgb(150, 146, 153)
 
-        val SOFTKEY_MARK: Int = Color.rgb(200, 211, 217)
-        val TEXT_PRIMARY: Int = Color.rgb(232, 238, 241)
-        val ACCENT_LIGHT: Int = Color.rgb(224, 238, 245)
+        val TEXT_PRIMARY: Int = Color.rgb(78, 76, 82)
+        val KEY_PRESSED: Int = Color.argb(70, 103, 94, 113)
 
-        val NAV_RING: Int = Color.rgb(47, 69, 85)
-        val NAV_BORDER: Int = Color.rgb(161, 179, 191)
-        val NAV_INNER_RIM: Int = Color.rgb(101, 123, 139)
-        val NAV_SHADOW: Int = Color.rgb(28, 38, 47)
-        val NAV_PRESSED: Int = Color.rgb(70, 100, 126)
-        val NAV_ICON: Int = Color.rgb(220, 230, 236)
+        val NAV_FACE: Int = Color.rgb(130, 117, 136)
+        val NAV_BORDER: Int = Color.rgb(91, 82, 98)
+        val NAV_SHADOW: Int = Color.rgb(104, 95, 111)
+        val NAV_PRESSED: Int = Color.rgb(105, 93, 116)
+        val NAV_ICON: Int = Color.rgb(236, 232, 240)
 
-        val CENTER_FILL: Int = Color.rgb(55, 63, 66)
-        val CENTER_PRESSED: Int = Color.rgb(87, 105, 116)
-        val CENTER_BORDER: Int = Color.rgb(188, 202, 210)
-        val CENTER_GLOW: Int = Color.argb(80, 190, 220, 236)
+        val CENTER_FILL: Int = Color.rgb(219, 214, 223)
+        val CENTER_PRESSED: Int = Color.rgb(193, 185, 201)
+        val CENTER_BORDER: Int = Color.rgb(96, 87, 103)
+        val CENTER_GLOW: Int = Color.argb(90, 255, 255, 255)
 
-        val DECOR_ICON: Int = Color.rgb(205, 218, 225)
-        val END_RED: Int = Color.rgb(193, 62, 61)
+        val END_RED: Int = Color.rgb(190, 58, 57)
     }
 }
