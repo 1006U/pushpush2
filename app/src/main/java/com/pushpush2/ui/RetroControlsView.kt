@@ -15,20 +15,20 @@ import kotlin.math.abs
 import kotlin.math.min
 
 /**
- * Bottom touch controls styled after the user's feature-phone keypad reference.
+ * Bottom touch controls rebuilt around the user's Motorola-style keypad
+ * reference.
  *
- * Functional layout based on the original feature-phone keypad:
+ * Functional mapping:
  * - upper-left soft key: 스테이지
  * - upper-right soft key: 리셋
- * - large center navigation pad: UP / DOWN / LEFT / RIGHT
- * - center key: 확인
+ * - circular ring: UP / DOWN / LEFT / RIGHT
+ * - NATE center position: 확인
  * - lower-center key: 돌아가기 (one-step undo)
- * - lower-left call key: decorative only
- * - lower-right end-call key: exit
+ * - lower-left key: decorative only
+ * - lower-right key: exit
  *
- * Direction and confirm controls keep their original proportions but get the
- * largest practical touch area. Utility buttons stay smaller and separated by
- * dead space so imprecise thumb touches do not trigger the wrong action.
+ * Touch areas remain independent from the visual styling so controls can stay
+ * generous without creating accidental neighbouring presses.
  */
 class RetroControlsView(context: Context) : View(context) {
 
@@ -54,8 +54,8 @@ class RetroControlsView(context: Context) : View(context) {
     private val resetRect = RectF()
     private val navRect = RectF()
     private val okRect = RectF()
-    private val topDecorRect = RectF()
     private val undoRect = RectF()
+    private val leftDecorRect = RectF()
     private val exitRect = RectF()
 
     private var controlScale = 1f
@@ -113,23 +113,21 @@ class RetroControlsView(context: Context) : View(context) {
 
         calculateGeometry(w, scaledHeight)
 
-        drawPhoneHousing(canvas)
-        drawSectionDividers(canvas)
-        drawTopDecorativeKey(canvas)
-        drawSoftKey(
+        drawHousing(canvas)
+        drawTopSoftKey(
             canvas = canvas,
             rect = stageRect,
             label = "스테이지",
             pressed = pressedSoftKey == SoftKey.STAGE
         )
-        drawSoftKey(
+        drawTopSoftKey(
             canvas = canvas,
             rect = resetRect,
             label = "리셋",
             pressed = pressedSoftKey == SoftKey.RESET
         )
-        drawNavigationPad(canvas)
-        drawDecorativeBottomKeys(canvas)
+        drawCircularNavigation(canvas)
+        drawBottomKeys(canvas)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -332,64 +330,69 @@ class RetroControlsView(context: Context) : View(context) {
         val sh = shellRect.height()
 
         /*
-         * Geometry rebuilt from the supplied Samsung feature-phone keypad:
+         * Layout reset from the supplied Motorola keypad reference:
          *
-         *          [ small top key ]
-         * [스테이지] [ large D-pad + 확인 ] [리셋]
-         * [ call ]   [    돌아가기    ]   [ exit ]
+         * [ 스테이지 ─ ]      [ ─ 리셋 ]
          *
-         * The D-pad intentionally owns most of the upper keypad. Side and
-         * bottom utility buttons are smaller and their touch rectangles never
-         * overlap the navigation rectangle.
+         *              ○
+         *        ←    확인    →
+         *              ↓
+         *
+         * [ decorative ]  [ 돌아가기 ]  [ 종료 ]
          */
-        topDecorRect.set(
-            shellRect.left + sw * 0.425f,
-            shellRect.top + sh * 0.025f,
-            shellRect.right - sw * 0.425f,
-            shellRect.top + sh * 0.105f
-        )
-
         stageRect.set(
-            shellRect.left + sw * 0.025f,
-            shellRect.top + sh * 0.095f,
-            shellRect.left + sw * 0.185f,
-            shellRect.top + sh * 0.405f
+            shellRect.left + sw * 0.055f,
+            shellRect.top + sh * 0.055f,
+            shellRect.left + sw * 0.31f,
+            shellRect.top + sh * 0.225f
         )
 
         resetRect.set(
-            shellRect.right - sw * 0.185f,
-            shellRect.top + sh * 0.095f,
-            shellRect.right - sw * 0.025f,
-            shellRect.top + sh * 0.405f
+            shellRect.right - sw * 0.31f,
+            shellRect.top + sh * 0.055f,
+            shellRect.right - sw * 0.055f,
+            shellRect.top + sh * 0.225f
         )
+
+        val navSize = min(sw * 0.50f, sh * 0.58f)
+        val navCx = shellRect.centerX()
+        val navCy = shellRect.top + sh * 0.45f
 
         navRect.set(
-            shellRect.left + sw * 0.215f,
-            shellRect.top + sh * 0.055f,
-            shellRect.right - sw * 0.215f,
-            shellRect.top + sh * 0.705f
+            navCx - navSize / 2f,
+            navCy - navSize / 2f,
+            navCx + navSize / 2f,
+            navCy + navSize / 2f
         )
 
-        // Keep the existing directional-pad : center-key proportions.
+        val okWidth = navRect.width() * 0.42f
+        val okHeight = navRect.height() * 0.28f
         okRect.set(
-            navRect.left + navRect.width() * 0.255f,
-            navRect.top + navRect.height() * 0.29f,
-            navRect.right - navRect.width() * 0.255f,
-            navRect.bottom - navRect.height() * 0.29f
+            navRect.centerX() - okWidth / 2f,
+            navRect.centerY() - okHeight / 2f,
+            navRect.centerX() + okWidth / 2f,
+            navRect.centerY() + okHeight / 2f
+        )
+
+        leftDecorRect.set(
+            shellRect.left + sw * 0.055f,
+            shellRect.top + sh * 0.73f,
+            shellRect.left + sw * 0.23f,
+            shellRect.bottom - sh * 0.055f
         )
 
         undoRect.set(
-            shellRect.left + sw * 0.315f,
-            shellRect.top + sh * 0.79f,
-            shellRect.right - sw * 0.315f,
-            shellRect.bottom - sh * 0.035f
+            shellRect.left + sw * 0.35f,
+            shellRect.top + sh * 0.76f,
+            shellRect.right - sw * 0.35f,
+            shellRect.bottom - sh * 0.055f
         )
 
         exitRect.set(
-            shellRect.right - sw * 0.19f,
+            shellRect.right - sw * 0.23f,
             shellRect.top + sh * 0.73f,
-            shellRect.right - sw * 0.025f,
-            shellRect.bottom - sh * 0.035f
+            shellRect.right - sw * 0.055f,
+            shellRect.bottom - sh * 0.055f
         )
     }
 
@@ -429,15 +432,12 @@ class RetroControlsView(context: Context) : View(context) {
         x: Float,
         y: Float
     ): Direction? {
-        if (!navRect.contains(x, y)) return null
-        if (okRect.contains(x, y)) return null
+        val radius = navRect.width() / 2f
+        val dx = x - navRect.centerX()
+        val dy = y - navRect.centerY()
 
-        val dx =
-            (x - navRect.centerX()) /
-                (navRect.width() / 2f)
-        val dy =
-            (y - navRect.centerY()) /
-                (navRect.height() / 2f)
+        if (dx * dx + dy * dy > radius * radius) return null
+        if (okRect.contains(x, y)) return null
 
         return if (abs(dx) > abs(dy)) {
             if (dx < 0f) {
@@ -454,9 +454,9 @@ class RetroControlsView(context: Context) : View(context) {
         }
     }
 
-    private fun drawPhoneHousing(canvas: Canvas) {
+    private fun drawHousing(canvas: Canvas) {
         paint.style = Paint.Style.FILL
-        paint.color = SHELL_SHADOW
+        paint.color = HOUSING_SHADOW
 
         val shadow = RectF(
             shellRect.left,
@@ -467,16 +467,16 @@ class RetroControlsView(context: Context) : View(context) {
 
         canvas.drawRoundRect(
             shadow,
-            scaledDp(32f),
-            scaledDp(32f),
+            scaledDp(26f),
+            scaledDp(26f),
             paint
         )
 
-        paint.color = SHELL_BASE
+        paint.color = HOUSING_BASE
         canvas.drawRoundRect(
             shellRect,
-            scaledDp(32f),
-            scaledDp(32f),
+            scaledDp(26f),
+            scaledDp(26f),
             paint
         )
 
@@ -487,174 +487,26 @@ class RetroControlsView(context: Context) : View(context) {
             shellRect.bottom - scaledDp(3f)
         )
 
-        paint.color = SHELL_INNER
+        paint.color = HOUSING_INNER
         canvas.drawRoundRect(
             inner,
-            scaledDp(29f),
-            scaledDp(29f),
+            scaledDp(23f),
+            scaledDp(23f),
             paint
         )
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.5f)
-        paint.color = SHELL_BORDER
+        paint.strokeWidth = scaledDp(1.1f)
+        paint.color = HOUSING_BORDER
         canvas.drawRoundRect(
             shellRect,
-            scaledDp(32f),
-            scaledDp(32f),
+            scaledDp(26f),
+            scaledDp(26f),
             paint
         )
     }
 
-    private fun drawSectionDividers(canvas: Canvas) {
-        /*
-         * Open mould seams only: no closed button outlines.
-         * The reference phone separates the utility areas with a handful of
-         * shallow panel seams that flow into the central navigation assembly.
-         */
-        val sw = shellRect.width()
-        val sh = shellRect.height()
-
-        val seams = arrayOf(
-            // Short upper seams beside the navigation pad.
-            Path().apply {
-                moveTo(
-                    navRect.left + scaledDp(1.5f),
-                    shellRect.top + scaledDp(1f)
-                )
-                cubicTo(
-                    navRect.left + scaledDp(1f),
-                    shellRect.top + sh * 0.02f,
-                    navRect.left - scaledDp(1f),
-                    navRect.top + scaledDp(2f),
-                    navRect.left - scaledDp(2f),
-                    navRect.top + scaledDp(8f)
-                )
-            },
-            Path().apply {
-                moveTo(
-                    navRect.right - scaledDp(1.5f),
-                    shellRect.top + scaledDp(1f)
-                )
-                cubicTo(
-                    navRect.right - scaledDp(1f),
-                    shellRect.top + sh * 0.02f,
-                    navRect.right + scaledDp(1f),
-                    navRect.top + scaledDp(2f),
-                    navRect.right + scaledDp(2f),
-                    navRect.top + scaledDp(8f)
-                )
-            },
-
-            // Side seams: divide upper soft-key and lower phone-key regions.
-            Path().apply {
-                moveTo(
-                    shellRect.left + scaledDp(1f),
-                    shellRect.top + sh * 0.43f
-                )
-                cubicTo(
-                    shellRect.left + sw * 0.07f,
-                    shellRect.top + sh * 0.46f,
-                    shellRect.left + sw * 0.15f,
-                    shellRect.top + sh * 0.50f,
-                    navRect.left + scaledDp(3f),
-                    shellRect.top + sh * 0.56f
-                )
-            },
-            Path().apply {
-                moveTo(
-                    navRect.right - scaledDp(3f),
-                    shellRect.top + sh * 0.56f
-                )
-                cubicTo(
-                    shellRect.right - sw * 0.15f,
-                    shellRect.top + sh * 0.50f,
-                    shellRect.right - sw * 0.07f,
-                    shellRect.top + sh * 0.46f,
-                    shellRect.right - scaledDp(1f),
-                    shellRect.top + sh * 0.43f
-                )
-            },
-
-            // Bottom seams: separate call / 돌아가기 / end-call regions.
-            Path().apply {
-                moveTo(
-                    navRect.left + scaledDp(4f),
-                    navRect.bottom - scaledDp(3f)
-                )
-                cubicTo(
-                    shellRect.left + sw * 0.255f,
-                    shellRect.top + sh * 0.78f,
-                    shellRect.left + sw * 0.265f,
-                    shellRect.top + sh * 0.90f,
-                    shellRect.left + sw * 0.255f,
-                    shellRect.bottom - scaledDp(1f)
-                )
-            },
-            Path().apply {
-                moveTo(
-                    navRect.right - scaledDp(4f),
-                    navRect.bottom - scaledDp(3f)
-                )
-                cubicTo(
-                    shellRect.right - sw * 0.255f,
-                    shellRect.top + sh * 0.78f,
-                    shellRect.right - sw * 0.265f,
-                    shellRect.top + sh * 0.90f,
-                    shellRect.right - sw * 0.255f,
-                    shellRect.bottom - scaledDp(1f)
-                )
-            }
-        )
-
-        paint.shader = null
-        paint.style = Paint.Style.STROKE
-        paint.strokeCap = Paint.Cap.ROUND
-        paint.strokeJoin = Paint.Join.ROUND
-
-        // Main recessed seam.
-        paint.strokeWidth = scaledDp(1.05f)
-        paint.color = Color.rgb(112, 108, 99)
-        seams.forEach { seam ->
-            canvas.drawPath(seam, paint)
-        }
-
-        // Very small highlight makes it read like a mould joint, not ink.
-        paint.strokeWidth = scaledDp(0.4f)
-        paint.color = Color.argb(80, 255, 255, 248)
-        canvas.save()
-        canvas.translate(
-            -scaledDp(0.35f),
-            -scaledDp(0.35f)
-        )
-        seams.forEach { seam ->
-            canvas.drawPath(seam, paint)
-        }
-        canvas.restore()
-    }
-
-    private fun drawTopDecorativeKey(canvas: Canvas) {
-        paint.style = Paint.Style.FILL
-        paint.color = KEY_NORMAL
-        canvas.drawRoundRect(
-            topDecorRect,
-            scaledDp(12f),
-            scaledDp(12f),
-            paint
-        )
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.2f)
-        paint.color = KEY_BORDER
-        canvas.drawRoundRect(
-            topDecorRect,
-            scaledDp(12f),
-            scaledDp(12f),
-            paint
-        )
-    }
-
-    private fun drawSoftKey(
+    private fun drawTopSoftKey(
         canvas: Canvas,
         rect: RectF,
         label: String,
@@ -662,21 +514,49 @@ class RetroControlsView(context: Context) : View(context) {
     ) {
         if (pressed) {
             paint.style = Paint.Style.FILL
-            paint.color = Color.argb(36, 43, 82, 168)
+            paint.color = Color.argb(38, 94, 123, 148)
             canvas.drawRoundRect(
                 rect,
-                scaledDp(7f),
-                scaledDp(7f),
+                scaledDp(8f),
+                scaledDp(8f),
                 paint
             )
         }
 
+        val leftSide = rect.centerX() < shellRect.centerX()
+
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = scaledDp(1.4f)
+        paint.strokeCap = Paint.Cap.ROUND
+        paint.color = if (pressed) ACCENT_LIGHT else SOFTKEY_MARK
+
+        val barY = rect.top + rect.height() * 0.25f
+        val barStart: Float
+        val barEnd: Float
+
+        if (leftSide) {
+            barStart = rect.left + rect.width() * 0.05f
+            barEnd = rect.left + rect.width() * 0.48f
+        } else {
+            barStart = rect.right - rect.width() * 0.48f
+            barEnd = rect.right - rect.width() * 0.05f
+        }
+
+        canvas.drawLine(
+            barStart,
+            barY,
+            barEnd,
+            barY,
+            paint
+        )
+
         textPaint.textSize = scaledDp(10f)
         textPaint.color =
-            if (pressed) NAV_BLUE else TEXT_DARK
+            if (pressed) Color.WHITE else TEXT_PRIMARY
 
+        val textY = rect.top + rect.height() * 0.70f
         val baseline =
-            rect.centerY() -
+            textY -
                 (textPaint.descent() + textPaint.ascent()) / 2f
 
         canvas.drawText(
@@ -687,108 +567,99 @@ class RetroControlsView(context: Context) : View(context) {
         )
     }
 
-    private fun drawNavigationPad(canvas: Canvas) {
+    private fun drawCircularNavigation(canvas: Canvas) {
+        val cx = navRect.centerX()
+        val cy = navRect.centerY()
+        val radius = navRect.width() / 2f
+
         paint.style = Paint.Style.FILL
         paint.color = NAV_SHADOW
-
-        val shadow = RectF(
-            navRect.left - scaledDp(2f),
-            navRect.top + scaledDp(3f),
-            navRect.right + scaledDp(2f),
-            navRect.bottom + scaledDp(4f)
-        )
-        canvas.drawRoundRect(
-            shadow,
-            scaledDp(22f),
-            scaledDp(22f),
+        canvas.drawCircle(
+            cx,
+            cy + scaledDp(2f),
+            radius + scaledDp(2f),
             paint
         )
 
-        // The photographed keypad uses a pale navigation face with a navy rim.
-        paint.style = Paint.Style.FILL
-        paint.color = NAV_FACE
-        canvas.drawRoundRect(
-            navRect,
-            scaledDp(22f),
-            scaledDp(22f),
+        paint.color = NAV_RING
+        canvas.drawCircle(
+            cx,
+            cy,
+            radius,
             paint
         )
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(3f)
-        paint.color = NAV_BLUE
-        canvas.drawRoundRect(
-            navRect,
-            scaledDp(22f),
-            scaledDp(22f),
+        paint.strokeWidth = scaledDp(2.2f)
+        paint.color = NAV_BORDER
+        canvas.drawCircle(
+            cx,
+            cy,
+            radius,
+            paint
+        )
+
+        paint.strokeWidth = scaledDp(1f)
+        paint.color = NAV_INNER_RIM
+        canvas.drawCircle(
+            cx,
+            cy,
+            radius * 0.82f,
             paint
         )
 
         drawDirectionHighlight(canvas)
+
         drawDirectionIcon(
             canvas,
             Direction.UP,
-            navRect.centerX(),
-            navRect.top + navRect.height() * 0.14f
+            cx,
+            cy - radius * 0.62f
         )
         drawDirectionIcon(
             canvas,
             Direction.DOWN,
-            navRect.centerX(),
-            navRect.bottom - navRect.height() * 0.14f
+            cx,
+            cy + radius * 0.62f
         )
         drawDirectionIcon(
             canvas,
             Direction.LEFT,
-            navRect.left + navRect.width() * 0.13f,
-            navRect.centerY()
+            cx - radius * 0.62f,
+            cy
         )
         drawDirectionIcon(
             canvas,
             Direction.RIGHT,
-            navRect.right - navRect.width() * 0.13f,
-            navRect.centerY()
+            cx + radius * 0.62f,
+            cy
         )
 
         if (pressedCenter) {
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = scaledDp(4f)
-            paint.color = PRESS_GLOW
-            canvas.drawRoundRect(
+            paint.style = Paint.Style.FILL
+            paint.color = CENTER_GLOW
+            canvas.drawOval(
                 RectF(
-                    okRect.left - scaledDp(2f),
-                    okRect.top - scaledDp(2f),
-                    okRect.right + scaledDp(2f),
-                    okRect.bottom + scaledDp(2f)
+                    okRect.left - scaledDp(3f),
+                    okRect.top - scaledDp(3f),
+                    okRect.right + scaledDp(3f),
+                    okRect.bottom + scaledDp(3f)
                 ),
-                scaledDp(10f),
-                scaledDp(10f),
                 paint
             )
         }
 
-        // NATE position -> 확인. Keep the dark-blue visual emphasis.
         paint.style = Paint.Style.FILL
         paint.color =
-            if (pressedCenter) NAV_PRESSED else NAV_BLUE
-        canvas.drawRoundRect(
-            okRect,
-            scaledDp(9f),
-            scaledDp(9f),
-            paint
-        )
+            if (pressedCenter) CENTER_PRESSED else CENTER_FILL
+        canvas.drawOval(okRect, paint)
 
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = scaledDp(1.2f)
-        paint.color = NAV_RIM
-        canvas.drawRoundRect(
-            okRect,
-            scaledDp(9f),
-            scaledDp(9f),
-            paint
-        )
+        paint.color = CENTER_BORDER
+        canvas.drawOval(okRect, paint)
 
-        textPaint.textSize = scaledDp(13.5f)
+        textPaint.textSize = scaledDp(12.5f)
         textPaint.color = Color.WHITE
 
         val baseline =
@@ -805,44 +676,41 @@ class RetroControlsView(context: Context) : View(context) {
 
     private fun drawDirectionHighlight(canvas: Canvas) {
         val direction = pressedDirection ?: return
+        val cx = navRect.centerX()
+        val cy = navRect.centerY()
+        val radius = navRect.width() / 2f
 
-        val highlight = when (direction) {
-            Direction.UP -> RectF(
-                navRect.left + navRect.width() * 0.29f,
-                navRect.top + scaledDp(5f),
-                navRect.right - navRect.width() * 0.29f,
-                okRect.top - scaledDp(2f)
-            )
+        val hx: Float
+        val hy: Float
 
-            Direction.DOWN -> RectF(
-                navRect.left + navRect.width() * 0.29f,
-                okRect.bottom + scaledDp(2f),
-                navRect.right - navRect.width() * 0.29f,
-                navRect.bottom - scaledDp(5f)
-            )
+        when (direction) {
+            Direction.UP -> {
+                hx = cx
+                hy = cy - radius * 0.62f
+            }
 
-            Direction.LEFT -> RectF(
-                navRect.left + scaledDp(5f),
-                navRect.top + navRect.height() * 0.30f,
-                okRect.left - scaledDp(2f),
-                navRect.bottom - navRect.height() * 0.30f
-            )
+            Direction.DOWN -> {
+                hx = cx
+                hy = cy + radius * 0.62f
+            }
 
-            Direction.RIGHT -> RectF(
-                okRect.right + scaledDp(2f),
-                navRect.top + navRect.height() * 0.30f,
-                navRect.right - scaledDp(5f),
-                navRect.bottom - navRect.height() * 0.30f
-            )
+            Direction.LEFT -> {
+                hx = cx - radius * 0.62f
+                hy = cy
+            }
+
+            Direction.RIGHT -> {
+                hx = cx + radius * 0.62f
+                hy = cy
+            }
         }
 
         paint.style = Paint.Style.FILL
         paint.color = NAV_PRESSED
-
-        canvas.drawRoundRect(
-            highlight,
-            scaledDp(10f),
-            scaledDp(10f),
+        canvas.drawCircle(
+            hx,
+            hy,
+            radius * 0.18f,
             paint
         )
     }
@@ -854,7 +722,7 @@ class RetroControlsView(context: Context) : View(context) {
         cy: Float
     ) {
         val pressed = pressedDirection == direction
-        val size = scaledDp(9f)
+        val size = scaledDp(7.5f)
 
         val path = Path().apply {
             when (direction) {
@@ -887,67 +755,117 @@ class RetroControlsView(context: Context) : View(context) {
 
         paint.style = Paint.Style.FILL
         paint.color =
-            if (pressed) Color.WHITE else NAV_BLUE
+            if (pressed) Color.WHITE else NAV_ICON
 
         canvas.drawPath(path, paint)
     }
 
-    private fun drawDecorativeBottomKeys(canvas: Canvas) {
-        val sw = shellRect.width()
-        val sh = shellRect.height()
+    private fun drawBottomKeys(canvas: Canvas) {
+        drawDecorativeLeftKey(canvas)
+        drawUndoKey(canvas)
+        drawExitKey(canvas)
+    }
 
-        val leftPhone = RectF(
-            shellRect.left + sw * 0.025f,
-            shellRect.top + sh * 0.73f,
-            shellRect.left + sw * 0.19f,
-            shellRect.bottom - sh * 0.035f
-        )
-
-        // Lower regions are separated only by the open mould seams.
-        drawPhoneKey(
-            canvas = canvas,
-            rect = leftPhone,
-            pressed = false,
-            isLeft = true
-        )
-
-        drawBottomActionKey(
-            canvas = canvas,
-            rect = undoRect,
-            label = "돌아가기",
-            pressed = pressedSoftKey == SoftKey.UNDO
-        )
-
-        drawPhoneKey(
-            canvas = canvas,
-            rect = exitRect,
-            pressed = pressedSoftKey == SoftKey.EXIT,
-            isLeft = false
-        )
-
+    private fun drawDecorativeLeftKey(canvas: Canvas) {
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(4.2f)
-        paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeWidth = scaledDp(1.4f)
+        paint.color = DECOR_ICON
 
-        paint.color = CALL_GREEN
-        canvas.drawArc(
-            RectF(
-                leftPhone.centerX() - scaledDp(17f),
-                leftPhone.centerY() - scaledDp(7f),
-                leftPhone.centerX() + scaledDp(17f),
-                leftPhone.centerY() + scaledDp(15f)
-            ),
-            205f,
-            130f,
-            false,
+        val cx = leftDecorRect.centerX()
+        val cy = leftDecorRect.centerY()
+        val w = leftDecorRect.width() * 0.32f
+        val h = leftDecorRect.height() * 0.22f
+
+        val iconRect = RectF(
+            cx - w,
+            cy - h,
+            cx + w,
+            cy + h
+        )
+
+        canvas.drawRoundRect(
+            iconRect,
+            scaledDp(2f),
+            scaledDp(2f),
             paint
         )
 
+        canvas.drawLine(
+            iconRect.left - scaledDp(5f),
+            cy,
+            iconRect.left,
+            cy,
+            paint
+        )
+    }
+
+    private fun drawUndoKey(canvas: Canvas) {
+        val pressed = pressedSoftKey == SoftKey.UNDO
+
+        if (pressed) {
+            paint.style = Paint.Style.FILL
+            paint.color = Color.argb(42, 94, 123, 148)
+            canvas.drawRoundRect(
+                undoRect,
+                scaledDp(7f),
+                scaledDp(7f),
+                paint
+            )
+        }
+
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = scaledDp(1.2f)
+        paint.color =
+            if (pressed) ACCENT_LIGHT else SOFTKEY_MARK
+
+        val y = undoRect.top + undoRect.height() * 0.22f
+        canvas.drawLine(
+            undoRect.left + undoRect.width() * 0.28f,
+            y,
+            undoRect.right - undoRect.width() * 0.28f,
+            y,
+            paint
+        )
+
+        textPaint.textSize = scaledDp(9.5f)
+        textPaint.color =
+            if (pressed) Color.WHITE else TEXT_PRIMARY
+
+        val baseline =
+            undoRect.centerY() + undoRect.height() * 0.16f -
+                (textPaint.descent() + textPaint.ascent()) / 2f
+
+        canvas.drawText(
+            "돌아가기",
+            undoRect.centerX(),
+            baseline,
+            textPaint
+        )
+    }
+
+    private fun drawExitKey(canvas: Canvas) {
+        val pressed = pressedSoftKey == SoftKey.EXIT
+
+        if (pressed) {
+            paint.style = Paint.Style.FILL
+            paint.color = Color.argb(50, 184, 63, 63)
+            canvas.drawRoundRect(
+                exitRect,
+                scaledDp(7f),
+                scaledDp(7f),
+                paint
+            )
+        }
+
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = scaledDp(4f)
+        paint.strokeCap = Paint.Cap.ROUND
         paint.color = END_RED
+
         canvas.drawArc(
             RectF(
                 exitRect.centerX() - scaledDp(17f),
-                exitRect.centerY() - scaledDp(7f),
+                exitRect.centerY() - scaledDp(6f),
                 exitRect.centerX() + scaledDp(17f),
                 exitRect.centerY() + scaledDp(15f)
             ),
@@ -955,62 +873,6 @@ class RetroControlsView(context: Context) : View(context) {
             130f,
             false,
             paint
-        )
-    }
-
-    private fun drawPhoneKey(
-        canvas: Canvas,
-        rect: RectF,
-        pressed: Boolean,
-        isLeft: Boolean
-    ) {
-        if (pressed) {
-            paint.style = Paint.Style.FILL
-            paint.color =
-                if (isLeft) {
-                    Color.argb(34, 19, 139, 113)
-                } else {
-                    Color.argb(42, 177, 45, 40)
-                }
-            canvas.drawRoundRect(
-                rect,
-                scaledDp(7f),
-                scaledDp(7f),
-                paint
-            )
-        }
-    }
-
-    private fun drawBottomActionKey(
-        canvas: Canvas,
-        rect: RectF,
-        label: String,
-        pressed: Boolean
-    ) {
-        if (pressed) {
-            paint.style = Paint.Style.FILL
-            paint.color = Color.argb(36, 43, 82, 168)
-            canvas.drawRoundRect(
-                rect,
-                scaledDp(7f),
-                scaledDp(7f),
-                paint
-            )
-        }
-
-        textPaint.textSize = scaledDp(10.5f)
-        textPaint.color =
-            if (pressed) NAV_BLUE else TEXT_DARK
-
-        val baseline =
-            rect.centerY() -
-                (textPaint.descent() + textPaint.ascent()) / 2f
-
-        canvas.drawText(
-            label,
-            rect.centerX(),
-            baseline,
-            textPaint
         )
     }
 
@@ -1036,33 +898,28 @@ class RetroControlsView(context: Context) : View(context) {
         const val BASE_CONTROL_HEIGHT_DP = 248
         const val MIN_CONTROL_SCALE = 0.58f
 
-        val SHELL_BASE: Int = Color.rgb(200, 195, 177)
-        val SHELL_INNER: Int = Color.rgb(219, 215, 198)
-        val SHELL_SHADOW: Int = Color.rgb(143, 139, 127)
-        val SHELL_BORDER: Int = Color.rgb(104, 101, 92)
+        val HOUSING_BASE: Int = Color.rgb(74, 94, 111)
+        val HOUSING_INNER: Int = Color.rgb(84, 104, 121)
+        val HOUSING_SHADOW: Int = Color.rgb(42, 55, 67)
+        val HOUSING_BORDER: Int = Color.rgb(128, 145, 157)
 
-        val KEY_NORMAL: Int = Color.rgb(215, 211, 195)
-        val KEY_PRESSED: Int = Color.rgb(57, 102, 181)
-        val KEY_BORDER: Int = Color.rgb(116, 111, 100)
+        val SOFTKEY_MARK: Int = Color.rgb(200, 211, 217)
+        val TEXT_PRIMARY: Int = Color.rgb(232, 238, 241)
+        val ACCENT_LIGHT: Int = Color.rgb(224, 238, 245)
 
-        val NAV_FACE: Int = Color.rgb(224, 226, 218)
-        val NAV_BLUE: Int = Color.rgb(43, 82, 168)
-        val NAV_PRESSED: Int = Color.rgb(25, 61, 143)
-        val NAV_SHADOW: Int = Color.rgb(77, 79, 89)
-        val NAV_RIM: Int = Color.rgb(230, 230, 218)
-        val NAV_ICON: Int = Color.rgb(209, 221, 235)
+        val NAV_RING: Int = Color.rgb(47, 69, 85)
+        val NAV_BORDER: Int = Color.rgb(161, 179, 191)
+        val NAV_INNER_RIM: Int = Color.rgb(101, 123, 139)
+        val NAV_SHADOW: Int = Color.rgb(28, 38, 47)
+        val NAV_PRESSED: Int = Color.rgb(70, 100, 126)
+        val NAV_ICON: Int = Color.rgb(220, 230, 236)
 
-        val OK_NORMAL: Int = Color.rgb(211, 211, 197)
-        val OK_PRESSED: Int = Color.rgb(181, 210, 242)
-        val OK_BORDER: Int = Color.rgb(100, 105, 106)
+        val CENTER_FILL: Int = Color.rgb(55, 63, 66)
+        val CENTER_PRESSED: Int = Color.rgb(87, 105, 116)
+        val CENTER_BORDER: Int = Color.rgb(188, 202, 210)
+        val CENTER_GLOW: Int = Color.argb(80, 190, 220, 236)
 
-        val PRESS_GLOW: Int = Color.argb(110, 0, 142, 255)
-        val BLUE_BRIGHT: Int = Color.rgb(0, 148, 255)
-
-        val CALL_GREEN: Int = Color.rgb(19, 139, 113)
-        val END_RED: Int = Color.rgb(177, 45, 40)
-
-        val TEXT_DARK: Int = Color.rgb(26, 29, 31)
-        val TEXT_MUTED: Int = Color.rgb(80, 78, 71)
+        val DECOR_ICON: Int = Color.rgb(205, 218, 225)
+        val END_RED: Int = Color.rgb(193, 62, 61)
     }
 }
