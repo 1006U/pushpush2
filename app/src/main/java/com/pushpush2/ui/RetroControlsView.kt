@@ -114,6 +114,7 @@ class RetroControlsView(context: Context) : View(context) {
         calculateGeometry(w, scaledHeight)
 
         drawPhoneHousing(canvas)
+        drawSectionDividers(canvas)
         drawTopDecorativeKey(canvas)
         drawSoftKey(
             canvas = canvas,
@@ -505,6 +506,133 @@ class RetroControlsView(context: Context) : View(context) {
         )
     }
 
+    private fun drawSectionDividers(canvas: Canvas) {
+        /*
+         * Open mould seams only: no closed button outlines.
+         * The reference phone separates the utility areas with a handful of
+         * shallow panel seams that flow into the central navigation assembly.
+         */
+        val sw = shellRect.width()
+        val sh = shellRect.height()
+
+        val seams = arrayOf(
+            // Short upper seams beside the navigation pad.
+            Path().apply {
+                moveTo(
+                    navRect.left + scaledDp(1.5f),
+                    shellRect.top + scaledDp(1f)
+                )
+                cubicTo(
+                    navRect.left + scaledDp(1f),
+                    shellRect.top + sh * 0.02f,
+                    navRect.left - scaledDp(1f),
+                    navRect.top + scaledDp(2f),
+                    navRect.left - scaledDp(2f),
+                    navRect.top + scaledDp(8f)
+                )
+            },
+            Path().apply {
+                moveTo(
+                    navRect.right - scaledDp(1.5f),
+                    shellRect.top + scaledDp(1f)
+                )
+                cubicTo(
+                    navRect.right - scaledDp(1f),
+                    shellRect.top + sh * 0.02f,
+                    navRect.right + scaledDp(1f),
+                    navRect.top + scaledDp(2f),
+                    navRect.right + scaledDp(2f),
+                    navRect.top + scaledDp(8f)
+                )
+            },
+
+            // Side seams: divide upper soft-key and lower phone-key regions.
+            Path().apply {
+                moveTo(
+                    shellRect.left + scaledDp(1f),
+                    shellRect.top + sh * 0.43f
+                )
+                cubicTo(
+                    shellRect.left + sw * 0.07f,
+                    shellRect.top + sh * 0.46f,
+                    shellRect.left + sw * 0.15f,
+                    shellRect.top + sh * 0.50f,
+                    navRect.left + scaledDp(3f),
+                    shellRect.top + sh * 0.56f
+                )
+            },
+            Path().apply {
+                moveTo(
+                    navRect.right - scaledDp(3f),
+                    shellRect.top + sh * 0.56f
+                )
+                cubicTo(
+                    shellRect.right - sw * 0.15f,
+                    shellRect.top + sh * 0.50f,
+                    shellRect.right - sw * 0.07f,
+                    shellRect.top + sh * 0.46f,
+                    shellRect.right - scaledDp(1f),
+                    shellRect.top + sh * 0.43f
+                )
+            },
+
+            // Bottom seams: separate call / 돌아가기 / end-call regions.
+            Path().apply {
+                moveTo(
+                    navRect.left + scaledDp(4f),
+                    navRect.bottom - scaledDp(3f)
+                )
+                cubicTo(
+                    shellRect.left + sw * 0.255f,
+                    shellRect.top + sh * 0.78f,
+                    shellRect.left + sw * 0.265f,
+                    shellRect.top + sh * 0.90f,
+                    shellRect.left + sw * 0.255f,
+                    shellRect.bottom - scaledDp(1f)
+                )
+            },
+            Path().apply {
+                moveTo(
+                    navRect.right - scaledDp(4f),
+                    navRect.bottom - scaledDp(3f)
+                )
+                cubicTo(
+                    shellRect.right - sw * 0.255f,
+                    shellRect.top + sh * 0.78f,
+                    shellRect.right - sw * 0.265f,
+                    shellRect.top + sh * 0.90f,
+                    shellRect.right - sw * 0.255f,
+                    shellRect.bottom - scaledDp(1f)
+                )
+            }
+        )
+
+        paint.shader = null
+        paint.style = Paint.Style.STROKE
+        paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeJoin = Paint.Join.ROUND
+
+        // Main recessed seam.
+        paint.strokeWidth = scaledDp(1.05f)
+        paint.color = Color.rgb(112, 108, 99)
+        seams.forEach { seam ->
+            canvas.drawPath(seam, paint)
+        }
+
+        // Very small highlight makes it read like a mould joint, not ink.
+        paint.strokeWidth = scaledDp(0.4f)
+        paint.color = Color.argb(80, 255, 255, 248)
+        canvas.save()
+        canvas.translate(
+            -scaledDp(0.35f),
+            -scaledDp(0.35f)
+        )
+        seams.forEach { seam ->
+            canvas.drawPath(seam, paint)
+        }
+        canvas.restore()
+    }
+
     private fun drawTopDecorativeKey(canvas: Canvas) {
         paint.style = Paint.Style.FILL
         paint.color = KEY_NORMAL
@@ -532,52 +660,20 @@ class RetroControlsView(context: Context) : View(context) {
         label: String,
         pressed: Boolean
     ) {
-        /*
-         * The real phone separates these side keys with their own thin moulded
-         * outline rather than long divider lines across the whole keypad.
-         */
-        val leftSide = rect.centerX() < shellRect.centerX()
-        val slant = rect.width() * 0.10f
-
-        val keyPath = Path().apply {
-            if (leftSide) {
-                moveTo(rect.left + scaledDp(1f), rect.top + scaledDp(2f))
-                lineTo(rect.right - slant, rect.top)
-                lineTo(rect.right, rect.bottom - scaledDp(2f))
-                lineTo(rect.left + slant, rect.bottom)
-            } else {
-                moveTo(rect.left + slant, rect.top)
-                lineTo(rect.right - scaledDp(1f), rect.top + scaledDp(2f))
-                lineTo(rect.right - slant, rect.bottom)
-                lineTo(rect.left, rect.bottom - scaledDp(2f))
-            }
-            close()
+        if (pressed) {
+            paint.style = Paint.Style.FILL
+            paint.color = Color.argb(36, 43, 82, 168)
+            canvas.drawRoundRect(
+                rect,
+                scaledDp(7f),
+                scaledDp(7f),
+                paint
+            )
         }
-
-        paint.style = Paint.Style.FILL
-        paint.color =
-            if (pressed) KEY_PRESSED_SOFT else KEY_FACE
-        canvas.drawPath(keyPath, paint)
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(0.95f)
-        paint.strokeCap = Paint.Cap.ROUND
-        paint.strokeJoin = Paint.Join.ROUND
-        paint.color =
-            if (pressed) NAV_BLUE else KEY_SEAM
-        canvas.drawPath(keyPath, paint)
-
-        // Tiny upper-left highlight gives the plastic edge a natural bevel.
-        paint.strokeWidth = scaledDp(0.45f)
-        paint.color = KEY_HIGHLIGHT
-        canvas.save()
-        canvas.translate(-scaledDp(0.45f), -scaledDp(0.45f))
-        canvas.drawPath(keyPath, paint)
-        canvas.restore()
 
         textPaint.textSize = scaledDp(10f)
         textPaint.color =
-            if (pressed) Color.WHITE else TEXT_DARK
+            if (pressed) NAV_BLUE else TEXT_DARK
 
         val baseline =
             rect.centerY() -
@@ -807,7 +903,7 @@ class RetroControlsView(context: Context) : View(context) {
             shellRect.bottom - sh * 0.035f
         )
 
-        // Each lower key now has its own subtle local moulded boundary.
+        // Lower regions are separated only by the open mould seams.
         drawPhoneKey(
             canvas = canvas,
             rect = leftPhone,
@@ -868,50 +964,21 @@ class RetroControlsView(context: Context) : View(context) {
         pressed: Boolean,
         isLeft: Boolean
     ) {
-        val slant = rect.width() * 0.14f
-        val keyPath = Path().apply {
-            if (isLeft) {
-                moveTo(rect.left + scaledDp(1f), rect.top)
-                lineTo(rect.right - slant, rect.top + scaledDp(1.5f))
-                lineTo(rect.right, rect.bottom - scaledDp(1f))
-                lineTo(rect.left + slant, rect.bottom)
-            } else {
-                moveTo(rect.left + slant, rect.top + scaledDp(1.5f))
-                lineTo(rect.right - scaledDp(1f), rect.top)
-                lineTo(rect.right - slant, rect.bottom)
-                lineTo(rect.left, rect.bottom - scaledDp(1f))
-            }
-            close()
-        }
-
-        paint.style = Paint.Style.FILL
-        paint.color =
-            if (pressed) {
+        if (pressed) {
+            paint.style = Paint.Style.FILL
+            paint.color =
                 if (isLeft) {
-                    Color.rgb(203, 222, 207)
+                    Color.argb(34, 19, 139, 113)
                 } else {
-                    Color.rgb(229, 204, 198)
+                    Color.argb(42, 177, 45, 40)
                 }
-            } else {
-                KEY_FACE
-            }
-        canvas.drawPath(keyPath, paint)
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(0.95f)
-        paint.color = if (pressed) {
-            if (isLeft) CALL_GREEN else END_RED
-        } else {
-            KEY_SEAM
+            canvas.drawRoundRect(
+                rect,
+                scaledDp(7f),
+                scaledDp(7f),
+                paint
+            )
         }
-        canvas.drawPath(keyPath, paint)
-
-        paint.strokeWidth = scaledDp(0.45f)
-        paint.color = KEY_HIGHLIGHT
-        canvas.save()
-        canvas.translate(-scaledDp(0.45f), -scaledDp(0.45f))
-        canvas.drawPath(keyPath, paint)
-        canvas.restore()
     }
 
     private fun drawBottomActionKey(
@@ -920,36 +987,20 @@ class RetroControlsView(context: Context) : View(context) {
         label: String,
         pressed: Boolean
     ) {
-        val inset = rect.width() * 0.08f
-        val keyPath = Path().apply {
-            moveTo(rect.left + inset, rect.top)
-            lineTo(rect.right - inset, rect.top)
-            lineTo(rect.right, rect.bottom)
-            lineTo(rect.left, rect.bottom)
-            close()
+        if (pressed) {
+            paint.style = Paint.Style.FILL
+            paint.color = Color.argb(36, 43, 82, 168)
+            canvas.drawRoundRect(
+                rect,
+                scaledDp(7f),
+                scaledDp(7f),
+                paint
+            )
         }
-
-        paint.style = Paint.Style.FILL
-        paint.color =
-            if (pressed) KEY_PRESSED_SOFT else KEY_FACE
-        canvas.drawPath(keyPath, paint)
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(0.95f)
-        paint.color =
-            if (pressed) NAV_BLUE else KEY_SEAM
-        canvas.drawPath(keyPath, paint)
-
-        paint.strokeWidth = scaledDp(0.45f)
-        paint.color = KEY_HIGHLIGHT
-        canvas.save()
-        canvas.translate(-scaledDp(0.45f), -scaledDp(0.45f))
-        canvas.drawPath(keyPath, paint)
-        canvas.restore()
 
         textPaint.textSize = scaledDp(10.5f)
         textPaint.color =
-            if (pressed) Color.WHITE else TEXT_DARK
+            if (pressed) NAV_BLUE else TEXT_DARK
 
         val baseline =
             rect.centerY() -
@@ -993,10 +1044,6 @@ class RetroControlsView(context: Context) : View(context) {
         val KEY_NORMAL: Int = Color.rgb(215, 211, 195)
         val KEY_PRESSED: Int = Color.rgb(57, 102, 181)
         val KEY_BORDER: Int = Color.rgb(116, 111, 100)
-        val KEY_FACE: Int = Color.rgb(220, 216, 200)
-        val KEY_PRESSED_SOFT: Int = Color.rgb(170, 190, 222)
-        val KEY_SEAM: Int = Color.rgb(124, 119, 108)
-        val KEY_HIGHLIGHT: Int = Color.argb(115, 255, 255, 247)
 
         val NAV_FACE: Int = Color.rgb(224, 226, 218)
         val NAV_BLUE: Int = Color.rgb(43, 82, 168)
