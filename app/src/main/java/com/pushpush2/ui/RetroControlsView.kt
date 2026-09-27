@@ -581,7 +581,7 @@ class RetroControlsView(context: Context) : View(context) {
         }
 
         textPaint.textSize = scaledDp(UTILITY_TEXT_SIZE_DP)
-        textPaint.color = Color.BLACK
+        textPaint.color = REFERENCE_TEXT
 
         val baseline =
             rect.centerY() -
@@ -641,18 +641,7 @@ class RetroControlsView(context: Context) : View(context) {
         direction: Direction,
         rect: RectF
     ) {
-        val pressed = pressedDirection == direction
-
-        paint.style = Paint.Style.FILL
-        paint.color =
-            if (pressed) NAV_PRESSED else DIRECTION_KEY_FILL
-        canvas.drawRoundRect(
-            rect,
-            scaledDp(8f),
-            scaledDp(8f),
-            paint
-        )
-
+        // Visual square removed. The large square rect remains as the touch zone.
         drawDirectionIcon(
             canvas,
             direction,
@@ -699,7 +688,7 @@ class RetroControlsView(context: Context) : View(context) {
         )
 
         textPaint.textSize = scaledDp(12f)
-        textPaint.color = Color.WHITE
+        textPaint.color = REFERENCE_TEXT
 
         val baseline =
             okRect.centerY() -
@@ -773,7 +762,7 @@ class RetroControlsView(context: Context) : View(context) {
         }
 
         textPaint.textSize = scaledDp(UTILITY_TEXT_SIZE_DP)
-        textPaint.color = Color.BLACK
+        textPaint.color = REFERENCE_TEXT
 
         val baseline =
             undoRect.centerY() -
@@ -802,7 +791,7 @@ class RetroControlsView(context: Context) : View(context) {
         }
 
         textPaint.textSize = scaledDp(UTILITY_TEXT_SIZE_DP)
-        textPaint.color = Color.BLACK
+        textPaint.color = REFERENCE_TEXT
 
         val baseline =
             exitRect.centerY() -
@@ -845,6 +834,7 @@ class RetroControlsView(context: Context) : View(context) {
         val HOUSING_BORDER: Int = Color.rgb(150, 146, 153)
 
         val TEXT_PRIMARY: Int = Color.rgb(78, 76, 82)
+        val REFERENCE_TEXT: Int = Color.rgb(94, 86, 102)
         val KEY_PRESSED: Int = Color.argb(70, 103, 94, 113)
         val SEAM_HIGHLIGHT: Int = Color.argb(90, 255, 255, 255)
 
@@ -853,7 +843,6 @@ class RetroControlsView(context: Context) : View(context) {
         val NAV_SHADOW: Int = Color.rgb(104, 95, 111)
         val NAV_PRESSED: Int = Color.rgb(105, 93, 116)
         val NAV_ICON: Int = Color.rgb(236, 232, 240)
-        val DIRECTION_KEY_FILL: Int = Color.rgb(148, 136, 153)
 
         val CENTER_FILL: Int = Color.rgb(219, 214, 223)
         val CENTER_PRESSED: Int = Color.rgb(193, 185, 201)
