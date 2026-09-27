@@ -18,7 +18,7 @@ import kotlin.math.min
  * Bottom controls rebuilt from the user's silver feature-phone keypad reference.
  *
  * Functional mapping:
- * - upper-left key: 스테이지
+ * - upper-left key: 단계
  * - upper-right key: 리셋
  * - center NATE position: 확인
  * - four areas around center: UP / DOWN / LEFT / RIGHT
@@ -562,7 +562,7 @@ class RetroControlsView(context: Context) : View(context) {
     private fun drawSideSeparators(canvas: Canvas) {
         /*
          * Reference-phone panel seams between the upper and lower side keys.
-         * These divide 스테이지 from 취소 and 리셋 from 종료.
+         * These divide 단계 from 취소 and 리셋 from 종료.
          */
         val sh = shellRect.height()
         val seamY = shellRect.top + sh * 0.46f
@@ -611,7 +611,7 @@ class RetroControlsView(context: Context) : View(context) {
         drawTopKey(
             canvas = canvas,
             rect = stageRect,
-            label = "스테이지",
+            label = "단계",
             pressed = pressedSoftKey == SoftKey.STAGE
         )
 
