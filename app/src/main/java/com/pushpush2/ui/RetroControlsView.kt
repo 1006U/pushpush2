@@ -877,7 +877,7 @@ class RetroControlsView(context: Context) : View(context) {
         const val REPEAT_INTERVAL_MS = 110L
         const val BASE_CONTROL_HEIGHT_DP = 248
         const val MIN_CONTROL_SCALE = 0.58f
-        const val UTILITY_TEXT_SIZE_DP = 17f
+        const val UTILITY_TEXT_SIZE_DP = 23f
         const val CONFIRM_TEXT_SIZE_DP = 15f
 
         val HOUSING_BASE: Int = Color.rgb(215, 213, 218)
