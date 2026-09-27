@@ -22,7 +22,7 @@ import kotlin.math.min
  * - upper-right key: 리셋
  * - center NATE position: 확인
  * - four areas around center: UP / DOWN / LEFT / RIGHT
- * - lower-left alarm position: 돌아가기 (one-step undo)
+ * - lower-left alarm position: 취소 (one-step undo)
  * - lower-right end key: exit
  */
 class RetroControlsView(context: Context) : View(context) {
@@ -513,7 +513,7 @@ class RetroControlsView(context: Context) : View(context) {
     private fun drawSideSeparators(canvas: Canvas) {
         /*
          * Reference-phone panel seams between the upper and lower side keys.
-         * These divide 스테이지 from 돌아가기 and 리셋 from 종료.
+         * These divide 스테이지 from 취소 and 리셋 from 종료.
          */
         val sh = shellRect.height()
         val seamY = shellRect.top + sh * 0.46f
@@ -771,7 +771,7 @@ class RetroControlsView(context: Context) : View(context) {
                 (textPaint.descent() + textPaint.ascent()) / 2f
 
         canvas.drawText(
-            "돌아가기",
+            "취소",
             undoRect.centerX(),
             baseline,
             textPaint
