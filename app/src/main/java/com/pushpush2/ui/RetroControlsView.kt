@@ -508,68 +508,75 @@ class RetroControlsView(context: Context) : View(context) {
 
     private fun drawSectionDividers(canvas: Canvas) {
         /*
-         * The supplied photo is only a layout reference. Use thin, uniform
-         * separators so the keypad reads as one clean control surface rather
-         * than a set of heavy hand-drawn partitions.
-         *
-         * These lines are visual only; touch rectangles stay unchanged.
+         * Match the subtle panel seams in the supplied feature-phone photo.
+         * These are deliberately thin grey dividers, not heavy black strokes.
+         * Touch geometry is independent and remains unchanged.
          */
         paint.shader = null
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(2.4f)
+        paint.strokeWidth = scaledDp(1.5f)
         paint.strokeCap = Paint.Cap.ROUND
         paint.strokeJoin = Paint.Join.ROUND
-        paint.color = Color.rgb(36, 36, 36)
+        paint.color = Color.rgb(96, 94, 86)
 
         val sw = shellRect.width()
         val sh = shellRect.height()
-        val edgeGap = scaledDp(1.5f)
+        val gap = scaledDp(1f)
 
-        // Upper separators meet the top edge of the navigation pad cleanly.
+        /*
+         * Top seams: almost vertical, with a slight outward flare toward the
+         * D-pad just like the original keypad.
+         */
         canvas.drawLine(
-            navRect.left,
-            shellRect.top + sh * 0.012f,
-            navRect.left,
-            navRect.top + edgeGap,
+            navRect.left + scaledDp(1.5f),
+            shellRect.top + sh * 0.015f,
+            navRect.left - gap,
+            navRect.top + scaledDp(2f),
             paint
         )
         canvas.drawLine(
-            navRect.right,
-            shellRect.top + sh * 0.012f,
-            navRect.right,
-            navRect.top + edgeGap,
-            paint
-        )
-
-        // Side separators split the upper utility keys from the call/end row.
-        canvas.drawLine(
-            shellRect.left + edgeGap,
-            shellRect.top + sh * 0.46f,
-            navRect.left - edgeGap,
-            shellRect.top + sh * 0.57f,
-            paint
-        )
-        canvas.drawLine(
-            navRect.right + edgeGap,
-            shellRect.top + sh * 0.58f,
-            shellRect.right - edgeGap,
-            shellRect.top + sh * 0.48f,
+            navRect.right - scaledDp(1.5f),
+            shellRect.top + sh * 0.015f,
+            navRect.right + gap,
+            navRect.top + scaledDp(2f),
             paint
         )
 
-        // Lower separators frame the 돌아가기 area without touching the edge.
+        /*
+         * Middle seams: shallow diagonals separating the upper soft-key area
+         * from the green/red phone-key row.
+         */
         canvas.drawLine(
-            navRect.left + edgeGap,
-            navRect.bottom - edgeGap,
-            shellRect.left + sw * 0.245f,
-            shellRect.bottom - edgeGap,
+            shellRect.left + scaledDp(1f),
+            shellRect.top + sh * 0.435f,
+            navRect.left - gap,
+            shellRect.top + sh * 0.555f,
             paint
         )
         canvas.drawLine(
-            navRect.right - edgeGap,
-            navRect.bottom - edgeGap,
-            shellRect.right - sw * 0.245f,
-            shellRect.bottom - edgeGap,
+            navRect.right + gap,
+            shellRect.top + sh * 0.555f,
+            shellRect.right - scaledDp(1f),
+            shellRect.top + sh * 0.435f,
+            paint
+        )
+
+        /*
+         * Bottom seams: nearly vertical, leaning gently inward around the
+         * 돌아가기 key.
+         */
+        canvas.drawLine(
+            navRect.left + gap,
+            navRect.bottom - scaledDp(1.5f),
+            shellRect.left + sw * 0.255f,
+            shellRect.bottom - scaledDp(1f),
+            paint
+        )
+        canvas.drawLine(
+            navRect.right - gap,
+            navRect.bottom - scaledDp(1.5f),
+            shellRect.right - sw * 0.255f,
+            shellRect.bottom - scaledDp(1f),
             paint
         )
     }
@@ -603,8 +610,8 @@ class RetroControlsView(context: Context) : View(context) {
     ) {
         /*
          * The reference layout does not need a separate outline around these
-         * utility keys. Their region is defined by the heavy black section
-         * separators. Keep only a subtle pressed fill for touch feedback.
+         * utility keys. Their region is defined by the thin section seams.
+         * Keep only a subtle pressed fill for touch feedback.
          */
         if (pressed) {
             paint.style = Paint.Style.FILL
