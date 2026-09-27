@@ -2,33 +2,29 @@
 
 Flash(SWF) 기반 **푸시푸시(PUSH II)** 를 Flash 런타임 없이 Android/Kotlin으로 재구현하는 프로젝트입니다.
 
-저장소:
+## 브랜치
 
-```text
-https://github.com/1006U/pushpush2
-branch: main
-```
+현재 유지하는 주요 브랜치:
+
+- `main` — 일반 Android 스마트폰용 기준 브랜치
+- `lenovo-k10-pro-android13` — Lenovo K10 Pro / Android 13 태블릿 전용 브랜치
+- `blackberry-classic` — BlackBerry Classic / BB10 Android Runtime 전용 브랜치
+
+`chatgpt/*` 브랜치는 과거 기능 실험/중간 작업 스냅샷입니다.
 
 ## 개발 환경
 
-현재 기준 환경:
-
 - Windows 11
 - Android Studio
-- GitHub
-- 웹 ChatGPT + GitHub 연동
 - JDK 17
 - AGP 8.13.2
 - Gradle 8.13
-- minSdk 24 (Android 7.0 / Galaxy S8)
-- compileSdk 36
-- targetSdk 36
-
-로컬 작업 경로 예시:
-
-```text
-C:\Dev\Android\pushpush2
-```
+- applicationId: `com.pushpush2`
+- versionCode: `2`
+- versionName: `0.1.1`
+- minSdk: 24
+- compileSdk: 36
+- targetSdk: 36
 
 ## 현재 구현 상태
 
@@ -39,13 +35,16 @@ C:\Dev\Android\pushpush2
 - 원본 SWF의 실제 퍼즐 스테이지 **66개** 이식
 - SharedPreferences 기반 진행 상황 저장
 - 스테이지 클리어 시 다음 스테이지 해금
-- 클리어 팝업 없이 자동으로 다음 스테이지 진행
-- 66 스테이지 클리어 후 Game Clear 화면 표시
-- STAGE 선택 / RESET / 하드웨어 키 입력 지원
+- 클리어 후 자동으로 다음 스테이지 진행
+- 66 스테이지 완료 후 Game Clear 화면
+- 스테이지 선택 / 리셋 / 하드웨어 키 입력
+- 이동 불가 시 진동 피드백
+  - 벽 충돌
+  - 맵 경계
+  - 박스 뒤 벽/박스/경계로 밀 수 없는 경우
+- 스테이지 클리어 반응 문구는 다음 스테이지 첫 정상 이동 전까지 유지
 
-### 원본 SWF 분석
-
-원본 분석 결과:
+### 원본 SWF 기준
 
 - SWF 버전: 6
 - 원본 화면: 240 × 250 px
@@ -55,31 +54,37 @@ C:\Dev\Android\pushpush2
 - frame 67: 엔딩
 - frame 68: 빈 프레임
 
-원본 주요 심볼:
+주요 심볼:
 
 - `brick` → 벽
 - `house` → 목표
 - `ball` → 박스
 - `charater` → 플레이어
 
-자세한 분석:
+자세한 내용은 `docs/ORIGINAL_SWF_NOTES.md` 참고.
 
-```text
-docs/ORIGINAL_SWF_NOTES.md
-```
+## 그래픽 진행상황
 
-## 현재 그래픽
+현재 완료된 항목:
 
-현재 `main`은 원작 피처폰 화면을 기준으로 픽셀아트 UI를 재구성하고 있습니다.
+- 사용자 제공 원본 기반 벽돌 픽셀아트 적용
+- 피처폰 캡처에서 생긴 불필요한 벽돌 줄무늬 정리
+- 벽돌 내부 색상 톤 보정
+- 연결된 벽이 끊겨 보이지 않도록 렌더링 보정
+- 원본 기준 1~66 스테이지 벽돌 배치 시각 검증
+- 바깥 모서리 장식 벽돌 보정
+- 목표 집 이미지 최종 반영
+- 목표 성공 애니메이션 적용
+- 플레이어 대기/성공 반응 애니메이션
+- Game Clear 화면 적용
 
-### 게임 타일
+주요 리소스:
 
 ```text
 app/src/main/res/drawable-nodpi/
 ├── tile_brick.png
 ├── tile_goal.png
 ├── tile_goal_after_02.png
-├── tile_goal_after_03.png
 ├── ...
 ├── tile_goal_after_11.png
 ├── tile_box.png
@@ -87,49 +92,34 @@ app/src/main/res/drawable-nodpi/
 └── game_clear_screen.webp
 ```
 
-현재 적용 상태:
+## 현재 UI
 
-- 벽돌: 사용자 제공 원본 벽돌을 기반으로 한 56×56 픽셀아트 리소스
-- 실제 게임 벽도 `tile_brick.png`를 직접 렌더링
-- 내부 통로: 원본 대각선 타일 bitmap을 nearest-neighbor로 확대
-- 공을 넣기 전 목표 집: 노란 집 픽셀아트
-- 목표 성공 애니메이션: `tile_goal_after_02 ~ 11`
-- 이미지 확대 시 bitmap filtering을 끄고 픽셀 경계를 유지
-- Game Clear 화면은 별도 `game_clear_screen.webp` 리소스로 표시
-
-### 플레이어
-
-플레이어는 원본 Sprite 370의 타이밍을 기준으로 동작합니다.
-
-- frame 1~70: 대기 / 눈 깜빡임
-- frame 71~76: 목표 성공 반응
-- 10 fps 기준
-- 현재 인게임 캐릭터는 사용자 지정 픽셀 캐릭터 사용
-- 상단 UI에는 별도의 리마스터 캐릭터 이미지 사용
-
-## UI
-
-현재 Android UI는 원본 240×250 화면을 그대로 레터박스로 복제하지 않고 스마트폰 화면에 맞게 확장합니다.
+게임 화면은 스마트폰 비율에 맞게 반응형으로 구성합니다.
 
 - 상단: 캐릭터 + 대사 패널
 - 중앙: 반응형 퍼즐 보드
-- 하단: `STAGE` / `STEP` 상태바
-- 최하단: 피처폰 키패드형 터치 조작부
-- 보드는 스테이지 크기에 따라 자동 확대/축소
-- 작은 화면에서도 전체 스테이지가 잘리지 않도록 조정
-- Galaxy S8 / S10 실기기 기준을 포함
+- 하단 상태바: `STAGE` / `STEP`
+- 최하단: 피처폰 스타일 터치 조작부
+
+현재 터치 조작부:
+
+- 좌상단: **단계**
+- 우상단: **리셋**
+- 좌하단: **취소**
+  - 실제 기능은 1스텝 Undo
+- 우하단: **종료**
+- 중앙: **확인**
+- 상 / 하 / 좌 / 우 방향 조작
+
+UI 표시 영역과 실제 터치영역은 분리되어 있습니다.
+
+- 방향 화살표의 시각적 크기는 유지
+- 상/하 터치영역은 넓은 가로 영역으로 확장
+- 좌/우 터치영역은 넓은 세로 영역으로 확장
+- 확인 터치영역은 중앙에서 별도로 조정
+- 단계/리셋/취소/종료/확인 글씨 크기 확대
 
 ## 사운드
-
-현재 `res/raw`에 포함된 사운드:
-
-```text
-app/src/main/res/raw/
-├── button.mp3
-├── clear.mp3
-├── move.mp3
-└── success.mp3
-```
 
 현재 연결:
 
@@ -138,18 +128,14 @@ app/src/main/res/raw/
 - 스테이지 클리어 → `clear.mp3`
 - UI 버튼 → `button.mp3`
 
-`start.mp3`는 이전 작업에서 제거되어 현재 자동 재생하지 않습니다.
+목표 진입 후 전체 사운드가 멈추던 문제는 수정 완료했습니다.
 
-### 사운드 상태
-
-목표 진입 후 사운드가 멈추던 문제는 수정되었으며, 현재는 효과음 재생 흐름을 정리한 상태입니다.
-
-- 목표 진입 시 중복 효과음 재생 방지
+- 목표 진입 시 move/success 중복 재생 방지
 - 이전 재생 인스턴스 안전 정리
-- 목표 성공 효과음 정상 재생
+- 원본 success 사운드 복원
 - 실기기 기준 동작 검증 완료
 
-## GitHub Actions
+## 테스트 / CI
 
 Workflow:
 
@@ -163,16 +149,16 @@ Workflow:
 ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
 ```
 
-추가로:
+추가 검증:
 
-- Android 7.0 / API 24 emulator smoke test
-- Android 16 / API 36 emulator smoke test
+- 66개 스테이지 구조 회귀 테스트
+- 전체 벽 배치 fingerprint 테스트
+- API 24 emulator smoke test
+- API 36 emulator smoke test
 - Debug APK Artifact
-- API별 화면 캡처 Artifact
+- API별 screenshot Artifact
 
-최근 `main`의 Android CI #140은 성공했습니다.
-
-## 친구 배포용 APK
+## 친구 배포용 Signed APK
 
 Workflow:
 
@@ -180,7 +166,11 @@ Workflow:
 .github/workflows/friend-release.yml
 ```
 
-GitHub Secrets:
+Signed Friend Release APK 생성 및 기존 설치본 업데이트 설치 확인까지 완료했습니다.
+
+릴리즈 키는 저장소에 포함하지 않고 GitHub Secrets 또는 로컬 keystore로 관리합니다.
+
+필요한 Secrets:
 
 ```text
 ANDROID_KEYSTORE_BASE64
@@ -189,59 +179,17 @@ ANDROID_KEY_ALIAS
 ANDROID_KEY_PASSWORD
 ```
 
-자세한 배포 방법:
-
-```text
-RELEASING.md
-```
-
-## 프로젝트 구조
-
-```text
-pushpush2/
-├── .github/workflows/
-│   ├── android-ci.yml
-│   └── friend-release.yml
-├── app/src/main/
-│   ├── java/com/pushpush2/
-│   │   ├── MainActivity.kt
-│   │   ├── audio/AudioPlayer.kt
-│   │   ├── data/ProgressStore.kt
-│   │   ├── game/
-│   │   │   ├── Direction.kt
-│   │   │   ├── GameEngine.kt
-│   │   │   ├── GameState.kt
-│   │   │   ├── Position.kt
-│   │   │   ├── Stage.kt
-│   │   │   └── StageRepository.kt
-│   │   └── ui/
-│   │       ├── GameView.kt
-│   │       ├── HeaderCharacterAsset.kt
-│   │       ├── OriginalAnimationFrames.kt
-│   │       ├── RetroControlsView.kt
-│   │       ├── StageLayoutPolicy.kt
-│   │       └── StageSelectView.kt
-│   └── res/
-│       ├── drawable-nodpi/
-│       └── raw/
-├── docs/ORIGINAL_SWF_NOTES.md
-├── original/README.md
-├── tools/
-├── HANDOFF.md
-├── PROJECT_STATUS.md
-├── README.md
-└── RELEASING.md
-```
+자세한 내용은 `RELEASING.md` 참고.
 
 ## 현재 남은 주요 작업
 
-- [ ] Galaxy S8 실제 화면 테스트
-- [ ] Galaxy S10 실제 화면 테스트
-- [ ] 66개 스테이지 실제 플레이 검증
+- [ ] Galaxy S8 실제 화면 최종 테스트
+- [ ] Galaxy S10 실제 화면 최종 테스트
+- [ ] 66개 스테이지 실제 플레이 완주 검증
 
-## 새 ChatGPT 대화에서 이어서 개발
+## 새 대화에서 이어서 개발
 
-새 대화에서는 아래 파일을 먼저 확인합니다.
+먼저 확인할 파일:
 
 ```text
 HANDOFF.md
@@ -250,11 +198,9 @@ README.md
 docs/ORIGINAL_SWF_NOTES.md
 ```
 
-시작 문장 예시:
+시작 예시:
 
 ```text
-GitHub 연동으로 1006U/pushpush2의 HANDOFF.md와 PROJECT_STATUS.md를 읽고
-main 최신 상태와 GitHub Actions 결과를 확인한 뒤 이어서 개발해줘.
+GitHub 연동으로 1006U/pushpush2의 main 최신 상태와
+HANDOFF.md / PROJECT_STATUS.md / README.md를 확인한 뒤 이어서 개발해줘.
 ```
-
-원본 `game.swf` 자체를 추가 분석해야 하는 작업에서는 원본 파일을 다시 제공해야 합니다.
