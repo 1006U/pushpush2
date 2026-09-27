@@ -399,7 +399,7 @@ class MainActivity : Activity() {
                 _,
                 _,
                 _ ->
-            applyStageResponsiveLayout()
+            applyFixedGameLayout()
         }
 
         return rootView
@@ -825,12 +825,12 @@ class MainActivity : Activity() {
 
         if (::rootView.isInitialized) {
             rootView.post {
-                applyStageResponsiveLayout()
+                applyFixedGameLayout()
             }
         }
     }
 
-    private fun applyStageResponsiveLayout() {
+    private fun applyFixedGameLayout() {
         if (
             !::rootView.isInitialized ||
             !::gameView.isInitialized ||
@@ -851,15 +851,17 @@ class MainActivity : Activity() {
         if (width <= 0 || contentHeight <= 0) return
         if (headerBar.measuredHeight <= 0 || statusBar.measuredHeight <= 0) return
 
-        val stage = engine.state.stage
         val controlsPanelPadding =
             controlsPanel.paddingTop + controlsPanel.paddingBottom
 
+        /*
+         * The board viewport is deliberately independent of stage.width /
+         * stage.height. GameView scales and centers each map inside this fixed
+         * viewport, so changing stages never moves the status bar or keypad.
+         */
         val allocation = StageLayoutPolicy.allocate(
             contentWidthPx = width,
             contentHeightPx = contentHeight,
-            stageWidth = stage.width,
-            stageHeight = stage.height,
             fixedChromeHeightPx =
                 headerBar.measuredHeight +
                     statusBar.measuredHeight +
