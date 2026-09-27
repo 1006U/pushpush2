@@ -1,14 +1,16 @@
 package com.pushpush2.ui
 
-import kotlin.math.ceil
 import kotlin.math.min
 
 /**
- * Pure layout math for keeping the stage and bottom controls visible together.
+ * Pure layout math for keeping the game board and bottom controls at a stable
+ * ratio on a given device.
  *
- * The stage may vary from wide to tall across the original 66 maps. This
- * allocator caps the stage height whenever necessary so a minimum touch-control
- * area is always reserved.
+ * The original 66 stages have very different row/column counts. The visible
+ * GameView height must not follow those stage dimensions, otherwise the keypad
+ * jumps up and down whenever the stage changes. Instead the board viewport is
+ * square whenever the screen has enough height, and only shrinks when needed
+ * to preserve the minimum control area.
  */
 internal object StageLayoutPolicy {
 
@@ -20,8 +22,6 @@ internal object StageLayoutPolicy {
     fun allocate(
         contentWidthPx: Int,
         contentHeightPx: Int,
-        stageWidth: Int,
-        stageHeight: Int,
         fixedChromeHeightPx: Int,
         boardHorizontalInsetPx: Int,
         boardVerticalInsetPx: Int,
@@ -30,21 +30,14 @@ internal object StageLayoutPolicy {
     ): Allocation {
         require(contentWidthPx > 0)
         require(contentHeightPx > 0)
-        require(stageWidth > 0)
-        require(stageHeight > 0)
 
         val usableBoardWidth =
             (contentWidthPx - boardHorizontalInsetPx * 2)
                 .coerceAtLeast(1)
 
-        val desiredCell =
-            usableBoardWidth.toDouble() / stageWidth.toDouble()
-
+        // Keep the board viewport at a fixed 1:1 ratio on every stage.
         val desiredBoardHeight =
-            ceil(
-                desiredCell * stageHeight +
-                    boardVerticalInsetPx * 2
-            ).toInt()
+            usableBoardWidth + boardVerticalInsetPx * 2
 
         val availableForBoardAndControls =
             (contentHeightPx - fixedChromeHeightPx)
