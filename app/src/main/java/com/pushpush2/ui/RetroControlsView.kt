@@ -314,53 +314,55 @@ class RetroControlsView(context: Context) : View(context) {
         )
 
         /*
-         * Keep the soft keys physically separated from the D-pad.
+         * Prioritise the four directional touch zones:
+         * - enlarge the D-pad in both axes
+         * - shrink STAGE / RESET / OK / EXIT
+         * - keep explicit dead space between every functional control
          *
-         * Previously STAGE/RESET extended to 27.5% from each side while the
-         * D-pad began at 25.5%, so their real touch rectangles overlapped.
-         * A touch near LEFT/RIGHT could therefore trigger STAGE or RESET.
-         * These bounds leave a clear 6.5% shell-width dead gap on both sides.
+         * This makes direction input much easier while preventing nearby
+         * utility buttons from stealing an imprecise thumb touch.
          */
         stageRect.set(
-            shellRect.left + sw * 0.035f,
+            shellRect.left + sw * 0.04f,
             shellRect.top + sh * 0.10f,
-            shellRect.left + sw * 0.225f,
-            shellRect.top + sh * 0.405f
+            shellRect.left + sw * 0.18f,
+            shellRect.top + sh * 0.34f
         )
 
         resetRect.set(
-            shellRect.right - sw * 0.225f,
+            shellRect.right - sw * 0.18f,
             shellRect.top + sh * 0.10f,
-            shellRect.right - sw * 0.035f,
-            shellRect.top + sh * 0.405f
+            shellRect.right - sw * 0.04f,
+            shellRect.top + sh * 0.34f
         )
 
         navRect.set(
-            shellRect.left + sw * 0.290f,
-            shellRect.top + sh * 0.185f,
-            shellRect.right - sw * 0.290f,
-            shellRect.top + sh * 0.715f
+            shellRect.left + sw * 0.235f,
+            shellRect.top + sh * 0.145f,
+            shellRect.right - sw * 0.235f,
+            shellRect.top + sh * 0.765f
         )
 
+        // Smaller OK key leaves a larger usable ring for UP/DOWN/LEFT/RIGHT.
         okRect.set(
-            navRect.left + navRect.width() * 0.255f,
-            navRect.top + navRect.height() * 0.29f,
-            navRect.right - navRect.width() * 0.255f,
-            navRect.bottom - navRect.height() * 0.29f
+            navRect.left + navRect.width() * 0.34f,
+            navRect.top + navRect.height() * 0.36f,
+            navRect.right - navRect.width() * 0.34f,
+            navRect.bottom - navRect.height() * 0.36f
         )
 
         bottomCancelRect.set(
-            shellRect.left + sw * 0.35f,
-            shellRect.top + sh * 0.78f,
-            shellRect.right - sw * 0.35f,
-            shellRect.bottom - sh * 0.035f
+            shellRect.left + sw * 0.42f,
+            shellRect.top + sh * 0.84f,
+            shellRect.right - sw * 0.42f,
+            shellRect.bottom - sh * 0.06f
         )
 
         exitRect.set(
-            shellRect.right - sw * 0.30f,
-            shellRect.top + sh * 0.68f,
+            shellRect.right - sw * 0.16f,
+            shellRect.top + sh * 0.79f,
             shellRect.right - sw * 0.04f,
-            shellRect.bottom - sh * 0.035f
+            shellRect.bottom - sh * 0.06f
         )
     }
 
@@ -672,7 +674,7 @@ class RetroControlsView(context: Context) : View(context) {
             paint
         )
 
-        textPaint.textSize = scaledDp(17f)
+        textPaint.textSize = scaledDp(15f)
         textPaint.color = TEXT_DARK
 
         val baseline =
@@ -738,7 +740,7 @@ class RetroControlsView(context: Context) : View(context) {
         cy: Float
     ) {
         val pressed = pressedDirection == direction
-        val size = scaledDp(7f)
+        val size = scaledDp(9f)
 
         val path = Path().apply {
             when (direction) {
@@ -782,9 +784,9 @@ class RetroControlsView(context: Context) : View(context) {
 
         val leftPhone = RectF(
             shellRect.left + sw * 0.04f,
-            shellRect.top + sh * 0.68f,
-            shellRect.left + sw * 0.30f,
-            shellRect.bottom - sh * 0.035f
+            shellRect.top + sh * 0.79f,
+            shellRect.left + sw * 0.16f,
+            shellRect.bottom - sh * 0.06f
         )
 
         drawDecorativeKey(canvas, leftPhone)
