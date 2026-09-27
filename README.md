@@ -1,298 +1,119 @@
-# PushPush 2 Android Port
+# PushPush 2 — BlackBerry Classic
 
-기존 Flash(SWF) 기반 **푸시푸시**를 Android 스마트폰에서 플레이할 수 있도록 네이티브 Android 앱으로 재구현하는 프로젝트입니다.
-
-## 개발 환경
-
-현재 개발 기준 환경:
-
-- **Windows 11**
-- **Android Studio**
-- **GitHub**
-- **웹 ChatGPT + GitHub MCP**
-
-WSL2, Docker, 로컬 MCP 서버는 사용하지 않습니다.
-
-작업 흐름:
+이 브랜치는 **BlackBerry Classic(Q20) / BlackBerry 10 Android Runtime** 전용 호환 버전입니다.
 
 ```text
-웹 ChatGPT
-→ GitHub MCP
-→ 1006U/pushpush2 코드 수정
-→ Windows 11에서 git pull
-→ Android Studio 실행/테스트
+branch: blackberry-classic
+applicationId: com.pushpush2.blackberry
+versionName: 0.1.0-bb10
+minSdk: 18
+targetSdk: 18
+compileSdk: 36
 ```
+
+일반 Android 스마트폰용 `main`과 독립적으로 유지합니다.
 
 ## 현재 구현 상태
 
-- Android 앱 기본 프로젝트
-- Kotlin 기반 Sokoban 게임 엔진
+공통 게임 기능:
+
+- Kotlin Sokoban 엔진
+- 원본 SWF의 66개 스테이지
 - 벽 충돌 / 박스 밀기 / 목표 판정
-- 원본 SWF에서 **실제 스테이지 66개 추출 및 이식**
-- 터치 방향패드
-- 스테이지 재시작
-- 스테이지 선택
-- 클리어 후 다음 스테이지 해금
-- SharedPreferences 기반 진행상황 저장
-- 원본 벽 / 목표 / 박스 / 플레이어 기본 그래픽 추출
-- 원본 14×14 픽셀 그래픽 적용
-- 원본 사운드 추출 스크립트 추가
-- 이동 / 클리어 / 버튼 사운드 연결 코드 추가
-- GitHub Actions Android 빌드 CI 추가
-- GameEngine JVM 회귀 테스트 + 66개 스테이지 구조 무결성 테스트
-- Galaxy S8(Android 7.0/API 24)부터 지원
-- Android 16(API 36) compileSdk/targetSdk 대응
-- CI에서 API 24 / API 36 에뮬레이터 실제 실행 및 화면 캡처
+- 진행 상황 저장 및 스테이지 해금
+- 자동 다음 스테이지 진행
+- 66 스테이지 완료 후 Game Clear 화면
+- 목표 성공/클리어 사운드
+- 이동 불가 시 진동 피드백
+- 목표 진입 후 사운드 중단 문제 수정
+- 클리어 반응을 다음 스테이지 첫 이동 전까지 유지
 
-플레이어는 원본 Sprite 370의 1~70프레임 대기/눈 깜빡임과 71~76프레임 성공 반응 타이밍을 재현합니다.
-현재 인게임 캐릭터 그래픽은 사용자 제공 캐릭터를 14×14 픽셀 타일에 맞춰 사용합니다.
+## BlackBerry 전용 UI
 
-## 원본 SWF 분석 결과
+BlackBerry Classic에는 물리 QWERTY 키보드가 있으므로 `main`의 스마트폰용 하단 터치 조작 패널을 제거했습니다.
 
-- Flash/SWF 버전: **6**
-- 원본 화면 크기: **240 × 250 px**
-- 프레임 속도: **10 fps**
-- 실제 퍼즐 스테이지: **66개**
-- 원본 퍼즐 격자 간격: **14 px**
-- `stage_map` 프레임 1~66: 퍼즐 스테이지
-- 프레임 67: 엔딩
-- 프레임 68: 빈 프레임
+화면 구성:
 
-주요 심볼:
+- 상단 캐릭터/대사 패널
+- 중앙 게임 보드
+- 하단 `STAGE / STEP` 상태바
+- 별도 터치 D-pad 없음
 
-- `brick` → 벽
-- `house` → 목표
-- `ball` → 박스
-- `charater` → 플레이어
+## 물리 키 조작
 
-원본 사운드:
-
-- `success.wav`
-- `start.wav`
-- `move.wav`
-- `clear.wav`
-- `button.wav`
-
-실제 DefineSound 데이터는 MP3 형식입니다.
-
-자세한 분석:
+기본 매핑:
 
 ```text
-docs/ORIGINAL_SWF_NOTES.md
+        T
+     F  G  H
+        V
+
+T = 위
+V = 아래
+F = 왼쪽
+H = 오른쪽
+G = 확인
+
+P = 리셋
+Q = 스테이지 선택
 ```
 
-## Windows 11에서 프로젝트 받기
+호환용으로 DPAD와 WASD 입력도 유지합니다.
 
-PowerShell:
+스테이지 선택 화면에서도 T/V/F/H 이동과 G 확인을 사용할 수 있습니다.
+
+Game Clear 화면에서는 G가 확인 키로 동작합니다.
+
+## 진동
+
+모든 이동 실패 상황에서 진동하도록 구현되어 있습니다.
+
+- 벽 충돌
+- 맵 경계
+- 박스를 더 이상 밀 수 없는 상황
+
+BB10 Android Runtime 호환을 위해 API 18의 legacy vibration API를 사용합니다.
+
+## 빌드
 
 ```powershell
-cd C:\Users\kim\Documents
 git clone https://github.com/1006U/pushpush2.git
 cd pushpush2
-```
-
-이미 clone했다면:
-
-```powershell
-cd C:\Users\kim\Documents\pushpush2
-git pull
-```
-
-## 원본 SWF 넣기
-
-첨부한 원본 파일을 Windows 프로젝트에:
-
-```text
-C:\Users\kim\Documents\pushpush2\original\game.swf
-```
-
-로 넣습니다.
-
-`original/*`는 `.gitignore` 처리되어 GitHub에 올라가지 않습니다.
-
-## 원본 사운드 추출
-
-원본 SWF를 위 경로에 넣은 뒤 PowerShell에서:
-
-```powershell
-cd C:\Users\kim\Documents\pushpush2
-py tools\extract_original_audio.py
-```
-
-실행합니다.
-
-성공하면 자동으로:
-
-```text
-app\src\main\res\raw\
-├── success.mp3
-├── start.mp3
-├── move.mp3
-├── clear.mp3
-└── button.mp3
-```
-
-가 생성됩니다.
-
-앱 코드는 해당 파일이 존재할 경우 자동으로 재생합니다.
-
-현재 연결된 동작:
-
-- 이동 성공 → `move.mp3`
-- 박스를 목표에 넣음 → `success.mp3`
-- 스테이지 클리어 → `clear.mp3`
-- 스테이지 선택 / 재시작 / 다음 스테이지 → `button.mp3`
-- 인트로 제거에 따라 `start` 사운드는 현재 자동 재생하지 않음
-
-## Android Studio에서 실행
-
-Android Studio:
-
-```text
-File
-→ Open
-→ C:\Users\kim\Documents\pushpush2
-```
-
-Gradle Sync 완료 후 에뮬레이터 또는 실제 스마트폰에서 **Run ▶** 을 실행합니다.
-
-## PowerShell에서 Debug APK 빌드
-
-```powershell
+git checkout blackberry-classic
 .\gradlew.bat assembleDebug
 ```
 
-성공 시:
+Debug APK:
 
 ```text
 app\build\outputs\apk\debug\app-debug.apk
 ```
 
-## GitHub Actions 자동 빌드
+일반 Android 앱과 패키지 ID가 다르므로 별도 앱으로 설치할 수 있습니다.
 
-`main` 브랜치에 코드가 올라가면 GitHub Actions가:
+## CI
 
-```text
-./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
-```
-
-를 자동 실행합니다.
-
-성공하면 Actions 실행 결과에 Debug APK와 API별 smoke screenshot Artifact가 생성됩니다.
+브랜치 관련 workflow:
 
 ```text
-pushpush2-debug-apk
-pushpush2-smoke-api-24
-pushpush2-smoke-api-36
-```
-
-따라서 로컬 Android Studio를 열기 전에도 GitHub에서 컴파일 오류를 확인할 수 있습니다.
-
-## 친구 배포용 Signed Release APK
-
-Google Play 공개 없이 친구에게 직접 전달하는 배포 workflow가 있습니다.
-
-```text
+.github/workflows/android-ci.yml
+.github/workflows/blackberry-ci.yml
 .github/workflows/friend-release.yml
 ```
 
-서명키는 저장소에 올리지 않고 GitHub Actions Secrets로만 주입합니다.
+## 현재 남은 주요 작업
 
-필요한 Secret:
+- [ ] BlackBerry Classic 실제 기기에서 최신 APK 실행 재검증
+- [ ] BB10 10.3.x 물리 키 매핑 최종 확인
+- [ ] 실제 기기 진동 동작 확인
+- [ ] BlackBerry 전용 Signed APK 업데이트 설치 검증
 
-```text
-ANDROID_KEYSTORE_BASE64
-ANDROID_KEYSTORE_PASSWORD
-ANDROID_KEY_ALIAS
-ANDROID_KEY_PASSWORD
-```
+## 브랜치 관계
 
-Actions의 **Friend Release APK**를 수동 실행하면서 `version_name`을 지정하거나,
-`v0.1.0`처럼 `v`로 시작하는 태그를 push하면 서명된 APK Artifact를 생성합니다.
+- `main`: 일반 Android 스마트폰
+- `lenovo-k10-pro-android13`: Lenovo Android 13 태블릿
+- `blackberry-classic`: BlackBerry Classic 전용
 
-예:
+`main`의 최신 터치 UI 변경은 이 브랜치에 자동으로 합쳐지지 않습니다. BlackBerry 버전은 물리 키 중심 UI를 유지합니다.
 
-```text
-PushPush2-v0.1.0.apk
-```
-
-GitHub Release를 자동 공개하지 않으므로, 생성된 APK를 직접 내려받아
-카카오톡 / Google Drive / NAS 등으로 친구에게 전달합니다.
-
-최초 keystore 생성과 GitHub Secrets 등록 방법은 `RELEASING.md`를 참고하세요.
-
-## 현재 프로젝트 구조
-
-```text
-pushpush2/
-├── .github/
-│   └── workflows/
-│       └── android-ci.yml
-├── app/
-│   └── src/main/
-│       ├── java/com/pushpush2/
-│       │   ├── MainActivity.kt
-│       │   ├── audio/
-│       │   │   └── AudioPlayer.kt
-│       │   ├── data/
-│       │   │   └── ProgressStore.kt
-│       │   ├── game/
-│       │   │   ├── Direction.kt
-│       │   │   ├── GameEngine.kt
-│       │   │   ├── GameState.kt
-│       │   │   ├── Position.kt
-│       │   │   ├── Stage.kt
-│       │   │   └── StageRepository.kt
-│       │   └── ui/
-│       │       └── GameView.kt
-│       └── res/
-│           ├── drawable-nodpi/
-│           │   ├── tile_brick.png
-│           │   ├── tile_goal.png
-│           │   ├── tile_box.png
-│           │   └── tile_player.png
-│           └── values/
-├── docs/
-│   └── ORIGINAL_SWF_NOTES.md
-├── original/
-│   └── README.md
-├── tools/
-│   └── extract_original_audio.py
-├── PROJECT_STATUS.md
-├── README.md
-├── build.gradle.kts
-├── settings.gradle.kts
-├── gradlew
-└── gradlew.bat
-```
-
-## 다음 작업
-
-1. Galaxy S8 / S10 실기기에서 게임 영역과 D-pad 크기 미세 조정
-2. 66개 스테이지 실제 플레이 검증
-3. Android Studio 실기기 테스트
-4. Debug APK 안정화
-5. 릴리즈 APK 생성
-
-현재 진행상황은 `PROJECT_STATUS.md`에 기록합니다.
-
-
-## 새 ChatGPT 대화에서 이어서 개발
-
-웹 ChatGPT 대화가 길어졌다면 새 채팅에서 다음 파일을 먼저 읽도록 요청하세요.
-
-```text
-HANDOFF.md
-PROJECT_STATUS.md
-README.md
-docs/ORIGINAL_SWF_NOTES.md
-```
-
-가장 간단한 시작 문장:
-
-```text
-GitHub MCP로 1006U/pushpush2의 HANDOFF.md를 읽고
-main 최신 상태와 GitHub Actions 결과를 확인한 뒤 이어서 개발해줘.
-```
-
-원본 SWF를 추가 분석해야 하는 작업에서는 `game.swf`를 새 채팅에 다시 첨부해야 합니다.
+자세한 BlackBerry 전용 설명은 `BLACKBERRY_CLASSIC.md` 참고.
