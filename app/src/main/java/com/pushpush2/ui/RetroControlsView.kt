@@ -52,8 +52,13 @@ class RetroControlsView(context: Context) : View(context) {
     private val downRect = RectF()
     private val leftRect = RectF()
     private val rightRect = RectF()
+    private val upHitRect = RectF()
+    private val downHitRect = RectF()
+    private val leftHitRect = RectF()
+    private val rightHitRect = RectF()
     private val centerPanelRect = RectF()
     private val okRect = RectF()
+    private val okHitRect = RectF()
     private val undoRect = RectF()
     private val exitRect = RectF()
 
@@ -396,6 +401,50 @@ class RetroControlsView(context: Context) : View(context) {
             navCy + keyHalf
         )
 
+        /*
+         * Touch-only geometry.
+         *
+         * Visual layout stays exactly as it is:
+         * - 확인: keep its current visual presentation, but restrict the real
+         *   touch target to the smaller center box requested by the user.
+         * - directions: keep the arrows exactly where/size they are, but expand
+         *   the real touch zones outward to the larger marked boxes.
+         */
+        val okHitSize = keySize * 0.72f
+        val okHitHalf = okHitSize / 2f
+        okHitRect.set(
+            navCx - okHitHalf,
+            navCy - okHitHalf,
+            navCx + okHitHalf,
+            navCy + okHitHalf
+        )
+
+        val directionHitExpansion = scaledDp(8f)
+
+        upHitRect.set(upRect)
+        upHitRect.inset(
+            -directionHitExpansion,
+            -directionHitExpansion
+        )
+
+        downHitRect.set(downRect)
+        downHitRect.inset(
+            -directionHitExpansion,
+            -directionHitExpansion
+        )
+
+        leftHitRect.set(leftRect)
+        leftHitRect.inset(
+            -directionHitExpansion,
+            -directionHitExpansion
+        )
+
+        rightHitRect.set(rightRect)
+        rightHitRect.inset(
+            -directionHitExpansion,
+            -directionHitExpansion
+        )
+
         // Lower keys moved upward to the user-marked alarm/end-key slots.
         undoRect.set(
             shellRect.left + sw * 0.015f,
@@ -416,17 +465,17 @@ class RetroControlsView(context: Context) : View(context) {
         x: Float,
         y: Float
     ): Boolean =
-        okRect.contains(x, y)
+        okHitRect.contains(x, y)
 
     private fun directionAt(
         x: Float,
         y: Float
     ): Direction? =
         when {
-            upRect.contains(x, y) -> Direction.UP
-            downRect.contains(x, y) -> Direction.DOWN
-            leftRect.contains(x, y) -> Direction.LEFT
-            rightRect.contains(x, y) -> Direction.RIGHT
+            upHitRect.contains(x, y) -> Direction.UP
+            downHitRect.contains(x, y) -> Direction.DOWN
+            leftHitRect.contains(x, y) -> Direction.LEFT
+            rightHitRect.contains(x, y) -> Direction.RIGHT
             else -> null
         }
 
@@ -688,7 +737,7 @@ class RetroControlsView(context: Context) : View(context) {
             )
         }
 
-        textPaint.textSize = scaledDp(12f)
+        textPaint.textSize = scaledDp(CONFIRM_TEXT_SIZE_DP)
         textPaint.color =
             if (pressedCenter) CENTER_PRESSED_TEXT else REFERENCE_TEXT
 
@@ -828,7 +877,8 @@ class RetroControlsView(context: Context) : View(context) {
         const val REPEAT_INTERVAL_MS = 110L
         const val BASE_CONTROL_HEIGHT_DP = 248
         const val MIN_CONTROL_SCALE = 0.58f
-        const val UTILITY_TEXT_SIZE_DP = 14f
+        const val UTILITY_TEXT_SIZE_DP = 17f
+        const val CONFIRM_TEXT_SIZE_DP = 15f
 
         val HOUSING_BASE: Int = Color.rgb(215, 213, 218)
         val HOUSING_INNER: Int = Color.rgb(229, 227, 231)
