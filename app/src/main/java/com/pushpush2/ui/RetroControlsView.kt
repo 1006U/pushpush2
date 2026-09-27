@@ -52,7 +52,6 @@ class RetroControlsView(context: Context) : View(context) {
     private val downRect = RectF()
     private val leftRect = RectF()
     private val rightRect = RectF()
-    private val centerFrameRect = RectF()
     private val okRect = RectF()
     private val undoRect = RectF()
     private val exitRect = RectF()
@@ -357,16 +356,6 @@ class RetroControlsView(context: Context) : View(context) {
             navCy + keyHalf
         )
 
-        // Visual frame only: expand around OK without changing OK touch/button size.
-        val frameSize = navBase * 0.56f
-        val frameHalf = frameSize / 2f
-        centerFrameRect.set(
-            navCx - frameHalf,
-            navCy - frameHalf,
-            navCx + frameHalf,
-            navCy + frameHalf
-        )
-
         upRect.set(
             navCx - keyHalf,
             navCy - offset - keyHalf,
@@ -636,19 +625,6 @@ class RetroControlsView(context: Context) : View(context) {
             navRect,
             scaledDp(20f),
             scaledDp(20f),
-            paint
-        )
-
-        /*
-         * Keep the OK button itself unchanged, but fill its surrounding square
-         * with the same color as the normal OK button.
-         */
-        paint.style = Paint.Style.FILL
-        paint.color = CENTER_FILL
-        canvas.drawRoundRect(
-            centerFrameRect,
-            scaledDp(5f),
-            scaledDp(5f),
             paint
         )
 
