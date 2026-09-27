@@ -114,6 +114,7 @@ class RetroControlsView(context: Context) : View(context) {
         calculateGeometry(w, scaledHeight)
 
         drawPhoneHousing(canvas)
+        drawSectionDividers(canvas)
         drawTopDecorativeKey(canvas)
         drawSoftKey(
             canvas = canvas,
@@ -505,6 +506,83 @@ class RetroControlsView(context: Context) : View(context) {
         )
     }
 
+    private fun drawSectionDividers(canvas: Canvas) {
+        /*
+         * Thick black separators copied from the supplied reference:
+         * - short upper separators beside the D-pad
+         * - diagonal separators between upper soft keys and call/end keys
+         * - lower vertical separators around the 돌아가기 region
+         *
+         * They are visual only. Touch handling still uses the non-overlapping
+         * rectangles calculated in calculateGeometry().
+         */
+        paint.shader = null
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = scaledDp(7f)
+        paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeJoin = Paint.Join.ROUND
+        paint.color = Color.BLACK
+
+        val sw = shellRect.width()
+        val sh = shellRect.height()
+
+        // Upper-left short divider.
+        canvas.drawLine(
+            shellRect.left + sw * 0.215f,
+            shellRect.top + sh * 0.01f,
+            shellRect.left + sw * 0.215f,
+            shellRect.top + sh * 0.13f,
+            paint
+        )
+
+        // Upper-right short divider.
+        canvas.drawLine(
+            shellRect.right - sw * 0.215f,
+            shellRect.top + sh * 0.01f,
+            shellRect.right - sw * 0.215f,
+            shellRect.top + sh * 0.13f,
+            paint
+        )
+
+        // Left diagonal separator: 스테이지 / call.
+        canvas.drawLine(
+            shellRect.left + sw * 0.005f,
+            shellRect.top + sh * 0.46f,
+            navRect.left - scaledDp(6f),
+            shellRect.top + sh * 0.57f,
+            paint
+        )
+
+        // Right diagonal separator: 리셋 / end-call.
+        canvas.drawLine(
+            navRect.right + scaledDp(6f),
+            shellRect.top + sh * 0.58f,
+            shellRect.right - sw * 0.005f,
+            shellRect.top + sh * 0.48f,
+            paint
+        )
+
+        // Lower-left separator beside 돌아가기.
+        canvas.drawLine(
+            navRect.left + scaledDp(5f),
+            navRect.bottom - scaledDp(4f),
+            shellRect.left + sw * 0.245f,
+            shellRect.bottom + scaledDp(2f),
+            paint
+        )
+
+        // Lower-right separator beside 돌아가기.
+        canvas.drawLine(
+            navRect.right - scaledDp(5f),
+            navRect.bottom - scaledDp(4f),
+            shellRect.right - sw * 0.245f,
+            shellRect.bottom + scaledDp(2f),
+            paint
+        )
+
+        paint.strokeCap = Paint.Cap.ROUND
+    }
+
     private fun drawTopDecorativeKey(canvas: Canvas) {
         paint.style = Paint.Style.FILL
         paint.color = KEY_NORMAL
@@ -532,46 +610,25 @@ class RetroControlsView(context: Context) : View(context) {
         label: String,
         pressed: Boolean
     ) {
-        val leftSide = rect.centerX() < shellRect.centerX()
-        val notchX = rect.width() * 0.14f
-        val notchY = rect.height() * 0.10f
-
-        val keyPath = Path().apply {
-            if (leftSide) {
-                moveTo(rect.left, rect.top + notchY)
-                lineTo(rect.right - notchX, rect.top)
-                lineTo(rect.right, rect.bottom - notchY)
-                lineTo(rect.left + notchX, rect.bottom)
-            } else {
-                moveTo(rect.left + notchX, rect.top)
-                lineTo(rect.right, rect.top + notchY)
-                lineTo(rect.right - notchX, rect.bottom)
-                lineTo(rect.left, rect.bottom - notchY)
-            }
-            close()
-        }
-
+        /*
+         * The reference layout does not need a separate outline around these
+         * utility keys. Their region is defined by the heavy black section
+         * dividers. Keep only a subtle pressed fill for touch feedback.
+         */
         if (pressed) {
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = scaledDp(4f)
-            paint.color = PRESS_GLOW
-            canvas.drawPath(keyPath, paint)
+            paint.style = Paint.Style.FILL
+            paint.color = Color.argb(55, 43, 82, 168)
+            canvas.drawRoundRect(
+                rect,
+                scaledDp(8f),
+                scaledDp(8f),
+                paint
+            )
         }
-
-        paint.style = Paint.Style.FILL
-        paint.color = if (pressed) KEY_PRESSED else KEY_NORMAL
-        canvas.drawPath(keyPath, paint)
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth =
-            if (pressed) scaledDp(2f) else scaledDp(1.2f)
-        paint.color =
-            if (pressed) BLUE_BRIGHT else KEY_BORDER
-        canvas.drawPath(keyPath, paint)
 
         textPaint.textSize = scaledDp(10f)
         textPaint.color =
-            if (pressed) Color.WHITE else TEXT_DARK
+            if (pressed) NAV_BLUE else TEXT_DARK
 
         val baseline =
             rect.centerY() -
@@ -801,7 +858,10 @@ class RetroControlsView(context: Context) : View(context) {
             shellRect.bottom - sh * 0.035f
         )
 
-        // Lower-left call key is visual only.
+        /*
+         * No individual key outlines here. The black dividers define the three
+         * lower regions. Only pressed feedback, text and phone icons are drawn.
+         */
         drawPhoneKey(
             canvas = canvas,
             rect = leftPhone,
@@ -823,9 +883,11 @@ class RetroControlsView(context: Context) : View(context) {
             isLeft = false
         )
 
-        // Green call icon.
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = scaledDp(4.5f)
+        paint.strokeCap = Paint.Cap.ROUND
+
+        // Green call icon, decorative only.
         paint.color = CALL_GREEN
         canvas.drawArc(
             RectF(
@@ -840,7 +902,7 @@ class RetroControlsView(context: Context) : View(context) {
             paint
         )
 
-        // Red end-call icon.
+        // Red end-call icon, still exits the game.
         paint.color = END_RED
         canvas.drawArc(
             RectF(
@@ -862,33 +924,22 @@ class RetroControlsView(context: Context) : View(context) {
         pressed: Boolean,
         isLeft: Boolean
     ) {
-        val slant = rect.width() * 0.16f
-        val path = Path().apply {
-            if (isLeft) {
-                moveTo(rect.left, rect.top)
-                lineTo(rect.right - slant, rect.top + rect.height() * 0.08f)
-                lineTo(rect.right, rect.bottom)
-                lineTo(rect.left + slant, rect.bottom)
-            } else {
-                moveTo(rect.left + slant, rect.top + rect.height() * 0.08f)
-                lineTo(rect.right, rect.top)
-                lineTo(rect.right - slant, rect.bottom)
-                lineTo(rect.left, rect.bottom)
-            }
-            close()
+        // Normal state has no surrounding key outline.
+        if (pressed) {
+            paint.style = Paint.Style.FILL
+            paint.color =
+                if (isLeft) {
+                    Color.argb(45, 19, 139, 113)
+                } else {
+                    Color.argb(55, 177, 45, 40)
+                }
+            canvas.drawRoundRect(
+                rect,
+                scaledDp(8f),
+                scaledDp(8f),
+                paint
+            )
         }
-
-        paint.style = Paint.Style.FILL
-        paint.color =
-            if (pressed) Color.rgb(232, 194, 181) else KEY_NORMAL
-        canvas.drawPath(path, paint)
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth =
-            if (pressed) scaledDp(1.8f) else scaledDp(1.1f)
-        paint.color =
-            if (pressed) END_RED else KEY_BORDER
-        canvas.drawPath(path, paint)
     }
 
     private fun drawBottomActionKey(
@@ -897,36 +948,20 @@ class RetroControlsView(context: Context) : View(context) {
         label: String,
         pressed: Boolean
     ) {
-        val inset = rect.width() * 0.10f
-        val path = Path().apply {
-            moveTo(rect.left + inset, rect.top)
-            lineTo(rect.right - inset, rect.top)
-            lineTo(rect.right, rect.bottom)
-            lineTo(rect.left, rect.bottom)
-            close()
-        }
-
         if (pressed) {
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = scaledDp(4f)
-            paint.color = PRESS_GLOW
-            canvas.drawPath(path, paint)
+            paint.style = Paint.Style.FILL
+            paint.color = Color.argb(55, 43, 82, 168)
+            canvas.drawRoundRect(
+                rect,
+                scaledDp(8f),
+                scaledDp(8f),
+                paint
+            )
         }
-
-        paint.style = Paint.Style.FILL
-        paint.color = if (pressed) KEY_PRESSED else KEY_NORMAL
-        canvas.drawPath(path, paint)
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth =
-            if (pressed) scaledDp(1.8f) else scaledDp(1.1f)
-        paint.color =
-            if (pressed) BLUE_BRIGHT else KEY_BORDER
-        canvas.drawPath(path, paint)
 
         textPaint.textSize = scaledDp(10.5f)
         textPaint.color =
-            if (pressed) Color.WHITE else TEXT_DARK
+            if (pressed) NAV_BLUE else TEXT_DARK
 
         val baseline =
             rect.centerY() -
@@ -937,51 +972,6 @@ class RetroControlsView(context: Context) : View(context) {
             rect.centerX(),
             baseline,
             textPaint
-        )
-    }
-
-    private fun drawDecorativeKey(
-        canvas: Canvas,
-        rect: RectF,
-        pressed: Boolean = false
-    ) {
-        if (pressed) {
-            paint.style = Paint.Style.FILL
-            paint.color = Color.argb(92, 215, 45, 40)
-            canvas.drawRoundRect(
-                RectF(
-                    rect.left - scaledDp(3f),
-                    rect.top - scaledDp(3f),
-                    rect.right + scaledDp(3f),
-                    rect.bottom + scaledDp(3f)
-                ),
-                scaledDp(19f),
-                scaledDp(19f),
-                paint
-            )
-        }
-
-        paint.style = Paint.Style.FILL
-        paint.color =
-            if (pressed) Color.rgb(232, 194, 181) else KEY_NORMAL
-
-        canvas.drawRoundRect(
-            rect,
-            scaledDp(16f),
-            scaledDp(16f),
-            paint
-        )
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.1f)
-        paint.color =
-            if (pressed) END_RED else KEY_BORDER
-
-        canvas.drawRoundRect(
-            rect,
-            scaledDp(16f),
-            scaledDp(16f),
-            paint
         )
     }
 
