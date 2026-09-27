@@ -327,21 +327,27 @@ class RetroControlsView(context: Context) : View(context) {
             shellRect.top + sh * 0.245f
         )
 
-        // Central NATE cluster rebuilt as five large square touch buttons.
-        val navSize = min(sw * 0.49f, sh * 0.56f)
+        /*
+         * Expand the central NATE cluster to the user's marked region.
+         * The panel itself becomes taller while the five touch targets remain
+         * square and generously spaced inside it.
+         */
+        val navWidth = sw * 0.52f
+        val navHeight = sh * 0.80f
         val navCx = shellRect.centerX()
-        val navCy = shellRect.top + sh * 0.46f
+        val navCy = shellRect.top + sh * 0.47f
 
         navRect.set(
-            navCx - navSize / 2f,
-            navCy - navSize / 2f,
-            navCx + navSize / 2f,
-            navCy + navSize / 2f
+            navCx - navWidth / 2f,
+            navCy - navHeight / 2f,
+            navCx + navWidth / 2f,
+            navCy + navHeight / 2f
         )
 
-        val keySize = navSize * 0.30f
+        val navBase = min(navRect.width(), navRect.height())
+        val keySize = navBase * 0.28f
         val keyHalf = keySize / 2f
-        val offset = navSize * 0.34f
+        val offset = navBase * 0.32f
 
         okRect.set(
             navCx - keyHalf,
@@ -499,7 +505,7 @@ class RetroControlsView(context: Context) : View(context) {
          * These divide 스테이지 from 돌아가기 and 리셋 from 종료.
          */
         val sh = shellRect.height()
-        val seamY = shellRect.top + sh * 0.61f
+        val seamY = shellRect.top + sh * 0.46f
 
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = scaledDp(1.1f)
@@ -509,13 +515,13 @@ class RetroControlsView(context: Context) : View(context) {
         canvas.drawLine(
             shellRect.left + scaledDp(3f),
             seamY,
-            navRect.left - scaledDp(4f),
+            navRect.left,
             seamY,
             paint
         )
 
         canvas.drawLine(
-            navRect.right + scaledDp(4f),
+            navRect.right,
             seamY,
             shellRect.right - scaledDp(3f),
             seamY,
@@ -528,12 +534,12 @@ class RetroControlsView(context: Context) : View(context) {
         canvas.drawLine(
             shellRect.left + scaledDp(3f),
             seamY - scaledDp(0.6f),
-            navRect.left - scaledDp(4f),
+            navRect.left,
             seamY - scaledDp(0.6f),
             paint
         )
         canvas.drawLine(
-            navRect.right + scaledDp(4f),
+            navRect.right,
             seamY - scaledDp(0.6f),
             shellRect.right - scaledDp(3f),
             seamY - scaledDp(0.6f),
@@ -591,7 +597,7 @@ class RetroControlsView(context: Context) : View(context) {
     }
 
     private fun drawNavigationCluster(canvas: Canvas) {
-        // Subtle panel behind the five square buttons.
+        // Enlarged central panel behind the five square touch areas.
         paint.style = Paint.Style.FILL
         paint.color = NAV_SHADOW
         canvas.drawRoundRect(
@@ -641,17 +647,6 @@ class RetroControlsView(context: Context) : View(context) {
         paint.style = Paint.Style.FILL
         paint.color =
             if (pressed) NAV_PRESSED else DIRECTION_KEY_FILL
-        canvas.drawRoundRect(
-            rect,
-            scaledDp(8f),
-            scaledDp(8f),
-            paint
-        )
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.1f)
-        paint.color =
-            if (pressed) Color.WHITE else DIRECTION_KEY_BORDER
         canvas.drawRoundRect(
             rect,
             scaledDp(8f),
@@ -810,7 +805,7 @@ class RetroControlsView(context: Context) : View(context) {
 
         textPaint.textSize = scaledDp(UTILITY_TEXT_SIZE_DP)
         textPaint.color =
-            if (pressed) Color.WHITE else EXIT_TEXT
+            if (pressed) Color.WHITE else Color.BLACK
 
         val baseline =
             exitRect.centerY() -
@@ -862,13 +857,11 @@ class RetroControlsView(context: Context) : View(context) {
         val NAV_PRESSED: Int = Color.rgb(105, 93, 116)
         val NAV_ICON: Int = Color.rgb(236, 232, 240)
         val DIRECTION_KEY_FILL: Int = Color.rgb(148, 136, 153)
-        val DIRECTION_KEY_BORDER: Int = Color.rgb(96, 86, 103)
 
         val CENTER_FILL: Int = Color.rgb(219, 214, 223)
         val CENTER_PRESSED: Int = Color.rgb(193, 185, 201)
         val CENTER_BORDER: Int = Color.rgb(96, 87, 103)
         val CENTER_GLOW: Int = Color.argb(90, 255, 255, 255)
 
-        val EXIT_TEXT: Int = Color.rgb(190, 58, 57)
     }
 }
