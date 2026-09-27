@@ -52,6 +52,7 @@ class RetroControlsView(context: Context) : View(context) {
     private val downRect = RectF()
     private val leftRect = RectF()
     private val rightRect = RectF()
+    private val centerFrameRect = RectF()
     private val okRect = RectF()
     private val undoRect = RectF()
     private val exitRect = RectF()
@@ -312,19 +313,19 @@ class RetroControlsView(context: Context) : View(context) {
         val sw = shellRect.width()
         val sh = shellRect.height()
 
-        // Utility keys sit close to the four outer corners like the reference.
+        // Utility keys moved to the user-marked upper-left/right slots.
         stageRect.set(
             shellRect.left + sw * 0.015f,
-            shellRect.top + sh * 0.045f,
+            shellRect.top + sh * 0.14f,
             shellRect.left + sw * 0.225f,
-            shellRect.top + sh * 0.255f
+            shellRect.top + sh * 0.30f
         )
 
         resetRect.set(
             shellRect.right - sw * 0.225f,
-            shellRect.top + sh * 0.045f,
+            shellRect.top + sh * 0.14f,
             shellRect.right - sw * 0.015f,
-            shellRect.top + sh * 0.255f
+            shellRect.top + sh * 0.30f
         )
 
         /*
@@ -356,6 +357,16 @@ class RetroControlsView(context: Context) : View(context) {
             navCy + keyHalf
         )
 
+        // Visual frame only: expand around OK without changing OK touch/button size.
+        val frameSize = navBase * 0.56f
+        val frameHalf = frameSize / 2f
+        centerFrameRect.set(
+            navCx - frameHalf,
+            navCy - frameHalf,
+            navCx + frameHalf,
+            navCy + frameHalf
+        )
+
         upRect.set(
             navCx - keyHalf,
             navCy - offset - keyHalf,
@@ -384,20 +395,19 @@ class RetroControlsView(context: Context) : View(context) {
             navCy + keyHalf
         )
 
-        // Original alarm position -> one-step undo, moved toward the outer edge.
+        // Lower keys moved upward to the user-marked alarm/end-key slots.
         undoRect.set(
             shellRect.left + sw * 0.015f,
-            shellRect.top + sh * 0.72f,
+            shellRect.top + sh * 0.64f,
             shellRect.left + sw * 0.225f,
-            shellRect.bottom - sh * 0.035f
+            shellRect.top + sh * 0.80f
         )
 
-        // Original end key keeps the current exit behaviour at the outer edge.
         exitRect.set(
             shellRect.right - sw * 0.225f,
-            shellRect.top + sh * 0.72f,
+            shellRect.top + sh * 0.64f,
             shellRect.right - sw * 0.015f,
-            shellRect.bottom - sh * 0.035f
+            shellRect.top + sh * 0.80f
         )
     }
 
@@ -626,6 +636,17 @@ class RetroControlsView(context: Context) : View(context) {
             navRect,
             scaledDp(20f),
             scaledDp(20f),
+            paint
+        )
+
+        // Expanded square frame around the unchanged OK button.
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = scaledDp(1.4f)
+        paint.color = CENTER_BORDER
+        canvas.drawRoundRect(
+            centerFrameRect,
+            scaledDp(5f),
+            scaledDp(5f),
             paint
         )
 
