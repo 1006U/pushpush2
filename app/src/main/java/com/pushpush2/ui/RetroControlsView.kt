@@ -412,8 +412,8 @@ class RetroControlsView(context: Context) : View(context) {
          * - LEFT / RIGHT: tall vertical touch zones
          * - OK: compact center touch zone around the 확인 label
          */
-        val horizontalHitWidth = navRect.width() * 0.46f
-        val horizontalHitHeight = navRect.height() * 0.20f
+        val horizontalHitWidth = navRect.width() * 0.48f
+        val horizontalHitHeight = navRect.height() * 0.26f
 
         upHitRect.set(
             upRect.centerX() - horizontalHitWidth / 2f,
@@ -429,8 +429,8 @@ class RetroControlsView(context: Context) : View(context) {
             downRect.centerY() + horizontalHitHeight / 2f
         )
 
-        val verticalHitWidth = navRect.width() * 0.22f
-        val verticalHitHeight = navRect.height() * 0.40f
+        val verticalHitWidth = navRect.width() * 0.24f
+        val verticalHitHeight = navRect.height() * 0.50f
 
         leftHitRect.set(
             leftRect.centerX() - verticalHitWidth / 2f,
