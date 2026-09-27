@@ -90,4 +90,63 @@ class GameEngineTest {
         assertEquals(0, engine.state.moves)
         assertFalse(engine.state.isCleared)
     }
+    @Test
+    fun undoRestoresPreviousSuccessfulMove() {
+        val stage = Stage.fromAscii(
+            number = 1,
+            name = "undo",
+            raw = """
+                ######
+                #@ $.#
+                ######
+            """
+        )
+        val engine = GameEngine(stage)
+        val initial = engine.state
+
+        assertTrue(engine.move(Direction.RIGHT))
+        assertEquals(1, engine.state.moves)
+
+        assertTrue(engine.undo())
+        assertEquals(initial, engine.state)
+        assertEquals(0, engine.state.moves)
+    }
+
+    @Test
+    fun blockedMoveDoesNotCreateUndoHistory() {
+        val stage = Stage.fromAscii(
+            number = 1,
+            name = "blocked-undo",
+            raw = """
+                ###
+                #@#
+                ###
+            """
+        )
+        val engine = GameEngine(stage)
+
+        assertFalse(engine.move(Direction.RIGHT))
+        assertFalse(engine.undo())
+    }
+
+    @Test
+    fun resetClearsUndoHistory() {
+        val stage = Stage.fromAscii(
+            number = 1,
+            name = "reset-undo",
+            raw = """
+                ######
+                #@ $.#
+                ######
+            """
+        )
+        val engine = GameEngine(stage)
+
+        assertTrue(engine.move(Direction.RIGHT))
+        engine.reset()
+
+        assertFalse(engine.undo())
+        assertEquals(0, engine.state.moves)
+    }
+
 }

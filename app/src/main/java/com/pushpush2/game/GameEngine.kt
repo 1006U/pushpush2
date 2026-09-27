@@ -5,12 +5,23 @@ class GameEngine(stage: Stage) {
     var state: GameState = GameState.initial(stage)
         private set
 
+    private val history = ArrayDeque<GameState>()
+
     fun reset() {
         state = GameState.initial(state.stage)
+        history.clear()
     }
 
     fun load(stage: Stage) {
         state = GameState.initial(stage)
+        history.clear()
+    }
+
+    fun undo(): Boolean {
+        if (history.isEmpty()) return false
+
+        state = history.removeLast()
+        return true
     }
 
     fun move(direction: Direction): Boolean {
@@ -33,11 +44,14 @@ class GameEngine(stage: Stage) {
             boxes.add(pushed)
         }
 
+        val previousState = state
+
         state = state.copy(
             player = next,
             boxes = boxes,
             moves = state.moves + 1
         )
+        history.addLast(previousState)
         return true
     }
 }

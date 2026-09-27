@@ -334,6 +334,12 @@ class MainActivity : Activity() {
                     returnToStageOne()
                 }
             }
+            onUndoClick = {
+                if (!showingGameClearScreen) {
+                    audioPlayer.play("button")
+                    undoOneStep()
+                }
+            }
             onExitClick = {
                 audioPlayer.play("button")
                 showExitConfirmation()
@@ -734,6 +740,21 @@ class MainActivity : Activity() {
         cancelPendingStageAdvance()
         clearHandled = false
         engine.reset()
+        gameView.resetPlayerAnimation()
+        updateUi()
+        showHeaderState(HeaderState.PLAYING)
+    }
+
+    private fun undoOneStep() {
+        if (!engine.undo()) {
+            vibrateBlockedMove()
+            return
+        }
+
+        // Undo may happen during the short stage-clear fade. Cancel the
+        // automatic advance and restore normal play immediately.
+        cancelPendingStageAdvance()
+        clearHandled = false
         gameView.resetPlayerAnimation()
         updateUi()
         showHeaderState(HeaderState.PLAYING)

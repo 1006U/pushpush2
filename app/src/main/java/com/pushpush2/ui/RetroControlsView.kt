@@ -17,15 +17,18 @@ import kotlin.math.min
 /**
  * Bottom touch controls styled after the user's feature-phone keypad reference.
  *
- * Functional layout:
- * - upper-left key: STAGE
- * - upper-right key: RESET
- * - center blue navigation pad: UP / DOWN / LEFT / RIGHT
- * - center key: OK
+ * Functional layout based on the original feature-phone keypad:
+ * - upper-left soft key: 스테이지
+ * - upper-right soft key: 리셋
+ * - large center navigation pad: UP / DOWN / LEFT / RIGHT
+ * - center key: 확인
+ * - lower-center key: 돌아가기 (one-step undo)
+ * - lower-left call key: decorative only
+ * - lower-right end-call key: exit
  *
- * The remaining lower phone keys are visual only. All functional hit areas
- * scale together with the available height so the controls remain usable
- * across all 66 stages.
+ * Direction and confirm controls keep their original proportions but get the
+ * largest practical touch area. Utility buttons stay smaller and separated by
+ * dead space so imprecise thumb touches do not trigger the wrong action.
  */
 class RetroControlsView(context: Context) : View(context) {
 
@@ -33,6 +36,7 @@ class RetroControlsView(context: Context) : View(context) {
     var onStageClick: (() -> Unit)? = null
     var onRetryClick: (() -> Unit)? = null
     var onCenterClick: (() -> Unit)? = null
+    var onUndoClick: (() -> Unit)? = null
     var onExitClick: (() -> Unit)? = null
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -51,7 +55,7 @@ class RetroControlsView(context: Context) : View(context) {
     private val navRect = RectF()
     private val okRect = RectF()
     private val topDecorRect = RectF()
-    private val bottomCancelRect = RectF()
+    private val undoRect = RectF()
     private val exitRect = RectF()
 
     private var controlScale = 1f
@@ -114,13 +118,13 @@ class RetroControlsView(context: Context) : View(context) {
         drawSoftKey(
             canvas = canvas,
             rect = stageRect,
-            label = "STAGE",
+            label = "스테이지",
             pressed = pressedSoftKey == SoftKey.STAGE
         )
         drawSoftKey(
             canvas = canvas,
             rect = resetRect,
-            label = "RESET",
+            label = "리셋",
             pressed = pressedSoftKey == SoftKey.RESET
         )
         drawNavigationPad(canvas)
@@ -140,6 +144,14 @@ class RetroControlsView(context: Context) : View(context) {
 
                     resetRect.contains(event.x, event.y) -> {
                         pressedSoftKey = SoftKey.RESET
+                        invalidate()
+                    }
+
+                    undoRect.contains(event.x, event.y) -> {
+                        pressedSoftKey = SoftKey.UNDO
+                        performHapticFeedback(
+                            HapticFeedbackConstants.KEYBOARD_TAP
+                        )
                         invalidate()
                     }
 
@@ -182,6 +194,9 @@ class RetroControlsView(context: Context) : View(context) {
 
                         SoftKey.RESET ->
                             resetRect.contains(event.x, event.y)
+
+                        SoftKey.UNDO ->
+                            undoRect.contains(event.x, event.y)
 
                         SoftKey.EXIT ->
                             exitRect.contains(event.x, event.y)
@@ -239,6 +254,15 @@ class RetroControlsView(context: Context) : View(context) {
                                 HapticFeedbackConstants.KEYBOARD_TAP
                             )
                             onRetryClick?.invoke()
+                        }
+                    }
+
+                    SoftKey.UNDO -> {
+                        if (undoRect.contains(event.x, event.y)) {
+                            performHapticFeedback(
+                                HapticFeedbackConstants.KEYBOARD_TAP
+                            )
+                            onUndoClick?.invoke()
                         }
                     }
 
@@ -314,55 +338,54 @@ class RetroControlsView(context: Context) : View(context) {
         )
 
         /*
-         * Prioritise the four directional touch zones:
-         * - enlarge the D-pad in both axes
-         * - shrink STAGE / RESET / OK / EXIT
-         * - keep explicit dead space between every functional control
+         * Reference-phone layout:
          *
-         * This makes direction input much easier while preventing nearby
-         * utility buttons from stealing an imprecise thumb touch.
+         * Small utility keys live outside the large central navigation pad.
+         * The D-pad keeps the same directional/OK proportions as the earlier
+         * layout, but the whole pad is enlarged. Horizontal and vertical dead
+         * gaps prevent STAGE/RESET/UNDO/EXIT from stealing navigation touches.
          */
         stageRect.set(
-            shellRect.left + sw * 0.04f,
+            shellRect.left + sw * 0.035f,
             shellRect.top + sh * 0.10f,
-            shellRect.left + sw * 0.18f,
-            shellRect.top + sh * 0.34f
+            shellRect.left + sw * 0.175f,
+            shellRect.top + sh * 0.285f
         )
 
         resetRect.set(
-            shellRect.right - sw * 0.18f,
+            shellRect.right - sw * 0.175f,
             shellRect.top + sh * 0.10f,
-            shellRect.right - sw * 0.04f,
-            shellRect.top + sh * 0.34f
+            shellRect.right - sw * 0.035f,
+            shellRect.top + sh * 0.285f
         )
 
         navRect.set(
-            shellRect.left + sw * 0.235f,
-            shellRect.top + sh * 0.145f,
-            shellRect.right - sw * 0.235f,
-            shellRect.top + sh * 0.765f
+            shellRect.left + sw * 0.215f,
+            shellRect.top + sh * 0.105f,
+            shellRect.right - sw * 0.215f,
+            shellRect.top + sh * 0.695f
         )
 
-        // Smaller OK key leaves a larger usable ring for UP/DOWN/LEFT/RIGHT.
+        // Keep the established OK-to-D-pad ratio while enlarging the whole pad.
         okRect.set(
-            navRect.left + navRect.width() * 0.34f,
-            navRect.top + navRect.height() * 0.36f,
-            navRect.right - navRect.width() * 0.34f,
-            navRect.bottom - navRect.height() * 0.36f
+            navRect.left + navRect.width() * 0.255f,
+            navRect.top + navRect.height() * 0.29f,
+            navRect.right - navRect.width() * 0.255f,
+            navRect.bottom - navRect.height() * 0.29f
         )
 
-        bottomCancelRect.set(
-            shellRect.left + sw * 0.42f,
-            shellRect.top + sh * 0.84f,
-            shellRect.right - sw * 0.42f,
-            shellRect.bottom - sh * 0.06f
+        undoRect.set(
+            shellRect.left + sw * 0.35f,
+            shellRect.top + sh * 0.79f,
+            shellRect.right - sw * 0.35f,
+            shellRect.bottom - sh * 0.055f
         )
 
         exitRect.set(
-            shellRect.right - sw * 0.16f,
-            shellRect.top + sh * 0.79f,
-            shellRect.right - sw * 0.04f,
-            shellRect.bottom - sh * 0.06f
+            shellRect.right - sw * 0.175f,
+            shellRect.top + sh * 0.765f,
+            shellRect.right - sw * 0.035f,
+            shellRect.bottom - sh * 0.055f
         )
     }
 
@@ -674,7 +697,7 @@ class RetroControlsView(context: Context) : View(context) {
             paint
         )
 
-        textPaint.textSize = scaledDp(15f)
+        textPaint.textSize = scaledDp(13f)
         textPaint.color = TEXT_DARK
 
         val baseline =
@@ -682,7 +705,7 @@ class RetroControlsView(context: Context) : View(context) {
                 (textPaint.descent() + textPaint.ascent()) / 2f
 
         canvas.drawText(
-            "OK",
+            "확인",
             okRect.centerX(),
             baseline,
             textPaint
@@ -783,19 +806,25 @@ class RetroControlsView(context: Context) : View(context) {
         val sh = shellRect.height()
 
         val leftPhone = RectF(
-            shellRect.left + sw * 0.04f,
-            shellRect.top + sh * 0.79f,
-            shellRect.left + sw * 0.16f,
-            shellRect.bottom - sh * 0.06f
+            shellRect.left + sw * 0.035f,
+            shellRect.top + sh * 0.765f,
+            shellRect.left + sw * 0.175f,
+            shellRect.bottom - sh * 0.055f
         )
 
+        // Left call key intentionally remains decorative with no touch handler.
         drawDecorativeKey(canvas, leftPhone)
+        drawBottomActionKey(
+            canvas = canvas,
+            rect = undoRect,
+            label = "돌아가기",
+            pressed = pressedSoftKey == SoftKey.UNDO
+        )
         drawDecorativeKey(
             canvas = canvas,
             rect = exitRect,
             pressed = pressedSoftKey == SoftKey.EXIT
         )
-        drawDecorativeKey(canvas, bottomCancelRect)
 
         // Green call-like arc.
         paint.style = Paint.Style.STROKE
@@ -831,6 +860,65 @@ class RetroControlsView(context: Context) : View(context) {
         )
 
 
+    }
+
+    private fun drawBottomActionKey(
+        canvas: Canvas,
+        rect: RectF,
+        label: String,
+        pressed: Boolean
+    ) {
+        if (pressed) {
+            paint.style = Paint.Style.FILL
+            paint.color = PRESS_GLOW
+            canvas.drawRoundRect(
+                RectF(
+                    rect.left - scaledDp(2f),
+                    rect.top - scaledDp(2f),
+                    rect.right + scaledDp(2f),
+                    rect.bottom + scaledDp(2f)
+                ),
+                scaledDp(14f),
+                scaledDp(14f),
+                paint
+            )
+        }
+
+        paint.style = Paint.Style.FILL
+        paint.color = if (pressed) KEY_PRESSED else KEY_NORMAL
+        canvas.drawRoundRect(
+            rect,
+            scaledDp(13f),
+            scaledDp(13f),
+            paint
+        )
+
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth =
+            if (pressed) scaledDp(1.8f) else scaledDp(1.1f)
+        paint.color =
+            if (pressed) BLUE_BRIGHT else KEY_BORDER
+        canvas.drawRoundRect(
+            rect,
+            scaledDp(13f),
+            scaledDp(13f),
+            paint
+        )
+
+        textPaint.textSize = scaledDp(10f)
+        textPaint.color =
+            if (pressed) Color.WHITE else TEXT_DARK
+
+        val baseline =
+            rect.centerY() -
+                (textPaint.descent() + textPaint.ascent()) / 2f
+
+        canvas.drawText(
+            label,
+            rect.centerX(),
+            baseline,
+            textPaint
+        )
     }
 
     private fun drawDecorativeKey(
@@ -890,6 +978,7 @@ class RetroControlsView(context: Context) : View(context) {
     private enum class SoftKey {
         STAGE,
         RESET,
+        UNDO,
         EXIT
     }
 
