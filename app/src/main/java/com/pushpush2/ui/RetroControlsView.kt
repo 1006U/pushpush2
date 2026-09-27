@@ -330,43 +330,50 @@ class RetroControlsView(context: Context) : View(context) {
         val sw = shellRect.width()
         val sh = shellRect.height()
 
+        /*
+         * Rebuilt from the supplied feature-phone keypad reference instead of
+         * incrementally adjusting the previous layout.
+         *
+         * - small speaker/decor key at the top
+         * - 스테이지 / 리셋 at the upper outer corners
+         * - one large central D-pad with 확인 in its original center ratio
+         * - 돌아가기 below the D-pad
+         * - decorative call key at lower-left
+         * - exit key at lower-right
+         *
+         * Functional rectangles never overlap. The D-pad receives most of the
+         * available area so UP/DOWN/LEFT/RIGHT and 확인 are easy to hit.
+         */
         topDecorRect.set(
-            shellRect.left + sw * 0.35f,
+            shellRect.left + sw * 0.43f,
             shellRect.top + sh * 0.025f,
-            shellRect.right - sw * 0.35f,
-            shellRect.top + sh * 0.17f
+            shellRect.right - sw * 0.43f,
+            shellRect.top + sh * 0.095f
         )
 
-        /*
-         * Reference-phone layout:
-         *
-         * Small utility keys live outside the large central navigation pad.
-         * The D-pad keeps the same directional/OK proportions as the earlier
-         * layout, but the whole pad is enlarged. Horizontal and vertical dead
-         * gaps prevent STAGE/RESET/UNDO/EXIT from stealing navigation touches.
-         */
         stageRect.set(
             shellRect.left + sw * 0.035f,
-            shellRect.top + sh * 0.10f,
-            shellRect.left + sw * 0.175f,
+            shellRect.top + sh * 0.105f,
+            shellRect.left + sw * 0.185f,
             shellRect.top + sh * 0.285f
         )
 
         resetRect.set(
-            shellRect.right - sw * 0.175f,
-            shellRect.top + sh * 0.10f,
+            shellRect.right - sw * 0.185f,
+            shellRect.top + sh * 0.105f,
             shellRect.right - sw * 0.035f,
             shellRect.top + sh * 0.285f
         )
 
+        // Main navigation pad: deliberately the dominant control.
         navRect.set(
-            shellRect.left + sw * 0.215f,
+            shellRect.left + sw * 0.225f,
             shellRect.top + sh * 0.105f,
-            shellRect.right - sw * 0.215f,
-            shellRect.top + sh * 0.695f
+            shellRect.right - sw * 0.225f,
+            shellRect.top + sh * 0.705f
         )
 
-        // Keep the established OK-to-D-pad ratio while enlarging the whole pad.
+        // Preserve the existing D-pad : OK proportions while scaling together.
         okRect.set(
             navRect.left + navRect.width() * 0.255f,
             navRect.top + navRect.height() * 0.29f,
@@ -374,18 +381,20 @@ class RetroControlsView(context: Context) : View(context) {
             navRect.bottom - navRect.height() * 0.29f
         )
 
+        // The original CANCEL position becomes one-step undo.
         undoRect.set(
-            shellRect.left + sw * 0.35f,
-            shellRect.top + sh * 0.79f,
-            shellRect.right - sw * 0.35f,
-            shellRect.bottom - sh * 0.055f
+            shellRect.left + sw * 0.34f,
+            shellRect.top + sh * 0.80f,
+            shellRect.right - sw * 0.34f,
+            shellRect.bottom - sh * 0.045f
         )
 
+        // Lower-right end-call key keeps the exit action.
         exitRect.set(
-            shellRect.right - sw * 0.175f,
-            shellRect.top + sh * 0.765f,
+            shellRect.right - sw * 0.185f,
+            shellRect.top + sh * 0.775f,
             shellRect.right - sw * 0.035f,
-            shellRect.bottom - sh * 0.055f
+            shellRect.bottom - sh * 0.045f
         )
     }
 
@@ -569,7 +578,7 @@ class RetroControlsView(context: Context) : View(context) {
             paint
         )
 
-        textPaint.textSize = scaledDp(13f)
+        textPaint.textSize = scaledDp(10.5f)
         textPaint.color =
             if (pressed) Color.WHITE else TEXT_DARK
 
@@ -697,7 +706,7 @@ class RetroControlsView(context: Context) : View(context) {
             paint
         )
 
-        textPaint.textSize = scaledDp(13f)
+        textPaint.textSize = scaledDp(14f)
         textPaint.color = TEXT_DARK
 
         val baseline =
@@ -807,9 +816,9 @@ class RetroControlsView(context: Context) : View(context) {
 
         val leftPhone = RectF(
             shellRect.left + sw * 0.035f,
-            shellRect.top + sh * 0.765f,
-            shellRect.left + sw * 0.175f,
-            shellRect.bottom - sh * 0.055f
+            shellRect.top + sh * 0.775f,
+            shellRect.left + sw * 0.185f,
+            shellRect.bottom - sh * 0.045f
         )
 
         // Left call key intentionally remains decorative with no touch handler.
@@ -905,7 +914,7 @@ class RetroControlsView(context: Context) : View(context) {
             paint
         )
 
-        textPaint.textSize = scaledDp(10f)
+        textPaint.textSize = scaledDp(10.5f)
         textPaint.color =
             if (pressed) Color.WHITE else TEXT_DARK
 
