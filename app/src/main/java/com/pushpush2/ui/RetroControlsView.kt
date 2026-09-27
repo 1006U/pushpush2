@@ -508,71 +508,129 @@ class RetroControlsView(context: Context) : View(context) {
 
     private fun drawSectionDividers(canvas: Canvas) {
         /*
-         * Keep the subtle seam weight, but deliberately extend every divider
-         * past the neighbouring panel boundary. drawNavigationPad() is rendered
-         * afterwards, so the small overlaps disappear underneath its rim and
-         * the seams read as continuous instead of stopping short.
+         * The real feature-phone keypad is divided by moulded plastic seams,
+         * not flat graphic lines. Recreate that with:
+         * - a very thin warm-grey shadow line
+         * - a faint highlight offset slightly toward the upper-left
+         * - shallow curves instead of ruler-straight partitions
          *
-         * These lines are visual only; touch geometry remains unchanged.
+         * These seams are visual only. Touch rectangles remain unchanged.
          */
-        paint.shader = null
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.5f)
-        paint.strokeCap = Paint.Cap.ROUND
-        paint.strokeJoin = Paint.Join.ROUND
-        paint.color = Color.rgb(96, 94, 86)
-
         val sw = shellRect.width()
         val sh = shellRect.height()
-        val overlap = scaledDp(5f)
 
-        // Upper seams: extend from the housing top and slightly into the D-pad.
-        canvas.drawLine(
-            navRect.left + scaledDp(1.5f),
-            shellRect.top + scaledDp(1f),
-            navRect.left - scaledDp(0.5f),
-            navRect.top + overlap,
-            paint
-        )
-        canvas.drawLine(
-            navRect.right - scaledDp(1.5f),
-            shellRect.top + scaledDp(1f),
-            navRect.right + scaledDp(0.5f),
-            navRect.top + overlap,
-            paint
+        val topLeft = Path().apply {
+            moveTo(
+                navRect.left + scaledDp(1.5f),
+                shellRect.top + scaledDp(1f)
+            )
+            quadTo(
+                navRect.left + scaledDp(0.5f),
+                shellRect.top + sh * 0.035f,
+                navRect.left - scaledDp(1f),
+                navRect.top + scaledDp(6f)
+            )
+        }
+
+        val topRight = Path().apply {
+            moveTo(
+                navRect.right - scaledDp(1.5f),
+                shellRect.top + scaledDp(1f)
+            )
+            quadTo(
+                navRect.right - scaledDp(0.5f),
+                shellRect.top + sh * 0.035f,
+                navRect.right + scaledDp(1f),
+                navRect.top + scaledDp(6f)
+            )
+        }
+
+        val middleLeft = Path().apply {
+            moveTo(
+                shellRect.left + scaledDp(1f),
+                shellRect.top + sh * 0.425f
+            )
+            quadTo(
+                shellRect.left + sw * 0.105f,
+                shellRect.top + sh * 0.475f,
+                navRect.left + scaledDp(5f),
+                shellRect.top + sh * 0.565f
+            )
+        }
+
+        val middleRight = Path().apply {
+            moveTo(
+                navRect.right - scaledDp(5f),
+                shellRect.top + sh * 0.565f
+            )
+            quadTo(
+                shellRect.right - sw * 0.105f,
+                shellRect.top + sh * 0.475f,
+                shellRect.right - scaledDp(1f),
+                shellRect.top + sh * 0.425f
+            )
+        }
+
+        val bottomLeft = Path().apply {
+            moveTo(
+                navRect.left + scaledDp(6f),
+                navRect.bottom - scaledDp(5f)
+            )
+            quadTo(
+                shellRect.left + sw * 0.275f,
+                shellRect.top + sh * 0.86f,
+                shellRect.left + sw * 0.255f,
+                shellRect.bottom - scaledDp(1f)
+            )
+        }
+
+        val bottomRight = Path().apply {
+            moveTo(
+                navRect.right - scaledDp(6f),
+                navRect.bottom - scaledDp(5f)
+            )
+            quadTo(
+                shellRect.right - sw * 0.275f,
+                shellRect.top + sh * 0.86f,
+                shellRect.right - sw * 0.255f,
+                shellRect.bottom - scaledDp(1f)
+            )
+        }
+
+        val seams = arrayOf(
+            topLeft,
+            topRight,
+            middleLeft,
+            middleRight,
+            bottomLeft,
+            bottomRight
         )
 
-        // Middle seams: run fully from the outer housing into the D-pad edge.
-        canvas.drawLine(
-            shellRect.left,
-            shellRect.top + sh * 0.425f,
-            navRect.left + overlap,
-            shellRect.top + sh * 0.565f,
-            paint
-        )
-        canvas.drawLine(
-            navRect.right - overlap,
-            shellRect.top + sh * 0.565f,
-            shellRect.right,
-            shellRect.top + sh * 0.425f,
-            paint
-        )
+        paint.shader = null
+        paint.style = Paint.Style.STROKE
+        paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeJoin = Paint.Join.ROUND
 
-        // Lower seams: begin inside the D-pad rim and continue to the bottom.
-        canvas.drawLine(
-            navRect.left + overlap,
-            navRect.bottom - overlap,
-            shellRect.left + sw * 0.255f,
-            shellRect.bottom,
-            paint
+        // Recess shadow: subtle, warm grey rather than a black drawn line.
+        paint.strokeWidth = scaledDp(1.15f)
+        paint.color = Color.rgb(118, 113, 103)
+        seams.forEach { seam ->
+            canvas.drawPath(seam, paint)
+        }
+
+        // Moulded-plastic highlight gives the seam a shallow physical edge.
+        paint.strokeWidth = scaledDp(0.65f)
+        paint.color = Color.argb(105, 255, 255, 248)
+
+        canvas.save()
+        canvas.translate(
+            -scaledDp(0.55f),
+            -scaledDp(0.55f)
         )
-        canvas.drawLine(
-            navRect.right - overlap,
-            navRect.bottom - overlap,
-            shellRect.right - sw * 0.255f,
-            shellRect.bottom,
-            paint
-        )
+        seams.forEach { seam ->
+            canvas.drawPath(seam, paint)
+        }
+        canvas.restore()
     }
 
     private fun drawTopDecorativeKey(canvas: Canvas) {
@@ -851,7 +909,7 @@ class RetroControlsView(context: Context) : View(context) {
         )
 
         /*
-         * No individual key outlines here. The black dividers define the three
+         * No individual key outlines here. The moulded panel seams define the
          * lower regions. Only pressed feedback, text and phone icons are drawn.
          */
         drawPhoneKey(
