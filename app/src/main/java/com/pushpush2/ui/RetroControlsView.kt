@@ -652,16 +652,6 @@ class RetroControlsView(context: Context) : View(context) {
             paint
         )
 
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.4f)
-        paint.color = CENTER_BORDER
-        canvas.drawRoundRect(
-            centerFrameRect,
-            scaledDp(5f),
-            scaledDp(5f),
-            paint
-        )
-
         drawSquareDirectionKey(canvas, Direction.UP, upRect)
         drawSquareDirectionKey(canvas, Direction.DOWN, downRect)
         drawSquareDirectionKey(canvas, Direction.LEFT, leftRect)
@@ -703,16 +693,6 @@ class RetroControlsView(context: Context) : View(context) {
         paint.style = Paint.Style.FILL
         paint.color =
             if (pressedCenter) CENTER_PRESSED else CENTER_FILL
-        canvas.drawRoundRect(
-            okRect,
-            scaledDp(8f),
-            scaledDp(8f),
-            paint
-        )
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = scaledDp(1.2f)
-        paint.color = CENTER_BORDER
         canvas.drawRoundRect(
             okRect,
             scaledDp(8f),
