@@ -639,7 +639,19 @@ class RetroControlsView(context: Context) : View(context) {
             paint
         )
 
-        // Expanded square frame around the unchanged OK button.
+        /*
+         * Keep the OK button itself unchanged, but fill its surrounding square
+         * with the same color as the normal OK button.
+         */
+        paint.style = Paint.Style.FILL
+        paint.color = CENTER_FILL
+        canvas.drawRoundRect(
+            centerFrameRect,
+            scaledDp(5f),
+            scaledDp(5f),
+            paint
+        )
+
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = scaledDp(1.4f)
         paint.color = CENTER_BORDER
