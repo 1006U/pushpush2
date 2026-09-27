@@ -839,6 +839,7 @@ class RetroControlsView(context: Context) : View(context) {
 
         val CENTER_FILL: Int = Color.rgb(219, 214, 223)
         val CENTER_PRESSED: Int = Color.rgb(193, 185, 201)
+        val CENTER_PRESSED_TEXT: Int = Color.rgb(72, 64, 80)
         val CENTER_BORDER: Int = Color.rgb(96, 87, 103)
         val CENTER_GLOW: Int = Color.argb(90, 255, 255, 255)
 
