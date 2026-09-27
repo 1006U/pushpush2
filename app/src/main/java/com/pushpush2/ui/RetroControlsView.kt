@@ -675,10 +675,22 @@ class RetroControlsView(context: Context) : View(context) {
 
     private fun drawSquareCenterKey(canvas: Canvas) {
         /*
-         * Keep the OK touch target, but draw no inner button box at all.
-         * The larger CENTER_FILL area behind it already provides the visual
-         * grouping, so only the 확인 label is rendered here.
+         * Normal state: no visible box around 확인.
+         * Pressed state: restore the previous confirm-button outline only while
+         * the finger is held down.
          */
+        if (pressedCenter) {
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = scaledDp(1.2f)
+            paint.color = CENTER_BORDER
+            canvas.drawRoundRect(
+                okRect,
+                scaledDp(8f),
+                scaledDp(8f),
+                paint
+            )
+        }
+
         textPaint.textSize = scaledDp(12f)
         textPaint.color =
             if (pressedCenter) CENTER_PRESSED_TEXT else REFERENCE_TEXT
