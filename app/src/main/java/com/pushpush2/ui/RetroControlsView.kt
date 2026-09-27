@@ -312,19 +312,19 @@ class RetroControlsView(context: Context) : View(context) {
         val sw = shellRect.width()
         val sh = shellRect.height()
 
-        // Top soft keys replace the original left/right dash keys.
+        // Utility keys sit close to the four outer corners like the reference.
         stageRect.set(
-            shellRect.left + sw * 0.055f,
-            shellRect.top + sh * 0.07f,
-            shellRect.left + sw * 0.31f,
-            shellRect.top + sh * 0.245f
+            shellRect.left + sw * 0.015f,
+            shellRect.top + sh * 0.045f,
+            shellRect.left + sw * 0.225f,
+            shellRect.top + sh * 0.255f
         )
 
         resetRect.set(
-            shellRect.right - sw * 0.31f,
-            shellRect.top + sh * 0.07f,
-            shellRect.right - sw * 0.055f,
-            shellRect.top + sh * 0.245f
+            shellRect.right - sw * 0.225f,
+            shellRect.top + sh * 0.045f,
+            shellRect.right - sw * 0.015f,
+            shellRect.top + sh * 0.255f
         )
 
         /*
@@ -384,20 +384,20 @@ class RetroControlsView(context: Context) : View(context) {
             navCy + keyHalf
         )
 
-        // Original alarm position -> one-step undo.
+        // Original alarm position -> one-step undo, moved toward the outer edge.
         undoRect.set(
-            shellRect.left + sw * 0.055f,
-            shellRect.top + sh * 0.74f,
-            shellRect.left + sw * 0.31f,
-            shellRect.bottom - sh * 0.055f
+            shellRect.left + sw * 0.015f,
+            shellRect.top + sh * 0.72f,
+            shellRect.left + sw * 0.225f,
+            shellRect.bottom - sh * 0.035f
         )
 
-        // Original end key keeps the current exit behaviour.
+        // Original end key keeps the current exit behaviour at the outer edge.
         exitRect.set(
-            shellRect.right - sw * 0.31f,
-            shellRect.top + sh * 0.74f,
-            shellRect.right - sw * 0.055f,
-            shellRect.bottom - sh * 0.055f
+            shellRect.right - sw * 0.225f,
+            shellRect.top + sh * 0.72f,
+            shellRect.right - sw * 0.015f,
+            shellRect.bottom - sh * 0.035f
         )
     }
 
@@ -581,8 +581,7 @@ class RetroControlsView(context: Context) : View(context) {
         }
 
         textPaint.textSize = scaledDp(UTILITY_TEXT_SIZE_DP)
-        textPaint.color =
-            if (pressed) Color.WHITE else TEXT_PRIMARY
+        textPaint.color = Color.BLACK
 
         val baseline =
             rect.centerY() -
@@ -774,8 +773,7 @@ class RetroControlsView(context: Context) : View(context) {
         }
 
         textPaint.textSize = scaledDp(UTILITY_TEXT_SIZE_DP)
-        textPaint.color =
-            if (pressed) Color.WHITE else TEXT_PRIMARY
+        textPaint.color = Color.BLACK
 
         val baseline =
             undoRect.centerY() -
@@ -804,8 +802,7 @@ class RetroControlsView(context: Context) : View(context) {
         }
 
         textPaint.textSize = scaledDp(UTILITY_TEXT_SIZE_DP)
-        textPaint.color =
-            if (pressed) Color.WHITE else Color.BLACK
+        textPaint.color = Color.BLACK
 
         val baseline =
             exitRect.centerY() -
@@ -840,7 +837,7 @@ class RetroControlsView(context: Context) : View(context) {
         const val REPEAT_INTERVAL_MS = 110L
         const val BASE_CONTROL_HEIGHT_DP = 248
         const val MIN_CONTROL_SCALE = 0.58f
-        const val UTILITY_TEXT_SIZE_DP = 12f
+        const val UTILITY_TEXT_SIZE_DP = 14f
 
         val HOUSING_BASE: Int = Color.rgb(215, 213, 218)
         val HOUSING_INNER: Int = Color.rgb(229, 227, 231)
