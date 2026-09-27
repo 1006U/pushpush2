@@ -675,14 +675,12 @@ class RetroControlsView(context: Context) : View(context) {
 
     private fun drawSquareCenterKey(canvas: Canvas) {
         /*
-         * Normal state: no visible box around 확인.
-         * Pressed state: restore the previous confirm-button outline only while
-         * the finger is held down.
+         * No visible border around 확인 in the normal state.
+         * Restore only the pressed-area color feedback when the user holds OK.
          */
         if (pressedCenter) {
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = scaledDp(1.2f)
-            paint.color = CENTER_BORDER
+            paint.style = Paint.Style.FILL
+            paint.color = CENTER_PRESSED
             canvas.drawRoundRect(
                 okRect,
                 scaledDp(8f),
