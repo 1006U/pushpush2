@@ -313,24 +313,32 @@ class RetroControlsView(context: Context) : View(context) {
             shellRect.top + sh * 0.17f
         )
 
+        /*
+         * Keep the soft keys physically separated from the D-pad.
+         *
+         * Previously STAGE/RESET extended to 27.5% from each side while the
+         * D-pad began at 25.5%, so their real touch rectangles overlapped.
+         * A touch near LEFT/RIGHT could therefore trigger STAGE or RESET.
+         * These bounds leave a clear 6.5% shell-width dead gap on both sides.
+         */
         stageRect.set(
             shellRect.left + sw * 0.035f,
             shellRect.top + sh * 0.10f,
-            shellRect.left + sw * 0.275f,
+            shellRect.left + sw * 0.225f,
             shellRect.top + sh * 0.405f
         )
 
         resetRect.set(
-            shellRect.right - sw * 0.275f,
+            shellRect.right - sw * 0.225f,
             shellRect.top + sh * 0.10f,
             shellRect.right - sw * 0.035f,
             shellRect.top + sh * 0.405f
         )
 
         navRect.set(
-            shellRect.left + sw * 0.255f,
+            shellRect.left + sw * 0.290f,
             shellRect.top + sh * 0.185f,
-            shellRect.right - sw * 0.255f,
+            shellRect.right - sw * 0.290f,
             shellRect.top + sh * 0.715f
         )
 
