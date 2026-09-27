@@ -402,49 +402,58 @@ class RetroControlsView(context: Context) : View(context) {
         )
 
         /*
-         * Touch-only geometry.
+         * Touch-only geometry matched to the user's marked boxes.
          *
-         * Visual layout stays exactly as it is:
-         * - 확인: keep its current visual presentation, but restrict the real
-         *   touch target to the smaller center box requested by the user.
-         * - directions: keep the arrows exactly where/size they are, but expand
-         *   the real touch zones outward to the larger marked boxes.
+         * IMPORTANT: these rectangles affect input only. The visible arrows,
+         * confirm panel, colors, positions and every other layout value stay
+         * exactly as they are.
+         *
+         * - UP / DOWN: wide horizontal touch zones
+         * - LEFT / RIGHT: tall vertical touch zones
+         * - OK: compact center touch zone around the 확인 label
          */
-        // Match the confirm touch target to the utility-button hit size.
-        // Visual size, text size and position remain unchanged.
-        val okHitWidth = stageRect.width()
-        val okHitHeight = stageRect.height()
+        val horizontalHitWidth = navRect.width() * 0.46f
+        val horizontalHitHeight = navRect.height() * 0.20f
+
+        upHitRect.set(
+            upRect.centerX() - horizontalHitWidth / 2f,
+            upRect.centerY() - horizontalHitHeight / 2f,
+            upRect.centerX() + horizontalHitWidth / 2f,
+            upRect.centerY() + horizontalHitHeight / 2f
+        )
+
+        downHitRect.set(
+            downRect.centerX() - horizontalHitWidth / 2f,
+            downRect.centerY() - horizontalHitHeight / 2f,
+            downRect.centerX() + horizontalHitWidth / 2f,
+            downRect.centerY() + horizontalHitHeight / 2f
+        )
+
+        val verticalHitWidth = navRect.width() * 0.22f
+        val verticalHitHeight = navRect.height() * 0.40f
+
+        leftHitRect.set(
+            leftRect.centerX() - verticalHitWidth / 2f,
+            leftRect.centerY() - verticalHitHeight / 2f,
+            leftRect.centerX() + verticalHitWidth / 2f,
+            leftRect.centerY() + verticalHitHeight / 2f
+        )
+
+        rightHitRect.set(
+            rightRect.centerX() - verticalHitWidth / 2f,
+            rightRect.centerY() - verticalHitHeight / 2f,
+            rightRect.centerX() + verticalHitWidth / 2f,
+            rightRect.centerY() + verticalHitHeight / 2f
+        )
+
+        val okHitWidth = navRect.width() * 0.28f
+        val okHitHeight = navRect.height() * 0.18f
+
         okHitRect.set(
             navCx - okHitWidth / 2f,
             navCy - okHitHeight / 2f,
             navCx + okHitWidth / 2f,
             navCy + okHitHeight / 2f
-        )
-
-        val directionHitExpansion = scaledDp(8f)
-
-        upHitRect.set(upRect)
-        upHitRect.inset(
-            -directionHitExpansion,
-            -directionHitExpansion
-        )
-
-        downHitRect.set(downRect)
-        downHitRect.inset(
-            -directionHitExpansion,
-            -directionHitExpansion
-        )
-
-        leftHitRect.set(leftRect)
-        leftHitRect.inset(
-            -directionHitExpansion,
-            -directionHitExpansion
-        )
-
-        rightHitRect.set(rightRect)
-        rightHitRect.inset(
-            -directionHitExpansion,
-            -directionHitExpansion
         )
 
         // Lower keys moved upward to the user-marked alarm/end-key slots.
