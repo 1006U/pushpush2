@@ -52,6 +52,7 @@ class RetroControlsView(context: Context) : View(context) {
     private val downRect = RectF()
     private val leftRect = RectF()
     private val rightRect = RectF()
+    private val centerPanelRect = RectF()
     private val okRect = RectF()
     private val undoRect = RectF()
     private val exitRect = RectF()
@@ -356,6 +357,17 @@ class RetroControlsView(context: Context) : View(context) {
             navCy + keyHalf
         )
 
+        // Desired normal-state light square around the 확인 label.
+        // This is visual only; okRect remains the actual confirm touch target.
+        val centerPanelSize = navBase * 0.56f
+        val centerPanelHalf = centerPanelSize / 2f
+        centerPanelRect.set(
+            navCx - centerPanelHalf,
+            navCy - centerPanelHalf,
+            navCx + centerPanelHalf,
+            navCy + centerPanelHalf
+        )
+
         upRect.set(
             navCx - keyHalf,
             navCy - offset - keyHalf,
@@ -628,6 +640,16 @@ class RetroControlsView(context: Context) : View(context) {
             paint
         )
 
+        // Large light center panel: fill only, never draw an outline.
+        paint.style = Paint.Style.FILL
+        paint.color = CENTER_FILL
+        canvas.drawRoundRect(
+            centerPanelRect,
+            scaledDp(5f),
+            scaledDp(5f),
+            paint
+        )
+
         drawSquareDirectionKey(canvas, Direction.UP, upRect)
         drawSquareDirectionKey(canvas, Direction.DOWN, downRect)
         drawSquareDirectionKey(canvas, Direction.LEFT, leftRect)
@@ -651,16 +673,17 @@ class RetroControlsView(context: Context) : View(context) {
 
     private fun drawSquareCenterKey(canvas: Canvas) {
         /*
-         * No visible border around 확인 in the normal state.
-         * Restore only the pressed-area color feedback when the user holds OK.
+         * Normal state: the large center panel is already drawn with no border.
+         * Pressed state: tint that same visible panel, avoiding any smaller
+         * square or outline around the 확인 label.
          */
         if (pressedCenter) {
             paint.style = Paint.Style.FILL
             paint.color = CENTER_PRESSED
             canvas.drawRoundRect(
-                okRect,
-                scaledDp(8f),
-                scaledDp(8f),
+                centerPanelRect,
+                scaledDp(5f),
+                scaledDp(5f),
                 paint
             )
         }
