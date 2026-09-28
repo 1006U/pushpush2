@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.SystemClock
 import android.os.Vibrator
@@ -16,6 +17,7 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -33,6 +35,7 @@ import com.pushpush2.ui.StageSelectView
 class MainActivity : Activity() {
 
     private lateinit var gameView: GameView
+    private lateinit var helpButton: TextView
     private lateinit var stageLabel: TextView
     private lateinit var moveLabel: TextView
     private lateinit var headerCharacter: ImageView
@@ -212,6 +215,58 @@ class MainActivity : Activity() {
 
         gameView = GameView(this)
 
+        val gameArea = FrameLayout(this).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+        }
+
+        gameArea.addView(
+            gameView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        helpButton = TextView(this).apply {
+            text = "?"
+            gravity = Gravity.CENTER
+            textSize = 18f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.rgb(54, 42, 28))
+            includeFontPadding = false
+
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(4).toFloat()
+                setColor(Color.argb(185, 244, 226, 191))
+                setStroke(
+                    dp(1),
+                    Color.argb(220, 84, 58, 32)
+                )
+            }
+
+            isClickable = true
+            isFocusable = false
+            contentDescription = "조작키 도움말"
+
+            setOnClickListener {
+                audioPlayer.play("button")
+                showControlsHelpDialog()
+            }
+        }
+
+        gameArea.addView(
+            helpButton,
+            FrameLayout.LayoutParams(
+                dp(34),
+                dp(34),
+                Gravity.END or Gravity.BOTTOM
+            ).apply {
+                marginEnd = dp(6)
+                bottomMargin = dp(6)
+            }
+        )
+
         val statusBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -255,7 +310,7 @@ class MainActivity : Activity() {
         )
 
         gameShell.addView(
-            gameView,
+            gameArea,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
@@ -308,6 +363,22 @@ class MainActivity : Activity() {
             }
         )
         return root
+    }
+
+    private fun showControlsHelpDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("조작키")
+            .setMessage(
+                "T : 위\n" +
+                    "V : 아래\n" +
+                    "F : 왼쪽\n" +
+                    "H : 오른쪽\n" +
+                    "G : OK / 확인\n\n" +
+                    "P : 현재 스테이지 리셋\n" +
+                    "Q : 스테이지 선택"
+            )
+            .setPositiveButton("확인", null)
+            .show()
     }
 
     private fun showGameClearScreen() {
