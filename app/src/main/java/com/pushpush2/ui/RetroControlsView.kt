@@ -10,6 +10,7 @@ import android.graphics.Typeface
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import com.pushpush2.game.Direction
 import kotlin.math.abs
 import kotlin.math.min
@@ -29,6 +30,7 @@ class RetroControlsView(context: Context) : View(context) {
 
     var onDirection: ((Direction) -> Unit)? = null
     var onStageClick: (() -> Unit)? = null
+    var onStageLongClick: (() -> Unit)? = null
     var onRetryClick: (() -> Unit)? = null
     var onCenterClick: (() -> Unit)? = null
     var onUndoClick: (() -> Unit)? = null
@@ -68,6 +70,17 @@ class RetroControlsView(context: Context) : View(context) {
     private var pressedDirection: Direction? = null
     private var pressedSoftKey: SoftKey? = null
     private var pressedCenter = false
+    private var stageLongPressTriggered = false
+
+    private val stageLongPressRunnable = Runnable {
+        if (pressedSoftKey == SoftKey.STAGE) {
+            stageLongPressTriggered = true
+            pressedSoftKey = null
+            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            onStageLongClick?.invoke()
+            invalidate()
+        }
+    }
 
     private val repeatRunnable = object : Runnable {
         override fun run() {
@@ -133,6 +146,12 @@ class RetroControlsView(context: Context) : View(context) {
                 when {
                     stageRect.contains(event.x, event.y) -> {
                         pressedSoftKey = SoftKey.STAGE
+                        stageLongPressTriggered = false
+                        removeCallbacks(stageLongPressRunnable)
+                        postDelayed(
+                            stageLongPressRunnable,
+                            ViewConfiguration.getLongPressTimeout().toLong()
+                        )
                         performHapticFeedback(
                             HapticFeedbackConstants.KEYBOARD_TAP
                         )
@@ -205,6 +224,9 @@ class RetroControlsView(context: Context) : View(context) {
                     }
 
                     if (!stillInside) {
+                        if (pressedSoftKey == SoftKey.STAGE) {
+                            removeCallbacks(stageLongPressRunnable)
+                        }
                         pressedSoftKey = null
                         invalidate()
                     }
@@ -240,7 +262,11 @@ class RetroControlsView(context: Context) : View(context) {
 
                 when (pressedSoftKey) {
                     SoftKey.STAGE -> {
-                        if (stageRect.contains(event.x, event.y)) {
+                        removeCallbacks(stageLongPressRunnable)
+                        if (
+                            !stageLongPressTriggered &&
+                            stageRect.contains(event.x, event.y)
+                        ) {
                             onStageClick?.invoke()
                         }
                     }
@@ -266,8 +292,10 @@ class RetroControlsView(context: Context) : View(context) {
                     null -> Unit
                 }
 
+                removeCallbacks(stageLongPressRunnable)
                 pressedSoftKey = null
                 pressedCenter = false
+                stageLongPressTriggered = false
                 releaseDirection()
                 performClick()
                 invalidate()
@@ -276,8 +304,10 @@ class RetroControlsView(context: Context) : View(context) {
 
             MotionEvent.ACTION_CANCEL -> {
                 parent?.requestDisallowInterceptTouchEvent(false)
+                removeCallbacks(stageLongPressRunnable)
                 pressedSoftKey = null
                 pressedCenter = false
+                stageLongPressTriggered = false
                 releaseDirection()
                 invalidate()
                 return true
@@ -293,6 +323,7 @@ class RetroControlsView(context: Context) : View(context) {
     }
 
     override fun onDetachedFromWindow() {
+        removeCallbacks(stageLongPressRunnable)
         cancelRepeat()
         super.onDetachedFromWindow()
     }
