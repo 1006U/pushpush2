@@ -1,0 +1,93 @@
+name: Fire HD 10 / Fire OS 7 CI
+
+on:
+  push:
+    branches: [ "FireHD10" ]
+  pull_request:
+    branches: [ "FireHD10" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-firehd10-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Test, lint and build Fire HD 10 APK
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
+
+      - name: Verify Fire OS 7 manifest compatibility
+        run: |
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)"
+          "$AAPT" dump badging app/build/outputs/apk/debug/app-debug.apk | tee app/build/firehd10-badging.txt
+          grep -q "sdkVersion:'24'" app/build/firehd10-badging.txt
+          grep -q "targetSdkVersion:'28'" app/build/firehd10-badging.txt
+          grep -q "package: name='com.pushpush2.firehd10'" app/build/firehd10-badging.txt
+
+      - name: Upload Fire HD 10 debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: pushpush2-firehd10-fireos7-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install and launch on API 28 Fire HD 10-sized tablet
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 28
+          target: google_apis
+          arch: x86_64
+          profile: pixel_c
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            # Fire HD 10 (Fire OS 7 generations): 1920x1200, hdpi-class display.
+            adb shell wm size 1920x1200
+            adb shell wm density 240
+
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+
+            mkdir -p app/build/reports/firehd10-smoke
+
+            # Landscape validation.
+            adb shell settings put system accelerometer_rotation 0
+            adb shell settings put system user_rotation 1
+            adb shell am force-stop com.pushpush2.firehd10
+            adb shell am start -W -n com.pushpush2.firehd10/com.pushpush2.MainActivity
+            sleep 3
+            test -n "$(adb shell pidof com.pushpush2.firehd10 | tr -d '\r')" || (echo "Fire HD 10 build died in landscape"; adb logcat -d -t 500; exit 1)
+            adb exec-out screencap -p > app/build/reports/firehd10-smoke/landscape-1920x1200.png
+
+            # Portrait validation.
+            adb shell settings put system user_rotation 0
+            sleep 2
+            test -n "$(adb shell pidof com.pushpush2.firehd10 | tr -d '\r')" || (echo "Fire HD 10 build died after rotation"; adb logcat -d -t 500; exit 1)
+            adb exec-out screencap -p > app/build/reports/firehd10-smoke/portrait-1200x1920.png
+
+            adb shell pidof com.pushpush2.firehd10
+
+      - name: Upload Fire HD 10 smoke screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pushpush2-firehd10-fireos7-smoke
+          path: app/build/reports/firehd10-smoke/*.png
+          if-no-files-found: warn

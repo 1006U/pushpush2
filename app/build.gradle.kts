@@ -4,7 +4,7 @@ plugins {
 }
 
 val releaseVersionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 2
-val releaseVersionName = System.getenv("VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.1.1"
+val releaseVersionName = System.getenv("VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.1.1-firehd10"
 
 val releaseKeystoreFile = System.getenv("ANDROID_KEYSTORE_FILE")
 val releaseKeystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
@@ -22,19 +22,16 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.pushpush2"
+        // Dedicated Fire HD 10 package so this build can coexist with the
+        // normal phone build while the tablet port is being validated.
+        applicationId = "com.pushpush2.firehd10"
 
-        // Galaxy S8 shipped with Android 7.0 (API 24).
-        // Keep this baseline so the original target device remains supported.
+        // Fire OS 7 is based on Android 9 (API 28). Keep the historical
+        // minSdk so shared game code stays reusable, but target API 28 so the
+        // Fire HD 10 build uses Android 9-era runtime behavior.
         minSdk = 24
+        targetSdk = 28
 
-        // Target the current stable Android compatibility level while keeping
-        // minSdk independent. Newer Android releases remain installable unless
-        // a future platform explicitly introduces a compatibility issue.
-        targetSdk = 36
-
-        // Local builds use these defaults. GitHub Actions can override both
-        // through VERSION_CODE / VERSION_NAME for friend-distribution builds.
         versionCode = releaseVersionCode
         versionName = releaseVersionName
     }
@@ -54,7 +51,6 @@ android {
         getByName("release") {
             isMinifyEnabled = false
 
-            // Keep the keystore out of Git. CI injects it only at build time.
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
