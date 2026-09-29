@@ -3,6 +3,7 @@ package com.pushpush2
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
@@ -61,6 +62,7 @@ class MainActivity : Activity() {
     private var lastBlockedMoveVibrationAt = 0L
     private var heldGamepadDirection: Direction? = null
     private var showingGameClearScreen = false
+    private var currentHeaderState = HeaderState.PLAYING
 
     private val gamepadRepeatRunnable = object : Runnable {
         override fun run() {
@@ -82,9 +84,21 @@ class MainActivity : Activity() {
         progressStore = ProgressStore(this)
         audioPlayer = AudioPlayer(this)
 
-        currentStageNumber = savedInstanceState?.getInt(KEY_STAGE, 1) ?: 1
+        val totalStages = StageRepository.stages.size
+        val maxUnlockedStage =
+            progressStore.highestUnlockedStage()
+                .coerceIn(1, totalStages)
+
         currentStageNumber =
-            currentStageNumber.coerceAtMost(progressStore.highestUnlockedStage())
+            (
+                savedInstanceState?.getInt(KEY_STAGE)
+                    ?: progressStore.lastPlayedStage(totalStages)
+                ).coerceIn(1, maxUnlockedStage)
+
+        progressStore.rememberLastPlayedStage(
+            stageNumber = currentStageNumber,
+            totalStages = totalStages
+        )
 
         engine = GameEngine(StageRepository.get(currentStageNumber))
         setContentView(buildContentView())
@@ -101,6 +115,14 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         stopGamepadRepeat()
+
+        if (::progressStore.isInitialized) {
+            progressStore.rememberLastPlayedStage(
+                stageNumber = currentStageNumber,
+                totalStages = StageRepository.stages.size
+            )
+        }
+
         super.onPause()
     }
 
@@ -156,9 +178,35 @@ class MainActivity : Activity() {
         super.onSaveInstanceState(outState)
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+
+        stopGamepadRepeat()
+        setContentView(buildContentView())
+        updateUi()
+        renderHeaderState(currentHeaderState)
+
+        if (showingGameClearScreen) {
+            gameShell.visibility = View.GONE
+            gameClearScreenView.visibility = View.VISIBLE
+            controlsPanel.visibility = View.VISIBLE
+        } else {
+            gameClearScreenView.visibility = View.GONE
+            gameShell.visibility = View.VISIBLE
+            controlsPanel.visibility = View.VISIBLE
+        }
+    }
+
     private fun buildContentView(): View {
+        val landscape = isLandscape()
+
         rootView = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+            orientation =
+                if (landscape) {
+                    LinearLayout.HORIZONTAL
+                } else {
+                    LinearLayout.VERTICAL
+                }
             setBackgroundColor(Color.WHITE)
 
             setOnApplyWindowInsetsListener { view, insets ->
@@ -365,35 +413,69 @@ class MainActivity : Activity() {
             contentDescription = "Push Push 2 game clear screen"
         }
 
-        rootView.addView(
-            gameClearScreenView,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
+        if (landscape) {
+            // Landscape: game on the left, controls on the right.
+            rootView.addView(
+                gameClearScreenView,
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LANDSCAPE_GAME_WEIGHT
+                )
             )
-        )
 
-        rootView.addView(
-            gameShell,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+            rootView.addView(
+                gameShell,
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LANDSCAPE_GAME_WEIGHT
+                )
             )
-        )
-        rootView.addView(
-            controlsPanel,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        )
 
-        controlsPanel.minimumHeight =
-            dp(MIN_CONTROLS_VIEW_HEIGHT_DP) +
-                controlsPanel.paddingTop +
-                controlsPanel.paddingBottom
+            rootView.addView(
+                controlsPanel,
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LANDSCAPE_CONTROLS_WEIGHT
+                )
+            )
+
+            controlsPanel.minimumHeight = 0
+        } else {
+            // Portrait: preserve the existing top-game / bottom-controls layout.
+            rootView.addView(
+                gameClearScreenView,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f
+                )
+            )
+
+            rootView.addView(
+                gameShell,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            )
+
+            rootView.addView(
+                controlsPanel,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f
+                )
+            )
+
+            controlsPanel.minimumHeight =
+                dp(MIN_CONTROLS_VIEW_HEIGHT_DP) +
+                    controlsPanel.paddingTop +
+                    controlsPanel.paddingBottom
+        }
 
         rootView.addOnLayoutChangeListener {
                 _,
@@ -766,6 +848,10 @@ class MainActivity : Activity() {
     ) {
         cancelPendingStageAdvance()
         currentStageNumber = number
+        progressStore.rememberLastPlayedStage(
+            stageNumber = currentStageNumber,
+            totalStages = StageRepository.stages.size
+        )
         clearHandled = false
         engine.load(StageRepository.get(number))
         gameView.resetPlayerAnimation()
@@ -875,6 +961,33 @@ class MainActivity : Activity() {
         val controlsPanelPadding =
             controlsPanel.paddingTop + controlsPanel.paddingBottom
 
+        if (isLandscape()) {
+            /*
+             * In landscape the control panel is beside the game, not below it.
+             * Give the board all vertical space left after the fixed header and
+             * STAGE/STEP status bar. GameView will scale/center the stage inside
+             * this fixed viewport without changing the left/right split.
+             */
+            val landscapeBoardHeight =
+                (
+                    gameShell.height -
+                        headerBar.measuredHeight -
+                        statusBar.measuredHeight -
+                        gameShell.paddingTop -
+                        gameShell.paddingBottom
+                    ).coerceAtLeast(1)
+
+            val gameParams = gameView.layoutParams
+            if (gameParams.height != landscapeBoardHeight) {
+                gameParams.height = landscapeBoardHeight
+                gameView.layoutParams = gameParams
+            }
+
+            controlsPanel.minimumHeight = 0
+            controlsView.requestLayout()
+            return
+        }
+
         /*
          * The board viewport is deliberately independent of stage.width /
          * stage.height. GameView scales and centers each map inside this fixed
@@ -912,16 +1025,8 @@ class MainActivity : Activity() {
         resetAfterMs: Long? = null
     ) {
         cancelHeaderReset()
-
-        if (::headerMessage.isInitialized) {
-            headerMessage.text = state.message
-        }
-
-        if (::headerCharacter.isInitialized) {
-            headerCharacter.setImageDrawable(
-                playerPortraitDrawable(state.sprite)
-            )
-        }
+        currentHeaderState = state
+        renderHeaderState(state)
 
         if (resetAfterMs != null) {
             val reset = Runnable {
@@ -931,6 +1036,18 @@ class MainActivity : Activity() {
 
             pendingHeaderReset = reset
             headerMessage.postDelayed(reset, resetAfterMs)
+        }
+    }
+
+    private fun renderHeaderState(state: HeaderState) {
+        if (::headerMessage.isInitialized) {
+            headerMessage.text = state.message
+        }
+
+        if (::headerCharacter.isInitialized) {
+            headerCharacter.setImageDrawable(
+                playerPortraitDrawable(state.sprite)
+            )
         }
     }
 
@@ -1046,6 +1163,10 @@ class MainActivity : Activity() {
             horizontalBands = horizontalBands
         )
 
+    private fun isLandscape(): Boolean =
+        resources.configuration.orientation ==
+            Configuration.ORIENTATION_LANDSCAPE
+
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
@@ -1097,6 +1218,8 @@ class MainActivity : Activity() {
         const val GAMEPAD_REPEAT_INTERVAL_MS = 110L
         const val GAMEPAD_DEAD_ZONE = 0.55f
         const val MIN_CONTROLS_VIEW_HEIGHT_DP = 148
+        const val LANDSCAPE_GAME_WEIGHT = 0.62f
+        const val LANDSCAPE_CONTROLS_WEIGHT = 0.38f
 
         val RETRO_BLUE: Int =
             Color.rgb(45, 132, 218)
