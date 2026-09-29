@@ -11,6 +11,27 @@ class ProgressStore(context: Context) {
     fun highestUnlockedStage(): Int =
         preferences.getInt(KEY_HIGHEST_UNLOCKED, 1)
 
+    fun lastPlayedStage(totalStages: Int): Int =
+        ResumeStagePolicy.resolve(
+            lastPlayedStage = preferences.getInt(KEY_LAST_PLAYED_STAGE, 1),
+            highestUnlockedStage = highestUnlockedStage(),
+            totalStages = totalStages
+        )
+
+    fun rememberLastPlayedStage(
+        stageNumber: Int,
+        totalStages: Int
+    ) {
+        if (totalStages <= 0) return
+
+        preferences.edit()
+            .putInt(
+                KEY_LAST_PLAYED_STAGE,
+                stageNumber.coerceIn(1, totalStages)
+            )
+            .apply()
+    }
+
     fun markCleared(stageNumber: Int, totalStages: Int) {
         val nextUnlocked = (stageNumber + 1).coerceAtMost(totalStages)
         val highest = max(highestUnlockedStage(), nextUnlocked)
@@ -25,5 +46,6 @@ class ProgressStore(context: Context) {
 
     private companion object {
         const val KEY_HIGHEST_UNLOCKED = "highest_unlocked_stage"
+        const val KEY_LAST_PLAYED_STAGE = "last_played_stage"
     }
 }
