@@ -364,7 +364,7 @@ class RetroControlsView(context: Context) : View(context) {
 
         // Borderless light center panel around the 확인 label.
         // This is visual only; okRect remains the actual confirm touch target.
-        val centerPanelSize = navBase * 0.56f
+        val centerPanelSize = navBase * 0.42f
         val centerPanelHalf = centerPanelSize / 2f
         centerPanelRect.set(
             navCx - centerPanelHalf,
@@ -412,8 +412,8 @@ class RetroControlsView(context: Context) : View(context) {
          * - LEFT / RIGHT: tall vertical touch zones
          * - OK: compact center touch zone around the 확인 label
          */
-        val horizontalHitWidth = navRect.width() * 0.48f
-        val horizontalHitHeight = navRect.height() * 0.26f
+        val horizontalHitWidth = navRect.width() * 0.52f
+        val horizontalHitHeight = navRect.height() * 0.30f
 
         upHitRect.set(
             upRect.centerX() - horizontalHitWidth / 2f,
@@ -429,8 +429,8 @@ class RetroControlsView(context: Context) : View(context) {
             downRect.centerY() + horizontalHitHeight / 2f
         )
 
-        val verticalHitWidth = navRect.width() * 0.24f
-        val verticalHitHeight = navRect.height() * 0.50f
+        val verticalHitWidth = navRect.width() * 0.28f
+        val verticalHitHeight = navRect.height() * 0.56f
 
         leftHitRect.set(
             leftRect.centerX() - verticalHitWidth / 2f,
@@ -771,7 +771,7 @@ class RetroControlsView(context: Context) : View(context) {
         cy: Float
     ) {
         val pressed = pressedDirection == direction
-        val size = scaledDp(8.5f)
+        val size = scaledDp(12.5f)
 
         val path = Path().apply {
             when (direction) {
