@@ -27,6 +27,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.pushpush2.audio.AudioPlayer
 import com.pushpush2.data.ProgressStore
+import com.pushpush2.data.StageSolutionRepository
 import com.pushpush2.game.Direction
 import com.pushpush2.game.GameEngine
 import com.pushpush2.game.StageRepository
@@ -369,6 +370,12 @@ class MainActivity : Activity() {
                 if (!showingGameClearScreen) {
                     audioPlayer.play("button")
                     showStageSelector()
+                }
+            }
+            onStageLongClick = {
+                if (!showingGameClearScreen) {
+                    audioPlayer.play("button")
+                    showCurrentStageSolutionPrompt()
                 }
             }
             onRetryClick = {
@@ -879,6 +886,54 @@ class MainActivity : Activity() {
             .setPositiveButton("종료") { _, _ ->
                 finishAndRemoveTask()
             }
+            .show()
+    }
+
+    private fun showCurrentStageSolutionPrompt() {
+        val stageNumber = currentStageNumber
+        val solution =
+            StageSolutionRepository.displaySolution(stageNumber)
+
+        if (solution == null) {
+            AlertDialog.Builder(this)
+                .setTitle("STAGE $stageNumber 해법")
+                .setMessage(
+                    "이 스테이지의 해법은 아직 등록되지 않았습니다.\n\n" +
+                        "현재 1~50탄까지 해법을 지원합니다."
+                )
+                .setPositiveButton("확인", null)
+                .show()
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("STAGE $stageNumber 해법")
+            .setMessage(
+                "정답이 표시됩니다. 정말 해법을 볼까요?\n\n" +
+                    "막혔을 때만 참고하는 용도로 사용할 수 있습니다."
+            )
+            .setNegativeButton("취소", null)
+            .setPositiveButton("해법 보기") { _, _ ->
+                showCurrentStageSolution(
+                    stageNumber = stageNumber,
+                    solution = solution
+                )
+            }
+            .show()
+    }
+
+    private fun showCurrentStageSolution(
+        stageNumber: Int,
+        solution: String
+    ) {
+        AlertDialog.Builder(this)
+            .setTitle("STAGE $stageNumber 해법")
+            .setMessage(
+                "↑ 위   ↓ 아래   ← 왼쪽   → 오른쪽\n" +
+                    "(2), (3) 등은 같은 방향 반복 횟수입니다.\n\n" +
+                    solution
+            )
+            .setPositiveButton("닫기", null)
             .show()
     }
 
