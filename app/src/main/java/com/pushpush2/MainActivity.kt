@@ -1218,8 +1218,8 @@ class MainActivity : Activity() {
         const val GAMEPAD_REPEAT_INTERVAL_MS = 110L
         const val GAMEPAD_DEAD_ZONE = 0.55f
         const val MIN_CONTROLS_VIEW_HEIGHT_DP = 148
-        const val LANDSCAPE_GAME_WEIGHT = 0.62f
-        const val LANDSCAPE_CONTROLS_WEIGHT = 0.38f
+        const val LANDSCAPE_GAME_WEIGHT = 0.54f
+        const val LANDSCAPE_CONTROLS_WEIGHT = 0.46f
 
         val RETRO_BLUE: Int =
             Color.rgb(45, 132, 218)
